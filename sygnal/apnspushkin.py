@@ -42,6 +42,8 @@ class ApnsPushkin(Pushkin):
             raise PushkinSetupException("Invalid platform: %s" % plaf)
             
         self.sess = apns_clerk.Session()
+        # reads the cert from the file and caches it
+        self.cert = self.sess.pool.get_certificate({"cert_file": self.certfile})
         logger.info("APNS with cert file %s on %s platform", self.certfile, self.plaf)
 
     def dispatchNotification(self, n):
@@ -80,7 +82,7 @@ class ApnsPushkin(Pushkin):
 
         conn = self.sess.get_connection(
             ApnsPushkin.ADDRESSES[self.plaf],
-            cert_file=self.certfile
+            certificate=self.cert
         )
         srv = apns_clerk.APNs(conn)
 
