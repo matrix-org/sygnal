@@ -1,0 +1,6 @@
+[log]
+loglevel=debug
+
+[apps]
+org.matrix.matrixConsole.ios.type = apns
+org.matrix.matrixConsole.ios.certfile = org.matrix.matrixConsole_prod_APNS.pem
