@@ -89,6 +89,8 @@ class ApnsPushkin(Pushkin):
         tries = 0
         while tries < ApnsPushkin.MAX_TRIES:
             # this appears to block for over three seconds...
+            # looks like this is because the thing just does a read
+            # with a 3 second timeout to wait for any errors to come in.
             res = srv.send(msg)
             for token, reason in res.failed.items():
                 code, errmsg = reason
