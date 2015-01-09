@@ -32,7 +32,8 @@ setup(
     description="Reference Push Gateway for Matrix Notifications",
     install_requires=[
         "flask==0.10.1",
-        "apns-clerk==0.1.1",
+        "gevent>=1.0.1",
+        "pushbaby",
     ],
     long_description=read("README.rst"),
 )

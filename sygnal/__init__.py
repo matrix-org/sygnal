@@ -14,6 +14,9 @@
 # limitations under the License.
 
 
+from .exceptions import InvalidNotificationException
+
+
 class Device:
     def __init__(self, raw):
         self.app_id = None
@@ -61,11 +64,3 @@ class Pushkin(object):
     def dispatchNotification(self, n):
         pass
 
-class InvalidNotificationException(Exception):
-    pass
-
-class PushkinSetupException(Exception):
-    pass
-
-class NotificationDispatchException(Exception):
-    pass

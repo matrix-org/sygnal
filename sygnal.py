@@ -17,6 +17,7 @@
 
 
 import flask
+import gevent.pywsgi
 import ConfigParser
 from flask import Flask, request
 
@@ -136,6 +137,7 @@ if __name__ == '__main__':
         logger.info("Configured with app IDs: %r", pushkins.keys())
 
     logger.info("Setup completed, listening on port %s", cfg.get('http', 'port'))
-    args = {'host': '0.0.0.0', 'port': cfg.getint('http', 'port')}
-    app.run(**args)
+
+    http_server = gevent.pywsgi.WSGIServer(('0.0.0.0', cfg.getint('http', 'port')), app)
+    http_server.serve_forever()
 

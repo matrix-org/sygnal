@@ -14,13 +14,13 @@
 # limitations under the License.
 
 
-from sygnal import Pushkin, PushkinSetupException
+from . import Pushkin
+from .exceptions import PushkinSetupException, NotificationDispatchException
 
-import apns_clerk
+from pushbaby import PushBaby
 
 import logging
 import base64
-import binascii
 
 logger = logging.getLogger(__name__)
 
@@ -41,69 +41,48 @@ class ApnsPushkin(Pushkin):
         else:
             raise PushkinSetupException("Invalid platform: %s" % plaf)
             
-        self.sess = apns_clerk.Session()
-        # reads the cert from the file and caches it
-        self.cert = self.sess.pool.get_certificate({"cert_file": self.certfile})
+        self.pushbaby = PushBaby(certfile=self.certfile, platform="prod")
+        self.pushbaby.on_failed_push = self.on_failed_push
         logger.info("APNS with cert file %s on %s platform", self.certfile, self.plaf)
 
     def dispatchNotification(self, n):
         tokens = []
         for d in n.devices:
             if 'platform' in d.data and d.data['platform'] == self.plaf:
-                # The apns library takes its tokens as hex strings, but Matrix
-                # uses base64 encoding (because it's much more efficient and
-                # the encoder is built in as of iOS7) so base64 decode and hex
-                # encode. Perhaps the library should just take binary strings...
-                tokens.append(binascii.b2a_hex(base64.b64decode(d.pushkey)))
+                tokens.append(base64.b64decode(d.pushkey))
             else:
                 logger.warn("Ignoring device of platform %s", d.data['platform'])
 
         alert = None
         if n.type == 'm.room.message':
-            alert = "Message from %s" % (n.fromuser)
+            alert = "Message from %s." % (n.fromuser)
 
         if not alert:
             logger.info("Don't know how to alert for a %s", n.type)
             return
-        msg = apns_clerk.Message(tokens, alert)
-        # truncate if > 256 bytes (apnsclient doesn't do this)
-        truncated = False
-        while len(msg.get_json_payload()) > 255:
-            alert = alert[:-1]
-            msg = apns_clerk.Message(tokens, alert)
-            if not truncated:
-                # add ellipsis to show we've truncated
-                # (which is 3 bytes, ironically), so chop an extra
-                # character here which is the *minimum* we'll need to
-                # take off, but probably need to go around more times.)
-                alert = alert[:-1]+u"\u2026"
-                truncated = True
-        logger.info("%s -> %s", alert, tokens)
 
-        conn = self.sess.get_connection(
-            ApnsPushkin.ADDRESSES[self.plaf],
-            certificate=self.cert
-        )
-        srv = apns_clerk.APNs(conn)
+        payload = {
+            "alert": {
+                "body": alert
+            }
+        }
+
+        logger.info("%s -> %s", alert, [base64.b64encode(t) for t in tokens])
 
         tries = 0
-        while tries < ApnsPushkin.MAX_TRIES:
-            # this appears to block for over three seconds...
-            # looks like this is because the thing just does a read
-            # with a 3 second timeout to wait for any errors to come in.
-            res = srv.send(msg)
-            for token, reason in res.failed.items():
-                code, errmsg = reason
-                # 'failed' are permanent failures
-                # we should report back to the HS and
-                # remove the pusher (when we have an interface for that)
-                logger.warn("Permanent APNS failure to %s: %s", token, errmsg);
-            for code, errmsg in res.errors:
-                logger.warn("Temporary APNS failure to %s", token, errmsg);
-            if not res.needs_retry():
-                break
-            msg = res.retry()
-            tries += 1
+        for t in tokens:
+            while tries < ApnsPushkin.MAX_TRIES:
+                try:
+                    res = self.pushbaby.send(payload, t)
+                    break
+                except:
+                    logger.exception("Exception sending push")
+
+                tries += 1
     
-        if res.needs_retry():
+        if tries == ApnsPushkin.MAX_TRIES:
             raise NotificationDispatchException("Max retries exceeded")
+
+    def on_failed_push(self, token, identifier, status):
+        logger.error("Error sending push to token %s, status", token, status)
+
