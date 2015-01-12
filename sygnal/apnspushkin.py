@@ -18,20 +18,43 @@ from . import Pushkin
 from .exceptions import PushkinSetupException, NotificationDispatchException
 
 from pushbaby import PushBaby
+import pushbaby.errors
 
 import logging
 import base64
+import time
+import gevent
 
 logger = logging.getLogger(__name__)
 
+create_failed_table_query = u"""
+CREATE TABLE IF NOT EXISTS apns_failed (id INTEGER PRIMARY KEY, b64token TEXT NOT NULL,
+last_failure_ts INTEGER NOT NULL,
+last_failure_type varchar(10) not null, last_failure_code INTEGER default -1, token_invalidated_ts INTEGER default -1);
+"""
+
+create_failed_index_query = u"""
+CREATE UNIQUE INDEX IF NOT EXISTS b64token on apns_failed(b64token);
+"""
+
+# These are the only ones of the errors returned in the APNS stream
+# that we want to feed back. Anything else is nothing to do with the
+# token.
+ERRORS_TO_FEED_BACK = (
+    pushbaby.errors.INVALID_TOKEN_SIZE,
+    pushbaby.errors.INVALID_TOKEN,
+)
+
+
 class ApnsPushkin(Pushkin):
     MAX_TRIES = 2
-    ADDRESSES = {'prod': 'push_production', 'sandbox': 'push_sandbox'}
+    DELETE_FEEDBACK_AFTER_SECS = 28 * 24 * 60 * 60 # a month(ish)
 
     def __init__(self, name):
         super(ApnsPushkin, self).__init__(name);
 
-    def setup(self, cfg):
+    def setup(self, ctx):
+        self.db = ctx.database
         self.certfile = self.getConfig('certfile')
         plaf = self.getConfig('platform')
         if not plaf or plaf == 'production':
@@ -40,18 +63,45 @@ class ApnsPushkin(Pushkin):
             self.plaf = 'sandbox'
         else:
             raise PushkinSetupException("Invalid platform: %s" % plaf)
+
+        self.db.query(create_failed_table_query)
+        self.db.query(create_failed_index_query)
             
-        self.pushbaby = PushBaby(certfile=self.certfile, platform="prod")
+        self.pushbaby = PushBaby(certfile=self.certfile, platform="prod", feedback_address=('localhost', 2196))
         self.pushbaby.on_failed_push = self.on_failed_push
         logger.info("APNS with cert file %s on %s platform", self.certfile, self.plaf)
+
+        # poll feedback in a little bit, not while we're busy starting up
+        gevent.spawn_later(10, self.do_feedback_poll)
 
     def dispatchNotification(self, n):
         tokens = []
         for d in n.devices:
             if 'platform' in d.data and d.data['platform'] == self.plaf:
-                tokens.append(base64.b64decode(d.pushkey))
+                tokens.append(d.pushkey)
             else:
                 logger.warn("Ignoring device of platform %s", d.data['platform'])
+
+        # check for tokens that have previously failed
+        token_set_str = u"(" + u",".join([u"?" for _ in tokens]) + u")"
+        feed_back_errors_set_str =  u"(" + u",".join([u"?" for _ in ApnsPushkin.ERROR_CODES_TO_FEED_BACK]) + u")"
+        args = []
+        args.extend([unicode(t) for t in tokens])
+        args.extend(ApnsPushkin.ERROR_CODES_TO_FEED_BACK)
+        rows = self.db.query(
+            "SELECT b64token,last_failure_type,last_failure_code FROM apns_failed WHERE b64token IN "+token_set_str+
+            " and ("+
+            "(last_failure_type = 'error' and last_failure_code in "+feed_back_errors_set_str+") "+
+            "or (last_failure_type = 'feedback')"+
+            ")",
+            args,
+            fetch='all'
+        )
+        rejected = []
+        for row in rows:
+            logger.warn("Rejecting token %s. Last failure of type '%s' code %d", r[0], r[1], r[2])
+            rejected.append(r[0])
+            tokens.remove(r[0])
 
         alert = None
         if n.type == 'm.room.message':
@@ -67,13 +117,13 @@ class ApnsPushkin(Pushkin):
             }
         }
 
-        logger.info("%s -> %s", alert, [base64.b64encode(t) for t in tokens])
+        logger.info("%s -> %s", alert, tokens)
 
         tries = 0
         for t in tokens:
             while tries < ApnsPushkin.MAX_TRIES:
                 try:
-                    res = self.pushbaby.send(payload, t)
+                    res = self.pushbaby.send(payload, base64.b64decode(t))
                     break
                 except:
                     logger.exception("Exception sending push")
@@ -83,6 +133,51 @@ class ApnsPushkin(Pushkin):
         if tries == ApnsPushkin.MAX_TRIES:
             raise NotificationDispatchException("Max retries exceeded")
 
+        return rejected
+
     def on_failed_push(self, token, identifier, status):
         logger.error("Error sending push to token %s, status", token, status)
+        # We store all errors (could be useful to get failures instead of digging
+        # through logs) but note that not all failures mean we should stop sending
+        # to that token.
+        self.db.query(
+            "INSERT OR REPLACE INTO apns_failed "+
+            "(b64token, last_failure_ts, last_failure_type, last_failure_code) "+
+            " VALUES (?, ?, 'error', ?)",
+            (base64.b64encode(token), long(time.time()), status)
+        )
 
+    def do_feedback_poll(self):
+        logger.info("Polling feedback...")
+        try:
+            feedback = self.pushbaby.get_all_feedback()
+            for fb in feedback:
+                self.db.query(
+                    "INSERT OR REPLACE INTO apns_failed "+
+                    "(b64token, last_failure_ts, last_failure_type, token_invalidated_ts) "+
+                    " VALUES (?, ?, 'feedback', ?)",
+                    (fb.token, long(time.time()), long(fb.ts))
+                )
+            logger.info("Stored %d feedback items", len(feedback))
+
+            # great, we're good until tomorrow
+            gevent.spawn_later(24 * 60 * 60, self.do_feedback_poll)
+        except:
+            logger.exception("Failed to poll for feedback, trying again in 10 minutes")
+            gevent.spawn_later(10 * 60, self.do_feedback_poll)
+
+        self.prune_failures()
+
+    def prune_failures(self):
+        """
+        Delete any failures older than a set amount of time.
+        This is the only way we delete them - we can't delete
+        them once we've sent them because a token could be in use by
+        more than one Home Server.
+        """
+        cutoff = long(time.time()) - ApnsPushkin.DELETE_FEEDBACK_AFTER_SECS
+        deleted = self.db.query(
+            "DELETE FROM apns_failed WHERE last_failure_ts < ?",
+            (cutoff,)
+        )
+        logger.info("deleted %d stale items from failure table", deleted)

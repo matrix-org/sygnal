@@ -22,6 +22,7 @@ import ConfigParser
 from flask import Flask, request
 
 from sygnal import Notification, InvalidNotificationException
+import sygnal.db
 
 import json
 import sys
@@ -33,17 +34,23 @@ app = Flask(__name__)
 app.debug = False
 app.config.from_object(__name__)
 
-CONFIG_SECTIONS = ['http', 'log', 'apps']
+CONFIG_SECTIONS = ['http', 'log', 'apps', 'db']
 CONFIG_DEFAULTS = {
     'port': '5000',
-    'loglevel': 'info'
+    'loglevel': 'info',
+    'dbfile': 'sygnal.db'
 }
 
 pushkins = {}
 
 
+class SygnalContext:
+    pass
+
+
 class ClientError(Exception):
     pass
+
 
 def parse_config():
     cfg = ConfigParser.SafeConfigParser(CONFIG_DEFAULTS)
@@ -104,8 +111,10 @@ def notify():
             
         pushkin = pushkins[appid]
         try:
-            pushkin.dispatchNotification(notif)
-            return flask.jsonify({})
+            rej = pushkin.dispatchNotification(notif)
+            return flask.jsonify({
+                "rejected": rej
+            })
         except:
             logger.exception("Failed to send push")
             flask.abort(500, "Failed to send push")
@@ -115,6 +124,9 @@ if __name__ == '__main__':
     cfg = parse_config()
     
     logging.basicConfig(level=getattr(logging, cfg.get('log', 'loglevel').upper()))
+
+    ctx = SygnalContext()
+    ctx.database = sygnal.db.Db(cfg.get('db', 'dbfile'))
 
     for key,val in cfg.items('apps'):
         parts = key.rsplit('.', 1)
@@ -133,7 +145,7 @@ if __name__ == '__main__':
 
     for p in pushkins:
         pushkins[p].cfg = cfg
-        pushkins[p].setup(cfg)
+        pushkins[p].setup(ctx)
         logger.info("Configured with app IDs: %r", pushkins.keys())
 
     logger.info("Setup completed, listening on port %s", cfg.get('http', 'port'))
