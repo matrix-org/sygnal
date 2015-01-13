@@ -21,12 +21,15 @@ class Device:
     def __init__(self, raw):
         self.app_id = None
         self.pushkey = None
+        self.pushkey_ts = 0
         self.data = None
 
         if 'app_id' not in raw:
             raise InvalidNotificationException("Device with no app_id")
         if 'pushkey' not in raw:
             raise InvalidNotificationException("Device with no pushkey")
+        if 'pushkeyTs' in raw:
+            self.pushkey_ts = raw['pushkeyTs']
         self.app_id = raw['app_id']
         self.pushkey = raw['pushkey']
         if 'data' in raw:
