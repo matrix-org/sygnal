@@ -1,0 +1,25 @@
+bind = '0.0.0.0:5000'
+preload_app = True
+proc_name = 'sygnal'
+workers = 1
+worker_class = 'gevent'
+worker_connections = 1000
+keepalive = 2
+daemon = False
+accesslog = 'var/access_log'
+errorlog = 'var/error_log'
+#accesslog = '-'
+#errorlog = '-'
+loglevel = 'debug'
+pidfile = 'sygnal.pid'
+
+def worker_exit(server, worker):
+    # NB. We obviously need to clean up in the worker, not
+    # the arbiter process. worker_exit runs in the worker
+    # (despite the docs claiming it runs after the worker
+    # has exited)
+    # We use a flask hook to handle the worker setup.
+    # Unfortunately flask doesn't have a shutdown hook
+    # (it's not a standard thing in WSGI).
+    import sygnal
+    sygnal.shutdown()

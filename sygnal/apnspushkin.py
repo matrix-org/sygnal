@@ -193,3 +193,7 @@ class ApnsPushkin(Pushkin):
             (cutoff,)
         )
         logger.info("deleted %d stale items from failure table", deleted)
+
+    def shutdown(self):
+        while self.pushbaby.messages_in_flight():
+            gevent.wait(timeout=1.0)

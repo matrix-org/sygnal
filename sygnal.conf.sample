@@ -1,5 +1,6 @@
 [log]
-loglevel=debug
+loglevel = debug
+logfile = var/sygnal.log
 
 [apps]
 org.matrix.matrixConsole.ios.type = apns
