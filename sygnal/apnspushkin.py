@@ -115,19 +115,37 @@ class ApnsPushkin(Pushkin):
                 # failure because HSes should probably have a fresh token
                 # if they actually want to use it
 
-        alert = None
+        loc_key = None
+        loc_args = None
         if n.type == 'm.room.message':
-            alert = "Message from %s." % (n.fromuser)
+            if n.roomName:
+                loc_key = 'MSG_FROM_USER_IN_ROOM'
+                loc_args = [n.fromuser, n.roomName]
+            elif n.roomAlias:
+                loc_key = 'MSG_FROM_USER_IN_ROOM'
+                loc_args = [n.fromuser, n.roomAlias]
+            else:
+                loc_key = 'MSG_FROM_USER'
+                loc_args = [n.fromuser]
+        elif n.type == 'm.call.invite':
+            loc_key = 'VOICE_CALL_FROM_USER'
+            loc_args = [n.fromuser]
 
-        if not alert:
+        if not loc_key:
             logger.info("Don't know how to alert for a %s", n.type)
             return
 
         payload = {
             "alert": {
-                "body": alert
+                "loc-key":loc_key
             }
         }
+        if loc_args:
+            payload['alert']['loc-args'] = loc_args
+
+        prio = 10
+        if n.prio == 'low':
+            prio = 5
 
         logger.info("'%s' -> %s", alert, tokens.keys())
 
@@ -135,7 +153,7 @@ class ApnsPushkin(Pushkin):
         for t in tokens.keys():
             while tries < ApnsPushkin.MAX_TRIES:
                 try:
-                    res = self.pushbaby.send(payload, base64.b64decode(t))
+                    res = self.pushbaby.send(payload, base64.b64decode(t), priority=prio)
                     break
                 except:
                     logger.exception("Exception sending push")

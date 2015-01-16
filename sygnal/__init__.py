@@ -73,6 +73,13 @@ class Notification:
             else:
                 self.__dict__[a] = notif[a]
 
+        optional_attrs = ['roomName', 'roomAlias', 'prio']
+        for a in attrs:
+            if a in notif:
+                self.__dict__[a] = notif[a]
+            else:
+                self.__dict__[a] = None
+
         if 'devices' not in notif or not isinstance(notif['devices'], list):
                raise InvalidNotificationException("Expected list in 'devices' key")
 
