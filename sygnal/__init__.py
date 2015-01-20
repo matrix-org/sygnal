@@ -53,8 +53,8 @@ class Device:
             raise InvalidNotificationException("Device with no app_id")
         if 'pushkey' not in raw:
             raise InvalidNotificationException("Device with no pushkey")
-        if 'pushkeyTs' in raw:
-            self.pushkey_ts = raw['pushkeyTs']
+        if 'pushkey_ts' in raw:
+            self.pushkey_ts = raw['pushkey_ts']
         self.app_id = raw['app_id']
         self.pushkey = raw['pushkey']
         if 'data' in raw:
