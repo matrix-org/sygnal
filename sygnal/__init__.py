@@ -41,6 +41,13 @@ CONFIG_DEFAULTS = {
 
 pushkins = {}
 
+class Tweaks:
+    def __init__(self, raw):
+        self.sound = None
+
+        if 'sound' in raw:
+            self.sound = raw['sound']
+
 
 class Device:
     def __init__(self, raw):
@@ -48,6 +55,7 @@ class Device:
         self.pushkey = None
         self.pushkey_ts = 0
         self.data = None
+        self.tweaks = None
 
         if 'app_id' not in raw:
             raise InvalidNotificationException("Device with no app_id")
@@ -55,6 +63,8 @@ class Device:
             raise InvalidNotificationException("Device with no pushkey")
         if 'pushkey_ts' in raw:
             self.pushkey_ts = raw['pushkey_ts']
+        if 'tweaks' in raw:
+            self.tweaks = Tweaks(raw['tweaks'])
         self.app_id = raw['app_id']
         self.pushkey = raw['pushkey']
         if 'data' in raw:
@@ -63,7 +73,7 @@ class Device:
 
 class Notification:
     def __init__(self, notif):
-        attrs = [ 'transition', 'id', 'type', 'from' ]
+        attrs = [ 'id', 'type', 'from' ]
         for a in attrs:
             if a not in notif:
                raise InvalidNotificationException("Expected '%s' key" % (a,))
@@ -73,7 +83,7 @@ class Notification:
             else:
                 self.__dict__[a] = notif[a]
 
-        optional_attrs = ['room_name', 'room_alias', 'prio']
+        optional_attrs = ['room_name', 'room_alias', 'prio', 'membership']
         for a in optional_attrs:
             if a in notif:
                 self.__dict__[a] = notif[a]

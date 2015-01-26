@@ -24,6 +24,7 @@ import logging
 import base64
 import time
 import gevent
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class ApnsPushkin(Pushkin):
             if 'platform' in d.data:
                 tokplaf = d.data['platform']
             if tokplaf == self.plaf:
-                tokens[d.pushkey] = d.pushkey_ts
+                tokens[d.pushkey] = d
             else:
                 logger.warn("Ignoring device of platform %s", d.data['platform'])
 
@@ -101,7 +102,7 @@ class ApnsPushkin(Pushkin):
         rejected = []
         for row in rows:
             token_invalidated_ts = row[3]
-            token_pushkey_ts = tokens[row[0]]
+            token_pushkey_ts = tokens[row[0]].pushkey_ts
             if token_pushkey_ts < token_invalidated_ts:
                 logger.warn(
                     "Rejecting token %s with ts %d. Last failure of type '%s' code %d, invalidated at %d",
@@ -120,16 +121,27 @@ class ApnsPushkin(Pushkin):
         if n.type == 'm.room.message':
             if n.room_name:
                 loc_key = 'MSG_FROM_USER_IN_ROOM'
-                loc_args = [n.fromuser, n.roomName]
+                loc_args = [n.fromuser, n.room_name]
             elif n.room_alias:
                 loc_key = 'MSG_FROM_USER_IN_ROOM'
-                loc_args = [n.fromuser, n.roomAlias]
+                loc_args = [n.fromuser, n.room_alias]
             else:
                 loc_key = 'MSG_FROM_USER'
                 loc_args = [n.fromuser]
         elif n.type == 'm.call.invite':
             loc_key = 'VOICE_CALL_FROM_USER'
             loc_args = [n.fromuser]
+        elif n.type == 'm.room.member':
+            if n.membership == 'invite':
+                if n.room_name:
+                    loc_key = 'USER_INVITE_TO_NAMED_ROOM'
+                    loc_args = [n.fromuser, n.room_name]
+                elif n.room_alias:
+                    loc_key = 'USER_INVITE_TO_NAMED_ROOM'
+                    loc_args = [n.fromuser, n.room_alias]
+                else:
+                    loc_key = 'USER_INVITE_TO_CHAT'
+                    loc_args = [n.fromuser]
 
         if not loc_key:
             logger.info("Don't know how to alert for a %s", n.type)
@@ -150,10 +162,13 @@ class ApnsPushkin(Pushkin):
         logger.info("'%s' -> %s", payload, tokens.keys())
 
         tries = 0
-        for t in tokens.keys():
+        for t,d in tokens.items():
             while tries < ApnsPushkin.MAX_TRIES:
+                thispayload = copy.copy(payload)
+                if d.tweaks.sound:
+                    thispayload['sound'] = d.tweaks.sound
                 try:
-                    res = self.pushbaby.send(payload, base64.b64decode(t), priority=prio)
+                    res = self.pushbaby.send(thispayload, base64.b64decode(t), priority=prio)
                     break
                 except:
                     logger.exception("Exception sending push")
