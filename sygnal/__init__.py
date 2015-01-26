@@ -73,8 +73,8 @@ class Notification:
             else:
                 self.__dict__[a] = notif[a]
 
-        optional_attrs = ['roomName', 'roomAlias', 'prio']
-        for a in attrs:
+        optional_attrs = ['room_name', 'room_alias', 'prio']
+        for a in optional_attrs:
             if a in notif:
                 self.__dict__[a] = notif[a]
             else:

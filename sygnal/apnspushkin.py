@@ -118,10 +118,10 @@ class ApnsPushkin(Pushkin):
         loc_key = None
         loc_args = None
         if n.type == 'm.room.message':
-            if n.roomName:
+            if n.room_name:
                 loc_key = 'MSG_FROM_USER_IN_ROOM'
                 loc_args = [n.fromuser, n.roomName]
-            elif n.roomAlias:
+            elif n.room_alias:
                 loc_key = 'MSG_FROM_USER_IN_ROOM'
                 loc_args = [n.fromuser, n.roomAlias]
             else:
@@ -133,7 +133,7 @@ class ApnsPushkin(Pushkin):
 
         if not loc_key:
             logger.info("Don't know how to alert for a %s", n.type)
-            return
+            return rejected
 
         payload = {
             "alert": {
@@ -147,7 +147,7 @@ class ApnsPushkin(Pushkin):
         if n.prio == 'low':
             prio = 5
 
-        logger.info("'%s' -> %s", alert, tokens.keys())
+        logger.info("'%s' -> %s", payload, tokens.keys())
 
         tries = 0
         for t in tokens.keys():
