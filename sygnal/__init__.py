@@ -41,6 +41,7 @@ CONFIG_DEFAULTS = {
 
 pushkins = {}
 
+
 class Tweaks:
     def __init__(self, raw):
         self.sound = None
@@ -65,10 +66,23 @@ class Device:
             self.pushkey_ts = raw['pushkey_ts']
         if 'tweaks' in raw:
             self.tweaks = Tweaks(raw['tweaks'])
+        else:
+            self.tweaks = Tweaks({})
         self.app_id = raw['app_id']
         self.pushkey = raw['pushkey']
         if 'data' in raw:
             self.data = raw['data']
+
+
+class Counts:
+    def __init__(self, raw):
+        self.unread = None
+        self.missed_calls = None
+
+        if 'unread' in raw:
+            self.unread = raw['unread']
+        if 'mised_calls' in raw:
+            self.mised_calls = raw['mised_calls']
 
 
 class Notification:
@@ -92,6 +106,11 @@ class Notification:
 
         if 'devices' not in notif or not isinstance(notif['devices'], list):
                raise InvalidNotificationException("Expected list in 'devices' key")
+
+        if 'counts' in notif:
+            self.counts = Counts(notif['counts'])
+        else:
+            self.counts = Counts({})
 
         self.devices = [Device(d) for d in notif['devices']]
         

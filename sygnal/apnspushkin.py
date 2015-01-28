@@ -143,17 +143,27 @@ class ApnsPushkin(Pushkin):
                     loc_key = 'USER_INVITE_TO_CHAT'
                     loc_args = [n.fromuser]
 
-        if not loc_key:
-            logger.info("Don't know how to alert for a %s", n.type)
-            return rejected
+        payload = {"alert": {}}
+        if loc_key:
+            payload['alert']['loc-key'] = loc_key
 
-        payload = {
-            "alert": {
-                "loc-key":loc_key
-            }
-        }
         if loc_args:
             payload['alert']['loc-args'] = loc_args
+
+        badge = None
+        if n.counts.unread is not None:
+            badge = n.counts.unread
+        if n.counts.missed_calls is not None:
+            if badge is None:
+                badge = 0
+            badge += n.counts.missed_calls
+
+        if badge is not None:
+            payload['badge'] = badge
+
+        if loc_key is None and badge is None:
+            logger.info("Nothing to do for alert of type %s", n.type)
+            return rejected
 
         prio = 10
         if n.prio == 'low':
