@@ -175,7 +175,7 @@ def handle_client_error(e):
 def root():
     return ""
 
-@app.route('/notify', methods=['POST'])
+@app.route('/_matrix/push/v1/notify', methods=['POST'])
 def notify():
     try:
         body = json.loads(request.data)
