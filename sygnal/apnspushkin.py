@@ -136,14 +136,14 @@ class ApnsPushkin(Pushkin):
             if room_display:
                 if content_display:
                     loc_key = 'MSG_FROM_USER_IN_ROOM_WITH_CONTENT'
-                    loc_args = [from_display, room_display, n.content]
+                    loc_args = [from_display, room_display, content_display]
                 else:
                     loc_key = 'MSG_FROM_USER_IN_ROOM'
                     loc_args = [from_display, n.room_name]
             else:
                 if content_display:
                     loc_key = 'MSG_FROM_USER_WITH_CONTENT'
-                    loc_args = [from_display, n.content]
+                    loc_args = [from_display, content_display]
                 else:
                     loc_key = 'MSG_FROM_USER'
                     loc_args = [from_display]
