@@ -123,15 +123,31 @@ class ApnsPushkin(Pushkin):
         loc_key = None
         loc_args = None
         if n.type == 'm.room.message':
+            room_display = None
             if n.room_name:
-                loc_key = 'MSG_FROM_USER_IN_ROOM'
-                loc_args = [from_display, n.room_name]
+                room_display = n.room_name
             elif n.room_alias:
-                loc_key = 'MSG_FROM_USER_IN_ROOM'
-                loc_args = [from_display, n.room_alias]
+                room_display = n.room_alias
+
+            content_display = None
+            if n.content and 'msgtype' in n.content and n.content['msgtype'] == 'm.text':
+                content_display = n.content['body']
+
+            if room_display:
+                if content_display:
+                    loc_key = 'MSG_FROM_USER_IN_ROOM_WITH_CONTENT'
+                    loc_args = [from_display, room_display, n.content]
+                else:
+                    loc_key = 'MSG_FROM_USER_IN_ROOM'
+                    loc_args = [from_display, n.room_name]
             else:
-                loc_key = 'MSG_FROM_USER'
-                loc_args = [from_display]
+                if content_display:
+                    loc_key = 'MSG_FROM_USER_WITH_CONTENT'
+                    loc_args = [from_display, n.content]
+                else:
+                    loc_key = 'MSG_FROM_USER'
+                    loc_args = [from_display]
+
         elif n.type == 'm.call.invite':
             loc_key = 'VOICE_CALL_FROM_USER'
             loc_args = [from_display]
