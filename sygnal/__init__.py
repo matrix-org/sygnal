@@ -87,17 +87,13 @@ class Counts:
 
 class Notification:
     def __init__(self, notif):
-        attrs = [ 'id', 'type', 'from' ]
+        attrs = [ 'id', 'type', 'sender' ]
         for a in attrs:
             if a not in notif:
-               raise InvalidNotificationException("Expected '%s' key" % (a,))
-            # 'from'  is reserved
-            if a == 'from':
-                self.fromuser = notif[a]
-            else:
-                self.__dict__[a] = notif[a]
+                raise InvalidNotificationException("Expected '%s' key" % (a,))
+            self.__dict__[a] = notif[a]
 
-        optional_attrs = ['room_name', 'room_alias', 'prio', 'membership']
+        optional_attrs = ['room_name', 'room_alias', 'prio', 'membership', 'sender_display_name']
         for a in optional_attrs:
             if a in notif:
                 self.__dict__[a] = notif[a]

@@ -116,32 +116,36 @@ class ApnsPushkin(Pushkin):
                 # failure because HSes should probably have a fresh token
                 # if they actually want to use it
 
+        from_display = n.sender
+        if n.sender_display_name is not None:
+            from_display = n.sender_display_name
+
         loc_key = None
         loc_args = None
         if n.type == 'm.room.message':
             if n.room_name:
                 loc_key = 'MSG_FROM_USER_IN_ROOM'
-                loc_args = [n.fromuser, n.room_name]
+                loc_args = [from_display, n.room_name]
             elif n.room_alias:
                 loc_key = 'MSG_FROM_USER_IN_ROOM'
-                loc_args = [n.fromuser, n.room_alias]
+                loc_args = [from_display, n.room_alias]
             else:
                 loc_key = 'MSG_FROM_USER'
-                loc_args = [n.fromuser]
+                loc_args = [from_display]
         elif n.type == 'm.call.invite':
             loc_key = 'VOICE_CALL_FROM_USER'
-            loc_args = [n.fromuser]
+            loc_args = [from_display]
         elif n.type == 'm.room.member':
             if n.membership == 'invite':
                 if n.room_name:
                     loc_key = 'USER_INVITE_TO_NAMED_ROOM'
-                    loc_args = [n.fromuser, n.room_name]
+                    loc_args = [from_display, n.room_name]
                 elif n.room_alias:
                     loc_key = 'USER_INVITE_TO_NAMED_ROOM'
-                    loc_args = [n.fromuser, n.room_alias]
+                    loc_args = [from_display, n.room_alias]
                 else:
                     loc_key = 'USER_INVITE_TO_CHAT'
-                    loc_args = [n.fromuser]
+                    loc_args = [from_display]
 
         payload = {"alert": {}}
         if loc_key:
