@@ -163,9 +163,8 @@ class ApnsPushkin(Pushkin):
                     loc_key = 'USER_INVITE_TO_CHAT'
                     loc_args = [from_display]
 
-        payload = {"alert": {}}
         if loc_key:
-            payload['alert']['loc-key'] = loc_key
+            payload['alert'] = {'loc-key': loc_key }
 
         if loc_args:
             payload['alert']['loc-args'] = loc_args
