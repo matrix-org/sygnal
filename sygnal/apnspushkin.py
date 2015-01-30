@@ -130,13 +130,20 @@ class ApnsPushkin(Pushkin):
                 room_display = n.room_alias
 
             content_display = None
-            if n.content and 'msgtype' in n.content and n.content['msgtype'] == 'm.text':
-                content_display = n.content['body']
+            action_display = None
+            if n.content and 'msgtype' in n.content:
+                if n.content['msgtype'] == 'm.text':
+                    content_display = n.content['body']
+                elif n.content['msgtype'] == 'm.emote':
+                    action_display = n.content['body']
 
             if room_display:
                 if content_display:
                     loc_key = 'MSG_FROM_USER_IN_ROOM_WITH_CONTENT'
                     loc_args = [from_display, room_display, content_display]
+                elif action_display:
+                    loc_key = 'ACTION_FROM_USER_IN_ROOM'
+                    loc_args = [room_display, from_display, action_display]
                 else:
                     loc_key = 'MSG_FROM_USER_IN_ROOM'
                     loc_args = [from_display, n.room_name]
@@ -144,6 +151,9 @@ class ApnsPushkin(Pushkin):
                 if content_display:
                     loc_key = 'MSG_FROM_USER_WITH_CONTENT'
                     loc_args = [from_display, content_display]
+                elif action_display:
+                    loc_key = 'ACTION_MSG_FROM_USER'
+                    loc_args = [from_display, action_display]
                 else:
                     loc_key = 'MSG_FROM_USER'
                     loc_args = [from_display]
