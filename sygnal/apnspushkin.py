@@ -24,7 +24,6 @@ import logging
 import base64
 import time
 import gevent
-import copy
 
 logger = logging.getLogger(__name__)
 
@@ -199,16 +198,18 @@ class ApnsPushkin(Pushkin):
         if n.prio == 'low':
             prio = 5
 
-        payload = {'aps': aps}
+        payload = {}
 
         logger.info("'%s' -> %s", payload, tokens.keys())
 
         tries = 0
         for t,d in tokens.items():
             while tries < ApnsPushkin.MAX_TRIES:
-                thispayload = copy.copy(payload)
+                thispayload = payload.copy()
+                thisaps = aps.copy()
                 if d.tweaks.sound:
-                    thispayload['sound'] = d.tweaks.sound
+                    thisaps['sound'] = d.tweaks.sound
+                thispayload['aps'] = thisaps
                 try:
                     res = self.pushbaby.send(thispayload, base64.b64decode(t), priority=prio)
                     break
