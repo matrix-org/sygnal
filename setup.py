@@ -33,7 +33,7 @@ setup(
     install_requires=[
         "flask==0.10.1",
         "gevent>=1.0.1",
-        "pushbaby",
+        "pushbaby>=0.0.5",
         "sqlite",
     ],
     long_description=read("README.rst"),
