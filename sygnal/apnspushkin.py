@@ -200,8 +200,6 @@ class ApnsPushkin(Pushkin):
 
         payload = {}
 
-        logger.info("'%s' -> %s", payload, tokens.keys())
-
         tries = 0
         for t,d in tokens.items():
             while tries < ApnsPushkin.MAX_TRIES:
@@ -210,6 +208,7 @@ class ApnsPushkin(Pushkin):
                 if d.tweaks.sound:
                     thisaps['sound'] = d.tweaks.sound
                 thispayload['aps'] = thisaps
+        	logger.info("'%s' -> %s", thispayload, t)
                 try:
                     res = self.pushbaby.send(thispayload, base64.b64decode(t), priority=prio)
                     break
