@@ -76,13 +76,7 @@ class ApnsPushkin(Pushkin):
     def dispatchNotification(self, n):
         tokens = {}
         for d in n.devices:
-            tokplaf = 'prod'
-            if 'platform' in d.data:
-                tokplaf = d.data['platform']
-            if tokplaf == self.plaf:
-                tokens[d.pushkey] = d
-            else:
-                logger.warn("Ignoring device of platform %s", d.data['platform'])
+            tokens[d.pushkey] = d
 
         # check for tokens that have previously failed
         token_set_str = u"(" + u",".join([u"?" for _ in tokens.keys()]) + u")"
