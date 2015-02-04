@@ -124,11 +124,18 @@ class ApnsPushkin(Pushkin):
 
             content_display = None
             action_display = None
-            if n.content and 'msgtype' in n.content:
-                if n.content['msgtype'] == 'm.text':
-                    content_display = n.content['body']
-                elif n.content['msgtype'] == 'm.emote':
-                    action_display = n.content['body']
+            is_image = False
+            if n.content and 'msgtype' in n.content and 'body' in n.content:
+                if 'body' in n.content:
+                    if n.content['msgtype'] == 'm.text':
+                        content_display = n.content['body']
+                    elif n.content['msgtype'] == 'm.emote':
+                        action_display = n.content['body']
+                    else:
+                        # fallback: 'body' should always be user-visible text in an m.room.message
+                        content_display = n.content['body']
+                if n.content['msgtype'] == 'm.image':
+                    is_image = True
 
             if room_display:
                 if content_display:
@@ -137,6 +144,9 @@ class ApnsPushkin(Pushkin):
                 elif action_display:
                     loc_key = 'ACTION_FROM_USER_IN_ROOM'
                     loc_args = [room_display, from_display, action_display]
+                elif is_image:
+                    loc_key = 'IMAGE_FROM_USER_IN_ROOM'
+                    loc_args = [from_display, room_display]
                 else:
                     loc_key = 'MSG_FROM_USER_IN_ROOM'
                     loc_args = [from_display, n.room_name]
@@ -145,8 +155,11 @@ class ApnsPushkin(Pushkin):
                     loc_key = 'MSG_FROM_USER_WITH_CONTENT'
                     loc_args = [from_display, content_display]
                 elif action_display:
-                    loc_key = 'ACTION_MSG_FROM_USER'
+                    loc_key = 'ACTION_FROM_USER'
                     loc_args = [from_display, action_display]
+                elif is_image:
+                    loc_key = 'IMAGE_FROM_USER'
+                    loc_args = [from_display]
                 else:
                     loc_key = 'MSG_FROM_USER'
                     loc_args = [from_display]
