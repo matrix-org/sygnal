@@ -192,21 +192,23 @@ def notify():
     if len(notif.devices) == 0:
         flask.abort(400, "No devices in notification")
 
+    rej = []
+
     for d in notif.devices:
         appid = d.app_id.lower()
         if appid not in pushkins:
             logger.warn("Got notification for unknown app ID %s", appid)
-            flask.abort(400, "Got notification for unknown app ID %s" % (appid,))
+            rej.append(d.pushkey)
 
         pushkin = pushkins[appid]
         try:
-            rej = pushkin.dispatchNotification(notif)
-            return flask.jsonify({
-                "rejected": rej
-            })
+            rej.extend(pushkin.dispatchNotification(notif))
         except:
             logger.exception("Failed to send push")
             flask.abort(500, "Failed to send push")
+    return flask.jsonify({
+        "rejected": rej
+    })
 
 
 @app.before_first_request
