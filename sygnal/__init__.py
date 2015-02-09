@@ -199,6 +199,7 @@ def notify():
         if appid not in pushkins:
             logger.warn("Got notification for unknown app ID %s", appid)
             rej.append(d.pushkey)
+            continue
 
         pushkin = pushkins[appid]
         try:
