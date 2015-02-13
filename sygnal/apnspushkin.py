@@ -250,7 +250,7 @@ class ApnsPushkin(Pushkin):
                     "INSERT OR REPLACE INTO apns_failed "+
                     "(b64token, last_failure_ts, last_failure_type, token_invalidated_ts) "+
                     " VALUES (?, ?, 'feedback', ?)",
-                    (fb.token, long(time.time()), long(fb.ts))
+                    (fb.token.decode('utf8'), long(time.time()), long(fb.ts))
                 )
             logger.info("Stored %d feedback items", len(feedback))
 
