@@ -246,11 +246,12 @@ class ApnsPushkin(Pushkin):
         try:
             feedback = self.pushbaby.get_all_feedback()
             for fb in feedback:
+		b64token = unicode(base64.b64encode(fb.token))
                 self.db.query(
                     "INSERT OR REPLACE INTO apns_failed "+
                     "(b64token, last_failure_ts, last_failure_type, token_invalidated_ts) "+
                     " VALUES (?, ?, 'feedback', ?)",
-                    (fb.token.decode('utf8'), long(time.time()), long(fb.ts))
+                    (b64token, long(time.time()), long(fb.ts))
                 )
             logger.info("Stored %d feedback items", len(feedback))
 
