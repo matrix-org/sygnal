@@ -39,13 +39,18 @@ class Db:
             job = self.db_queue.get()
             job()
 
-    def query(self, query, args=(), fetch=None):
+    def update_query(self, query, args=()):
+        return self.query(query, args, commit=True)
+
+    def query(self, query, args=(), fetch=None, commit=False):
         res = {}
         ev = threading.Event()
         def runquery():
             try:
                 c = self.db.cursor()
                 c.execute(query, args)
+                if commit:
+                    c.commit()
                 if fetch == 1 or fetch == 'one':
                     res['rows'] = c.fetchone()
                 elif fetch == 'all':

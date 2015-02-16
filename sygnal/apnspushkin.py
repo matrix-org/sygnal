@@ -67,7 +67,7 @@ class ApnsPushkin(Pushkin):
         self.db.query(create_failed_index_query)
             
         self.pushbaby = PushBaby(certfile=self.certfile, platform=self.plaf)
-        self.pushbaby.on_failed_push = self.on_failed_push
+        self.pushbaby.on_push_failed = self.on_push_failed
         logger.info("APNS with cert file %s on %s platform", self.certfile, self.plaf)
 
         # poll feedback in a little bit, not while we're busy starting up
@@ -229,12 +229,12 @@ class ApnsPushkin(Pushkin):
 
         return rejected
 
-    def on_failed_push(self, token, identifier, status):
+    def on_push_failed(self, token, identifier, status):
         logger.error("Error sending push to token %s, status", token, status)
         # We store all errors (could be useful to get failures instead of digging
         # through logs) but note that not all failures mean we should stop sending
         # to that token.
-        self.db.query(
+        self.db.update_query(
             "INSERT OR REPLACE INTO apns_failed "+
             "(b64token, last_failure_ts, last_failure_type, last_failure_code, token_invalidated_ts) "+
             " VALUES (?, ?, 'error', ?, ?)",
@@ -246,8 +246,8 @@ class ApnsPushkin(Pushkin):
         try:
             feedback = self.pushbaby.get_all_feedback()
             for fb in feedback:
-		b64token = unicode(base64.b64encode(fb.token))
-                self.db.query(
+                b64token = unicode(base64.b64encode(fb.token))
+                self.db.update_query(
                     "INSERT OR REPLACE INTO apns_failed "+
                     "(b64token, last_failure_ts, last_failure_type, token_invalidated_ts) "+
                     " VALUES (?, ?, 'feedback', ?)",
