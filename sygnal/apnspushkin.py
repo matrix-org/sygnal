@@ -81,18 +81,17 @@ class ApnsPushkin(Pushkin):
         # check for tokens that have previously failed
         token_set_str = u"(" + u",".join([u"%s" for _ in tokens.keys()]) + u")"
         feed_back_errors_set_str =  u"(" + u",".join([u"%s" for _ in ApnsPushkin.ERRORS_TO_FEED_BACK]) + u")"
-        args = tokens.keys() + [("%d" % e) for e in ApnsPushkin.ERRORS_TO_FEED_BACK]
         q = (
             "SELECT b64token,last_failure_type,last_failure_code,token_invalidated_ts "+
             "FROM apns_failed WHERE b64token IN "+token_set_str+
             " and ("+
             "(last_failure_type = 'error' and last_failure_code in "+feed_back_errors_set_str+") "+
             "or (last_failure_type = 'feedback')"+
-            ")", args
+            ")"
             )
         args = []
         args.extend([unicode(t) for t in tokens.keys()])
-        args.extend(ApnsPushkin.ERRORS_TO_FEED_BACK)
+        args.extend([(u"%d" % e) for e in ApnsPushkin.ERRORS_TO_FEED_BACK])
         rows = self.db.query(q, args, fetch='all')
 
         rejected = []
