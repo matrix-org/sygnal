@@ -234,7 +234,7 @@ class ApnsPushkin(Pushkin):
         # We store all errors (could be useful to get failures instead of digging
         # through logs) but note that not all failures mean we should stop sending
         # to that token.
-        self.db.update_query(
+        self.db.query(
             "INSERT OR REPLACE INTO apns_failed "+
             "(b64token, last_failure_ts, last_failure_type, last_failure_code, token_invalidated_ts) "+
             " VALUES (?, ?, 'error', ?, ?)",
@@ -246,8 +246,8 @@ class ApnsPushkin(Pushkin):
         try:
             feedback = self.pushbaby.get_all_feedback()
             for fb in feedback:
-                b64token = unicode(base64.b64encode(fb.token))
-                self.db.update_query(
+		b64token = unicode(base64.b64encode(fb.token))
+                self.db.query(
                     "INSERT OR REPLACE INTO apns_failed "+
                     "(b64token, last_failure_ts, last_failure_type, token_invalidated_ts) "+
                     " VALUES (?, ?, 'feedback', ?)",
