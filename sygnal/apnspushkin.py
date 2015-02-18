@@ -180,6 +180,9 @@ class ApnsPushkin(Pushkin):
                 else:
                     loc_key = 'USER_INVITE_TO_CHAT'
                     loc_args = [from_display]
+        else:
+            logger.info("Not sending push for event of type  %s", n.type)
+            return rejected
 
         aps = {}
         if loc_key:
