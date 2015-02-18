@@ -180,9 +180,6 @@ class ApnsPushkin(Pushkin):
                 else:
                     loc_key = 'USER_INVITE_TO_CHAT'
                     loc_args = [from_display]
-        else:
-            logger.info("Not sending push for event of type  %s", n.type)
-            return rejected
 
         aps = {}
         if loc_key:
@@ -202,7 +199,7 @@ class ApnsPushkin(Pushkin):
         if badge is not None:
             aps['badge'] = badge
 
-        if loc_key is None and badge is None:
+        if loc_key is None and badge != 0:
             logger.info("Nothing to do for alert of type %s", n.type)
             return rejected
 
