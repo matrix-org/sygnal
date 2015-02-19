@@ -209,6 +209,9 @@ class ApnsPushkin(Pushkin):
 
         payload = {}
 
+        if loc_key and n.room_id:
+            payload['room_id'] = n.room_id
+
         tries = 0
         for t,d in tokens.items():
             while tries < ApnsPushkin.MAX_TRIES:
