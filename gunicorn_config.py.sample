@@ -1,5 +1,5 @@
 bind = '0.0.0.0:5000'
-preload_app = True
+preload_app = False
 proc_name = 'sygnal'
 workers = 1
 worker_class = 'gevent'
