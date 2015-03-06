@@ -93,7 +93,7 @@ class Notification:
                 raise InvalidNotificationException("Expected '%s' key" % (a,))
             self.__dict__[a] = notif[a]
 
-        optional_attrs = ['room_name', 'room_alias', 'prio', 'membership', 'sender_display_name', 'content', 'room_id']
+        optional_attrs = ['room_name', 'room_alias', 'prio', 'membership', 'sender_display_name', 'content', 'room_id', 'user_is_target']
         for a in optional_attrs:
             if a in notif:
                 self.__dict__[a] = notif[a]

@@ -170,16 +170,17 @@ class ApnsPushkin(Pushkin):
             loc_key = 'VOICE_CALL_FROM_USER'
             loc_args = [from_display]
         elif n.type == 'm.room.member':
-            if n.membership == 'invite':
-                if n.room_name:
-                    loc_key = 'USER_INVITE_TO_NAMED_ROOM'
-                    loc_args = [from_display, n.room_name]
-                elif n.room_alias:
-                    loc_key = 'USER_INVITE_TO_NAMED_ROOM'
-                    loc_args = [from_display, n.room_alias]
-                else:
-                    loc_key = 'USER_INVITE_TO_CHAT'
-                    loc_args = [from_display]
+            if n.user_is_target:
+                if n.membership == 'invite':
+                    if n.room_name:
+                        loc_key = 'USER_INVITE_TO_NAMED_ROOM'
+                        loc_args = [from_display, n.room_name]
+                    elif n.room_alias:
+                        loc_key = 'USER_INVITE_TO_NAMED_ROOM'
+                        loc_args = [from_display, n.room_alias]
+                    else:
+                        loc_key = 'USER_INVITE_TO_CHAT'
+                        loc_args = [from_display]
 
         aps = {}
         if loc_key:
