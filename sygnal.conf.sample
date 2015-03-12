@@ -3,5 +3,5 @@ loglevel = debug
 logfile = var/sygnal.log
 
 [apps]
-org.matrix.matrixConsole.ios.type = apns
-org.matrix.matrixConsole.ios.certfile = org.matrix.matrixConsole_prod_APNS.pem
+org.matrix.console.ios.type = apns
+org.matrix.console.ios.certfile = org.matrix.matrixConsole_prod_APNS.pem

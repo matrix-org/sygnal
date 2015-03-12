@@ -1,10 +1,5 @@
+# Customise these settings to your needs
 bind = '0.0.0.0:5000'
-preload_app = False
-proc_name = 'sygnal'
-workers = 1
-worker_class = 'gevent'
-worker_connections = 1000
-keepalive = 2
 daemon = False
 accesslog = 'var/access_log'
 errorlog = 'var/error_log'
@@ -12,6 +7,17 @@ errorlog = 'var/error_log'
 #errorlog = '-'
 loglevel = 'debug'
 pidfile = 'sygnal.pid'
+worker_connections = 1000
+keepalive = 2
+proc_name = 'sygnal'
+
+# It is inadvisable to change anything below here,
+# since these settings make gunicorn work appropriately
+# with sygnal.
+
+preload_app = False
+workers = 1
+worker_class = 'gevent'
 
 def worker_exit(server, worker):
     # NB. We obviously need to clean up in the worker, not
