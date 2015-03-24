@@ -5,3 +5,5 @@ logfile = var/sygnal.log
 [apps]
 org.matrix.console.ios.type = apns
 org.matrix.console.ios.certfile = org.matrix.matrixConsole_prod_APNS.pem
+org.matrix.console.android.type = gcm
+org.matrix.console.android.apiKey = ooceihohx3Tho3p_roflmao
