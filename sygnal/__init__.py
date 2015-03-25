@@ -140,6 +140,8 @@ class ClientError(Exception):
 
 def parse_config():
     cfg = ConfigParser.SafeConfigParser(CONFIG_DEFAULTS)
+    # Make keys case-sensitive
+    cfg.optionxform = str
     for sect in CONFIG_SECTIONS:
         try:
             cfg.add_section(sect)
@@ -195,7 +197,7 @@ def notify():
     rej = []
 
     for d in notif.devices:
-        appid = d.app_id.lower()
+        appid = d.app_id
         if appid not in pushkins:
             logger.warn("Got notification for unknown app ID %s", appid)
             rej.append(d.pushkey)
