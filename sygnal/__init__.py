@@ -109,7 +109,7 @@ class Notification:
             self.counts = Counts({})
 
         self.devices = [Device(d) for d in notif['devices']]
-
+        
 
 class Pushkin(object):
     def __init__(self, name):
@@ -122,7 +122,7 @@ class Pushkin(object):
         if not self.cfg.has_option('apps', '%s.%s' % (self.name, key)):
             return None
         return self.cfg.get('apps', '%s.%s' % (self.name, key))
-
+        
     def dispatchNotification(self, n):
         pass
 
@@ -209,7 +209,6 @@ def notify():
         except:
             logger.exception("Failed to send push")
             flask.abort(500, "Failed to send push")
-    logger.debug("Responding with rejected pushkeys %s", rej)
     return flask.jsonify({
         "rejected": rej
     })
