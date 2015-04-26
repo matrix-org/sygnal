@@ -4,10 +4,10 @@ Introduction
 sygnal is a reference Push Gateway for Matrix (http://matrix.org/).
 
 See
-https://github.com/matrix-org/matrix-doc/blob/master/drafts/push_overview.rst
+https://github.com/matrix-org/matrix-doc/blob/master/specification/42_push_overview.rst
 for a high level overview of how notifications work in Matrix.
 
-https://github.com/matrix-org/matrix-doc/blob/master/drafts/push_pgwapi.rst
+https://github.com/matrix-org/matrix-doc/blob/master/specification/44_push_push_gw_api.rst
 described the protocol that Matrix Home Servers use to send notifications to
 Push Gateways such as sygnal.
 
@@ -26,7 +26,7 @@ and level of sygnal's log file. The [apps] section is where you set up different
 apps that are to be handled. Each app has a 'type' and its own configuration. It
 also has an App ID: this is the app_id as specified when setting up a Matrix
 pusher (see
-https://github.com/matrix-org/matrix-doc/blob/master/drafts/push_csapi.rst). The
+https://github.com/matrix-org/matrix-doc/blob/master/specification/43_push_cs_api.rst). The
 name of an app configuration key is the app_id and the name of the
 configuration key, joined by a single dot ('.'). App Types are listed below.
 
