@@ -106,7 +106,7 @@ class ApnsPushkin(Pushkin):
                 rejected.append(row[0])
                 del tokens[row[0]]
             else:
-                logger.info("Have a failure for token %s of type '%s' code %d but this token postdates it: allowing.", row[0], row[1], row[2])
+                logger.info("Have a failure for token %s of type '%s' at %d code %d but this token postdates it (%d): allowing.", row[0], row[1], token_invalidated_ts, row[2], token_pushkey_ts)
                 # This pushkey may be alive again, but we don't delete the
                 # failure because HSes should probably have a fresh token
                 # if they actually want to use it
