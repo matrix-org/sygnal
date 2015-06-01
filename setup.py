@@ -34,7 +34,6 @@ setup(
         "flask==0.10.1",
         "gevent>=1.0.1",
         "pushbaby>=0.0.6",
-        "sqlite",
     ],
     long_description=read("README.rst"),
 )
