@@ -89,8 +89,10 @@ class GcmPushkin(Pushkin):
 
         # Flatten because GCM can't handle nested objects
         if getattr(n, 'content', None):
-            data['msgtype'] = n.content["msgtype"]
-            data['body'] = n.content["body"]
+            if "msgtype" in n.content:
+                data['msgtype'] = n.content["msgtype"]
+            if "body" in n.content:
+                data['body'] = n.content["body"]
 
         if getattr(n, 'counts', None):
             data['unread'] = n.counts.unread
