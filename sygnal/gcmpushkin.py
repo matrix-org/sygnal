@@ -68,6 +68,7 @@ class GcmPushkin(Pushkin):
                 self.canonical_reg_id_store.set_canonical_id(reg_id, canonical_reg_id)
 
             failed.extend(response.failed.keys())
+            logger.info("Reg IDs permanently failed: %r", response.failed);
 
             if not response.needs_retry():
                 break
@@ -75,6 +76,9 @@ class GcmPushkin(Pushkin):
             request = response.retry()
             gevent.wait(timeout=response.delay(retry))
         else:
+            # response.unavailable is a list of reg IDs that failed temporarily
+            # but is undocumented in gcmclient's API
+            logger.info("Gave up retrying reg IDs: %r", response.unavailable);
             failed.extend(response.unavailable)
 
         return failed
