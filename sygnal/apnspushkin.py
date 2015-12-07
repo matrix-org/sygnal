@@ -200,9 +200,6 @@ class ApnsPushkin(Pushkin):
         if badge is not None:
             aps['badge'] = badge
 
-        if loc_key:
-            aps['content-available'] = 1
-
         if loc_key is None and badge != 0:
             logger.info("Nothing to do for alert of type %s", n.type)
             return rejected
