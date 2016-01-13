@@ -92,6 +92,11 @@ class GcmPushkin(Pushkin):
                         failed_reg_id, error_code
                     )
                     failed.append(failed_reg_id)
+                else:
+                    logger.info(
+                        "Reg ID %r has temporarily failed with code %r",
+                        failed_reg_id, error_code
+                    )
 
             if not response.needs_retry():
                 break
