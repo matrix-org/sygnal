@@ -29,6 +29,18 @@ logger = logging.getLogger(__name__)
 
 MAX_TRIES = 3
 
+# The error codes that mean a registration ID will never
+# succeed and we should reject it upstream.
+# We include NotRegistered here too for good measure, even
+# though gcm-client 'helpfully' extracts these into a separate
+# list.
+PERMANENT_FAILURE_CODES = [
+    'MissingRegistration',
+    'InvalidRegistration',
+    'NotRegistered',
+    'InvalidPackageName',
+    'MismatchSenderId',
+]
 
 class GcmPushkin(Pushkin):
 
@@ -67,8 +79,19 @@ class GcmPushkin(Pushkin):
             for reg_id, canonical_reg_id in response.canonical.items():
                 self.canonical_reg_id_store.set_canonical_id(reg_id, canonical_reg_id)
 
-            failed.extend(response.failed.keys())
-            logger.info("Reg IDs permanently failed: %r", response.failed);
+            # gcm-client extracts the NotRegistered errors and puts the reg_ids in
+            # the not_registered list.
+            failed.extend(response.not_registered)
+            logger.info("Reg IDs Not Registered: %r", response.not_registered);
+            # Other errors live in the `failed` dict, but some of those mean
+            # the reg_id is permanently dead too and we should remove it.
+            for failed_reg_id,error_code in response.failed.items():
+                if error_code in PERMANENT_FAILURE_CODES:
+                    logger.info(
+                        "Reg ID %r has permanently failed with code %r",
+                        failed_reg_id, error_code
+                    )
+                    failed.append(failed_reg_id)
 
             if not response.needs_retry():
                 break
@@ -79,7 +102,6 @@ class GcmPushkin(Pushkin):
             # response.unavailable is a list of reg IDs that failed temporarily
             # but is undocumented in gcmclient's API
             logger.info("Gave up retrying reg IDs: %r", response.unavailable);
-            failed.extend(response.unavailable)
 
         return failed
 
