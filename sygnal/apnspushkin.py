@@ -200,7 +200,7 @@ class ApnsPushkin(Pushkin):
         if badge is not None:
             aps['badge'] = badge
 
-        if loc_key is None and badge != 0:
+        if loc_key is None and badge is None:
             logger.info("Nothing to do for alert of type %s", n.type)
             return rejected
 
