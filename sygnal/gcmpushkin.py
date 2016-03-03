@@ -68,6 +68,8 @@ class GcmPushkin(Pushkin):
         request = gcmclient.JSONMessage(pushkeys, data)
         failed = []
 
+        logger.info("%r => %r", data, pushkeys);
+
         for retry in range(0, MAX_TRIES):
             response = self.gcm.send(request)
 
