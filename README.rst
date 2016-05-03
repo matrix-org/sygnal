@@ -23,12 +23,13 @@ There are two config files:
 
 sygnal.cfg contains configuration for sygnal itself. This includes the location
 and level of sygnal's log file. The [apps] section is where you set up different
-apps that are to be handled. Each app has a 'type' and its own configuration. It
-also has an App ID: this is the app_id as specified when setting up a Matrix
-pusher (see
-http://matrix.org/docs/spec/#pushers-http-api). The
-name of an app configuration key is the app_id and the name of the
-configuration key, joined by a single dot ('.'). App Types are listed below.
+apps that are to be handled. Keys in this section take the form of the app_id
+and the name of the configuration key, joined by a single dot ('.'). The app_id
+is as specified when setting up a Matrix pusher (see
+http://matrix.org/docs/spec/#pushers-http-api). So for example, the `type` for
+the App ID of `com.example.myapp.ios.prod` would be specified as follows::
+
+  com.example.myapp.ios.prod.type = foobar
 
 The gunicorn sample config contains everything necessary to run sygnal from
 gunicorn. The shutdown hook handles clean shutdown. You can customise other
@@ -41,13 +42,18 @@ multiple greenlets to handle all the requests).
 
 App Types
 ---------
-At present, the only supported App Type is 'apns'. 
+There are two supported App Types:
 
 apns
   This sends push notifications to iOS apps via the Apple Push Notification
   Service (APNS). It expects the 'certfile' parameter to be a path relative to
   sygnal's working directory of a PEM file containing the APNS certificate and
   unencrypted private key.
+
+gcm:
+  This sens messages via Google Cloud Messaging (GCM) and hence can be used
+  to deliver notifications to Android apps. It expects the 'apiKey' parameter
+  to contain the secret GCM key.
 
 Running
 =======
