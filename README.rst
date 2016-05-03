@@ -51,7 +51,7 @@ apns
   unencrypted private key.
 
 gcm:
-  This sens messages via Google Cloud Messaging (GCM) and hence can be used
+  This sends messages via Google Cloud Messaging (GCM) and hence can be used
   to deliver notifications to Android apps. It expects the 'apiKey' parameter
   to contain the secret GCM key.
 
