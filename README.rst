@@ -14,8 +14,8 @@ Push Gateways such as sygnal.
 Setup
 =====
 sygnal is a plain WSGI app, although when used with gunicorn can
-use gunicorn's extra hook to perform a clean shutdown which tries as hard a
-spossible to ensure no messages are lost.
+use gunicorn's extra hook to perform a clean shutdown which tries as hard as
+possible to ensure no messages are lost.
 
 There are two config files:
  * sygnal.cfg (The app-specific config file)
