@@ -51,7 +51,7 @@ apns
   sygnal's working directory of a PEM file containing the APNS certificate and
   unencrypted private key.
 
-gcm:
+gcm
   This sends messages via Google Cloud Messaging (GCM) and hence can be used
   to deliver notifications to Android apps. It expects the 'apiKey' parameter
   to contain the secret GCM key.
