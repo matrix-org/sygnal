@@ -24,6 +24,7 @@ import ConfigParser
 import json
 import sys
 import logging
+from logging.handlers import WatchedFileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +220,7 @@ def setup():
     logging.getLogger().setLevel(getattr(logging, cfg.get('log', 'loglevel').upper()))
     logfile = cfg.get('log', 'logfile')
     if logfile != '':
-        handler = logging.FileHandler(logfile)
+        handler = WatchedFileHandler(logfile)
         formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
         handler.setFormatter(formatter)
         logging.getLogger().addHandler(handler)
