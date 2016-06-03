@@ -41,7 +41,6 @@ CONFIG_DEFAULTS = {
 
 pushkins = {}
 
-
 class Tweaks:
     def __init__(self, raw):
         self.sound = None
@@ -214,7 +213,6 @@ def notify():
     })
 
 
-@app.before_first_request
 def setup():
     cfg = parse_config()
 
@@ -240,6 +238,7 @@ def setup():
                 pushkins[parts[0]] = make_pushkin(val, parts[0])
             except:
                 logger.exception("Failed to load module for kind %s", val)
+                raise
 
     if len(pushkins) == 0:
         logger.error("No app IDs are configured. Edit sygnal.conf to define some.")
@@ -260,3 +259,6 @@ def shutdown():
         p.shutdown()
         i += 1
     logger.info("Shutdown complete...")
+
+
+setup()

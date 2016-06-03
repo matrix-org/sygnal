@@ -19,6 +19,15 @@ preload_app = False
 workers = 1
 worker_class = 'gevent'
 
+# Used in the hooks
+try:
+    import sygnal
+except:
+    # We swallow this exception because it's generally a completely
+    # useless, "No module named sygnal" due to it failing to load
+    # the sygnal module because an exception was thrown.
+    print "Failed to load sygnal - check your log file"
+
 def worker_exit(server, worker):
     # NB. We obviously need to clean up in the worker, not
     # the arbiter process. worker_exit runs in the worker
@@ -27,5 +36,4 @@ def worker_exit(server, worker):
     # We use a flask hook to handle the worker setup.
     # Unfortunately flask doesn't have a shutdown hook
     # (it's not a standard thing in WSGI).
-    import sygnal
     sygnal.shutdown()
