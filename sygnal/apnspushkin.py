@@ -181,7 +181,7 @@ class ApnsPushkin(Pushkin):
                     else:
                         loc_key = 'USER_INVITE_TO_CHAT'
                         loc_args = [from_display]
-        else:
+        elif n.type:
             # A type of message was received that we don't know about
             # but it was important enough for a push to have got to us
             loc_key = 'MSG_FROM_USER'
