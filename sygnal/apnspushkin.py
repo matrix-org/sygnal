@@ -117,7 +117,7 @@ class ApnsPushkin(Pushkin):
 
         loc_key = None
         loc_args = None
-        if n.type == 'm.room.message':
+        if n.type == 'm.room.message' or n.type == 'm.room.encrypted':
             room_display = None
             if n.room_name:
                 room_display = n.room_name
@@ -181,6 +181,11 @@ class ApnsPushkin(Pushkin):
                     else:
                         loc_key = 'USER_INVITE_TO_CHAT'
                         loc_args = [from_display]
+        else:
+            # A type of message was received that we don't know about
+            # but it was important enough for a push to have got to us
+            loc_key = 'MSG_FROM_USER'
+            loc_args = [from_display]
 
         aps = {}
         if loc_key:
