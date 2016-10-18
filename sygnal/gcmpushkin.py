@@ -17,7 +17,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import logging
 
-import gcmclient
+import grequests
 import gevent
 
 from . import Pushkin
@@ -26,8 +26,9 @@ from .exceptions import PushkinSetupException
 
 logger = logging.getLogger(__name__)
 
-
+GCM_URL = "http://gcm-http.googleapis.com/gcm/send"
 MAX_TRIES = 3
+RETRY_DELAY_BASE = 10
 
 # The error codes that mean a registration ID will never
 # succeed and we should reject it upstream.
@@ -50,10 +51,9 @@ class GcmPushkin(Pushkin):
     def setup(self, ctx):
         self.db = ctx.database
 
-        api_key = self.getConfig('apiKey')
-        if not api_key:
+        self.api_key = self.getConfig('apiKey')
+        if not self.api_key:
             raise PushkinSetupException("No API key set in config")
-        self.gcm = gcmclient.GCM(api_key)
         self.canonical_reg_id_store = CanonicalRegIdStore(self.db)
 
     def dispatchNotification(self, n):
@@ -63,62 +63,110 @@ class GcmPushkin(Pushkin):
                     self.canonical_reg_id_store.get_canonical_ids(pushkeys).items()]
 
         data = GcmPushkin.build_data(n)
+        headers = {
+            "User-Agent": "sygnal",
+            "Content-Type": "application/json",
+            "Authorization": "key=%s" % (self.api_key,)
+        }
 
         # TODO: Implement collapse_key to queue only one message per room.
-        request = gcmclient.JSONMessage(pushkeys, data)
         failed = []
 
         logger.info("%r => %r", data, pushkeys);
 
-        for retry in range(0, MAX_TRIES):
-            response = self.gcm.send(request)
+        for retry_number in range(0, MAX_TRIES):
+            body = {
+                "data": data,
+                "priority": 'normal' if n.prio == 'low' else 'high',
+            }
+            if len(pushkeys) == 1:
+                body['to'] = pushkeys[0]
+            else:
+                body['registration_ids'] = pushkeys
 
-            for reg_id, msg_id in response.success.items():
-                logger.debug(
-                    "Successfully sent notification %s to %s as %s",
-                    n.id, reg_id, msg_id)
+            req = grequests.post(
+                GCM_URL, json=body, headers=headers
+            )
+            req.send()
 
-            for reg_id, canonical_reg_id in response.canonical.items():
-                self.canonical_reg_id_store.set_canonical_id(reg_id, canonical_reg_id)
-
-            # gcm-client extracts the NotRegistered errors and puts the reg_ids in
-            # the not_registered list.
-            failed.extend(response.not_registered)
-            logger.info("Reg IDs Not Registered: %r", response.not_registered);
-            # Other errors live in the `failed` dict, but some of those mean
-            # the reg_id is permanently dead too and we should remove it.
-            for failed_reg_id,error_code in response.failed.items():
-                if error_code in PERMANENT_FAILURE_CODES:
-                    logger.info(
-                        "Reg ID %r has permanently failed with code %r",
-                        failed_reg_id, error_code
+            if req.response.status_code / 100 == 5:
+                success = False
+                logger.debug("%d from server, waiting to try again", response.status_code)
+            elif req.response.status_code == 400:
+                logger.error(
+                    "%d from server, we have sent something invalid! Error: %r",
+                    response.status_code,
+                    response.json(),
+                )
+                # permanent failure: give up
+                return failed
+            elif req.response.status_code == 401:
+                logger.error(
+                    "401 from server! Our API key is invalid? Error: %r",
+                    response.json(),
+                )
+                # permanent failure: give up
+                return failed
+            elif req.response.status_code / 100 == 2:
+                resp_object = req.response.json()
+                if 'results' not in resp_object:
+                    logger.error(
+                        "%d from server but response contained no 'results' key: %r",
+                        req.response.status_code, req.response.text,
                     )
-                    failed.append(failed_reg_id)
-                else:
-                    logger.info(
-                        "Reg ID %r has temporarily failed with code %r",
-                        failed_reg_id, error_code
+                if len(resp_object['results']) < len(pushkeys):
+                    logger.error(
+                        "Sent %d notifications but only got %d responses!",
+                        len(n.devices), len(resp_object['results'])
                     )
 
-            if not response.needs_retry():
-                break
+                new_pushkeys = []
+                for i, result in enumerate(resp_object['results']):
+                    if 'registration_id' in result:
+                        self.canonical_reg_id_store.set_canonical_id(
+                            pushkeys[i], result['registration_id']
+                        )
+                    if 'error' in result:
+                        logger.warn("Error for pushkey %s: %s", pushkeys[i], result['error'])
+                        if result['error'] in PERMANENT_FAILURE_CODES:
+                            logger.info(
+                                "Reg ID %r has permanently failed with code %r",
+                                 pushkeys[i], result['error']
+                            )
+                            failed.append(pushkeys[i])
+                        else:
+                            logger.info(
+                                "Reg ID %r has temporarily failed with code %r",
+                                 pushkeys[i], result['error']
+                            )
+                            new_pushkeys.append(pushkeys[i])
+                if len(new_pushkeys) == 0:
+                    return failed
+                pushkeys = new_pushkeys
 
-            request = response.retry()
-            gevent.wait(timeout=response.delay(retry))
-        else:
-            # response.unavailable is a list of reg IDs that failed temporarily
-            # but is undocumented in gcmclient's API
-            logger.info("Gave up retrying reg IDs: %r", response.unavailable);
+            retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
+            if 'retry-after' in req.response.headers:
+                try:
+                    retry_delay = int(req.response.headers['retry-after'])
+                except:
+                    pass
+            logger.info("Retrying in %d seconds", retry_delay)
+            gevent.wait(timeout=retry_delay)
 
+        logger.info("Gave up retrying reg IDs: %r", pushkeys)
         return failed
 
     @staticmethod
     def build_data(n):
         data = {}
-        for attr in ['id', 'type', 'sender', 'room_name', 'room_alias', 'prio', 'membership',
+        for attr in ['id', 'type', 'sender', 'room_name', 'room_alias', 'membership',
                      'sender_display_name', 'content', 'room_id']:
             if hasattr(n, attr):
                 data[attr] = getattr(n, attr)
+
+        data['prio'] = 'high'
+        if n.prio == 'low':
+            data['prio'] = 'normal';
 
         # Flatten because GCM can't handle nested objects
         if getattr(n, 'content', None):
