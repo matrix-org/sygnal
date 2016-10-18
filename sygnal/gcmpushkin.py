@@ -26,7 +26,7 @@ from .exceptions import PushkinSetupException
 
 logger = logging.getLogger(__name__)
 
-GCM_URL = "http://gcm-http.googleapis.com/gcm/send"
+GCM_URL = "https://gcm-http.googleapis.com/gcm/send"
 MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
 
