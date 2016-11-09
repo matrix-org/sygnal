@@ -35,13 +35,21 @@ RETRY_DELAY_BASE = 10
 # We include NotRegistered here too for good measure, even
 # though gcm-client 'helpfully' extracts these into a separate
 # list.
-PERMANENT_FAILURE_CODES = [
+BAD_PUSHKEY_FAILURE_CODES = [
     'MissingRegistration',
     'InvalidRegistration',
     'NotRegistered',
     'InvalidPackageName',
     'MismatchSenderId',
+]
+
+# Failure codes that mean the message in question will never
+# succeed, so don't retry, but the registration ID is fine
+# so we should not reject it upstream.
+BAD_MESSAGE_FAILURE_CODES = [
     'MessageTooBig',
+    'InvalidDataKey',
+    'InvalidTtl',
 ]
 
 class GcmPushkin(Pushkin):
@@ -129,12 +137,17 @@ class GcmPushkin(Pushkin):
                         )
                     if 'error' in result:
                         logger.warn("Error for pushkey %s: %s", pushkeys[i], result['error'])
-                        if result['error'] in PERMANENT_FAILURE_CODES:
+                        if result['error'] in BAD_PUSHKEY_FAILURE_CODES:
                             logger.info(
-                                "Reg ID %r has permanently failed with code %r",
+                                "Reg ID %r has permanently failed with code %r: rejecting upstream",
                                  pushkeys[i], result['error']
                             )
                             failed.append(pushkeys[i])
+                        elif result['error'] in BAD_MESSAGE_FAILURE_CODES:
+                            logger.info(
+                                "Message for reg ID %r has permanently failed with code %r",
+                                 pushkeys[i], result['error']
+                            )
                         else:
                             logger.info(
                                 "Reg ID %r has temporarily failed with code %r",
