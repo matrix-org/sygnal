@@ -41,6 +41,7 @@ PERMANENT_FAILURE_CODES = [
     'NotRegistered',
     'InvalidPackageName',
     'MismatchSenderId',
+    'MessageTooBig',
 ]
 
 class GcmPushkin(Pushkin):
