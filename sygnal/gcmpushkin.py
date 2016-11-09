@@ -168,13 +168,6 @@ class GcmPushkin(Pushkin):
         if n.prio == 'low':
             data['prio'] = 'normal';
 
-        # Flatten because GCM can't handle nested objects
-        if getattr(n, 'content', None):
-            if "msgtype" in n.content:
-                data['msgtype'] = n.content["msgtype"]
-            if "body" in n.content:
-                data['body'] = n.content["body"]
-
         if getattr(n, 'counts', None):
             data['unread'] = n.counts.unread
             data['missed_calls'] = n.counts.missed_calls
