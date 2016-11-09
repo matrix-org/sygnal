@@ -151,7 +151,7 @@ class GcmPushkin(Pushkin):
                 except:
                     pass
             logger.info("Retrying in %d seconds", retry_delay)
-            gevent.wait(timeout=retry_delay)
+            gevent.sleep(timeout=retry_delay)
 
         logger.info("Gave up retrying reg IDs: %r", pushkeys)
         return failed
