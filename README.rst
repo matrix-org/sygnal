@@ -4,11 +4,10 @@ Introduction
 sygnal is a reference Push Gateway for Matrix (http://matrix.org/).
 
 See
-http://matrix.org/docs/spec/#push-notifications
-for a high level overview of how notifications work in Matrix.
+http://matrix.org/docs/spec/client_server/r0.2.0.html#id51 for a high level overview of how notifications work in Matrix.
 
-http://matrix.org/docs/spec/#http-notification-protocol
-described the protocol that Matrix Home Servers use to send notifications to
+http://matrix.org/docs/spec/push_gateway/unstable.html#post-matrix-push-r0-notify
+describes the protocol that Matrix Home Servers use to send notifications to
 Push Gateways such as sygnal.
 
 Setup
@@ -27,7 +26,7 @@ and level of sygnal's log file. The [apps] section is where you set up different
 apps that are to be handled. Keys in this section take the form of the app_id
 and the name of the configuration key, joined by a single dot ('.'). The app_id
 is as specified when setting up a Matrix pusher (see
-http://matrix.org/docs/spec/#pushers-http-api). So for example, the `type` for
+http://matrix.org/docs/spec/client_server/r0.2.0.html#post-matrix-client-r0-pushers-set). So for example, the `type` for
 the App ID of `com.example.myapp.ios.prod` would be specified as follows::
 
   com.example.myapp.ios.prod.type = foobar
