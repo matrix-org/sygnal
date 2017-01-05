@@ -9,3 +9,4 @@ tmp/
 build/
 dist/
 matrix_sygnal.egg-info/
+certs/
