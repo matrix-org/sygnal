@@ -4,3 +4,4 @@ gunicorn_config.py
 var/
 sygnal.pid
 sygnal.db
+venv/
