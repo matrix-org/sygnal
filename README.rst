@@ -40,6 +40,13 @@ Note that sygnal uses gevent. You should therefore not change the worker class
 or the number of workers (which should be 1: in gevent, a single worker uses
 multiple greenlets to handle all the requests).
 
+Push Key
+--------
+The Specs define that the content of `pushkey` should be the `Token` or `ID` returned by Apple or Google.
+This Token is `Bynary`, so if you are converting it to a `String` you should add the following to your config
+
+  com.example.myapp.ios.prod.string_pushkey = yes
+
 App Types
 ---------
 There are two supported App Types:

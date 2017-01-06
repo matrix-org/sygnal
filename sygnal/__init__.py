@@ -42,7 +42,8 @@ CONFIG_DEFAULTS = {
     'port': '5000',
     'loglevel': 'info',
     'logfile': '',
-    'dbfile': 'sygnal.db'
+    'dbfile': 'sygnal.db',
+    'string_pushkey': False
 }
 
 pushkins = {}
@@ -203,13 +204,14 @@ def notify():
 
     for d in notif.devices:
         appid = d.app_id
-        d.pushkey = base64.b64encode(unhexlify(d.pushkey))
         if appid not in pushkins:
             logger.warn("Got notification for unknown app ID %s", appid)
             rej.append(d.pushkey)
             continue
 
         pushkin = pushkins[appid]
+        if pushkin.string_pushkey == 'yes':
+            d.pushkey = base64.b64encode(unhexlify(d.pushkey))
         try:
             rej.extend(pushkin.dispatchNotification(notif))
         except:
