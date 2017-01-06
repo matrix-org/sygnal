@@ -55,6 +55,7 @@ class ApnsPushkin(Pushkin):
     def setup(self, ctx):
         self.db = ctx.database
         self.certfile = self.getConfig('certfile')
+        self.string_pushkey = self.getConfig('string_pushkey')
         plaf = self.getConfig('platform')
         if not plaf or plaf == 'production' or plaf == 'prod':
             self.plaf = 'prod'
