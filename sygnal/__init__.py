@@ -216,7 +216,9 @@ def notify():
             logger.exception("Failed to send push")
             flask.abort(500, "Failed to send push")
     return flask.jsonify({
-        "rejected": rej
+        "rejected": rej,
+        "synapseRequest": request.data,
+        
     })
 
 
