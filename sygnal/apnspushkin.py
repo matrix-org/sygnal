@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2014 OpenMarket Ltd
+# Copyright 2017 Vector Creations Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -229,7 +230,7 @@ class ApnsPushkin(Pushkin):
                 if d.tweaks.sound:
                     thisaps['sound'] = d.tweaks.sound
                 thispayload['aps'] = thisaps
-        	logger.info("'%s' -> %s", thispayload, t)
+                logger.info("'%s' -> %s", thispayload, t)
                 try:
                     res = self.pushbaby.send(thispayload, base64.b64decode(t), priority=prio)
                     break
