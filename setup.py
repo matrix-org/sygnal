@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright 2014 OpenMarket Ltd
+# Copyright 2017 Vector Creations Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +34,7 @@ setup(
     install_requires=[
         "flask==0.10.1",
         "gevent>=1.0.1",
-        "pushbaby>=0.0.6",
+        "pushbaby>=0.0.8",
         "grequests",
     ],
     long_description=read("README.rst"),
