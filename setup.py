@@ -34,7 +34,7 @@ setup(
     install_requires=[
         "flask==0.10.1",
         "gevent>=1.0.1",
-        "pushbaby>=0.0.8",
+        "pushbaby>=0.0.9",
         "grequests",
     ],
     long_description=read("README.rst"),
