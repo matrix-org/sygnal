@@ -26,6 +26,11 @@ import sys
 import logging
 from logging.handlers import WatchedFileHandler
 
+# ZBox App For String only Tokens
+import base64
+from binascii import unhexlify
+format = '!cH32sH40s'
+
 logger = logging.getLogger(__name__)
 
 app = Flask('sygnal')
@@ -198,6 +203,7 @@ def notify():
 
     for d in notif.devices:
         appid = d.app_id
+        d.pushkey = base64.b64encode(unhexlify(d.pushkey))
         if appid not in pushkins:
             logger.warn("Got notification for unknown app ID %s", appid)
             rej.append(d.pushkey)
@@ -210,7 +216,9 @@ def notify():
             logger.exception("Failed to send push")
             flask.abort(500, "Failed to send push")
     return flask.jsonify({
-        "rejected": rej
+        "rejected": rej,
+        "synapseRequest": request.data,
+        
     })
 
 
