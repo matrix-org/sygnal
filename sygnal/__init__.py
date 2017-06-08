@@ -81,8 +81,8 @@ class Counts:
 
         if 'unread' in raw:
             self.unread = raw['unread']
-        if 'mised_calls' in raw:
-            self.mised_calls = raw['mised_calls']
+        if 'missed_calls' in raw:
+            self.missed_calls = raw['missed_calls']
 
 
 class Notification:
