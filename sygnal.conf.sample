@@ -7,3 +7,7 @@ com.example.myapp.ios.type = apns
 com.example.myapp.ios.certfile = com.example.myApp_prod_APNS.pem
 com.example.myapp.android.type = gcm
 com.example.myapp.android.apiKey = your_api_key_for_gcm
+com.example.myapp.mqtt.type = mqtt
+com.example.myapp.mqtt.broker = mqtt_broker
+com.example.myapp.mqtt.username = mqtt_username
+com.example.myapp.mqtt.password = mqtt_password

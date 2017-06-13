@@ -36,6 +36,7 @@ setup(
         "gevent>=1.0.1",
         "pushbaby>=0.0.9",
         "grequests",
+        "paho-mqtt",
     ],
     long_description=read("README.rst"),
 )
