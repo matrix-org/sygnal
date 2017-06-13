@@ -129,6 +129,24 @@ class Pushkin(object):
     def shutdown(self):
         pass
 
+    @staticmethod
+    def build_data(n):
+        data = {}
+        for attr in ['id', 'type', 'sender', 'room_name', 'room_alias', 'membership',
+                     'sender_display_name', 'content', 'room_id']:
+            if hasattr(n, attr):
+                data[attr] = getattr(n, attr)
+
+        data['prio'] = 'high'
+        if n.prio == 'low':
+            data['prio'] = 'normal';
+
+        if getattr(n, 'counts', None):
+            data['unread'] = n.counts.unread
+            data['missed_calls'] = n.counts.missed_calls
+
+        return data
+
 
 class SygnalContext:
     pass
