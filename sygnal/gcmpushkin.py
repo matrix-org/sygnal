@@ -26,7 +26,7 @@ from .exceptions import PushkinSetupException
 
 logger = logging.getLogger(__name__)
 
-GCM_URL = "https://fcm.googleapis.com/gcm/send"
+GCM_URL = "https://fcm.googleapis.com/fcm/send"
 MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
 
@@ -165,7 +165,7 @@ class GcmPushkin(Pushkin):
                 except:
                     pass
             logger.info("Retrying in %d seconds", retry_delay)
-            gevent.sleep(timeout=retry_delay)
+            gevent.sleep(seconds=retry_delay)
 
         logger.info("Gave up retrying reg IDs: %r", pushkeys)
         return failed
