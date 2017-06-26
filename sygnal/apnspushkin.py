@@ -245,7 +245,7 @@ class ApnsPushkin(Pushkin):
         return rejected
 
     def on_push_failed(self, token, identifier, status):
-        logger.error("Error sending push to token %s, status", token, status)
+        logger.error("Error sending push to token %s, status %s", token, status)
         # We store all errors (could be useful to get failures instead of digging
         # through logs) but note that not all failures mean we should stop sending
         # to that token.
