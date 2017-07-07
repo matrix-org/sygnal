@@ -100,10 +100,10 @@ class GcmPushkin(Pushkin):
 
             if req.response is None:
                 success = False
-                logger.debug("Request failed, waiting to try again", response.exception)
+                logger.debug("Request failed, waiting to try again", req.exception)
             elif req.response.status_code / 100 == 5:
                 success = False
-                logger.debug("%d from server, waiting to try again", response.status_code)
+                logger.debug("%d from server, waiting to try again", req.response.status_code)
             elif req.response.status_code == 400:
                 logger.error(
                     "%d from server, we have sent something invalid! Error: %r",
