@@ -168,7 +168,19 @@ class ApnsPushkin(Pushkin):
                     loc_args = [from_display]
 
         elif n.type == 'm.call.invite':
-            loc_key = 'VOICE_CALL_FROM_USER'
+            is_video_call = False
+
+            # This detection works only for hs that uses WebRTC for calls
+            if n.content and 'offer' in n.content and 'sdp' in n.content['offer']:
+                sdp = n.content['offer']['sdp']
+                if 'm=video' in sdp:
+                    is_video_call = True
+
+            if is_video_call:
+                loc_key = 'VIDEO_CALL_FROM_USER'
+            else:
+                loc_key = 'VOICE_CALL_FROM_USER'
+
             loc_args = [from_display]
         elif n.type == 'm.room.member':
             if n.user_is_target:
