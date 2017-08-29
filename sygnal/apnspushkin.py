@@ -143,7 +143,7 @@ class ApnsPushkin(Pushkin):
             if room_display:
                 if is_image:
                     loc_key = 'IMAGE_FROM_USER_IN_ROOM'
-                    loc_args = [from_display, room_display]
+                    loc_args = [from_display, content_display, room_display]
                 elif content_display:
                     loc_key = 'MSG_FROM_USER_IN_ROOM_WITH_CONTENT'
                     loc_args = [from_display, room_display, content_display]
@@ -156,7 +156,7 @@ class ApnsPushkin(Pushkin):
             else:
                 if is_image:
                     loc_key = 'IMAGE_FROM_USER'
-                    loc_args = [from_display]
+                    loc_args = [from_display, content_display]
                 elif content_display:
                     loc_key = 'MSG_FROM_USER_WITH_CONTENT'
                     loc_args = [from_display, content_display]
