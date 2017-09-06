@@ -107,15 +107,15 @@ class GcmPushkin(Pushkin):
             elif req.response.status_code == 400:
                 logger.error(
                     "%d from server, we have sent something invalid! Error: %r",
-                    response.status_code,
-                    response.json(),
+                    req.response.status_code,
+                    req.response.json(),
                 )
                 # permanent failure: give up
                 return failed
             elif req.response.status_code == 401:
                 logger.error(
                     "401 from server! Our API key is invalid? Error: %r",
-                    response.json(),
+                    req.response.json(),
                 )
                 # permanent failure: give up
                 return failed
