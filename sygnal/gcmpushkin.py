@@ -108,17 +108,17 @@ class GcmPushkin(Pushkin):
                 logger.error(
                     "%d from server, we have sent something invalid! Error: %r",
                     req.response.status_code,
-                    req.response.json(),
+                    req.response.text,
                 )
                 # permanent failure: give up
-                return failed
+                raise Exception("Invalid request")
             elif req.response.status_code == 401:
                 logger.error(
                     "401 from server! Our API key is invalid? Error: %r",
-                    req.response.json(),
+                    req.response.text,
                 )
                 # permanent failure: give up
-                return failed
+                raise Exception("Not authorized to push")
             elif req.response.status_code / 100 == 2:
                 resp_object = req.response.json()
                 if 'results' not in resp_object:
