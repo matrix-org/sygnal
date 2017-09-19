@@ -176,7 +176,7 @@ class GcmPushkin(Pushkin):
     @staticmethod
     def build_data(n):
         data = {}
-        for attr in ['id', 'type', 'sender', 'room_name', 'room_alias', 'membership',
+        for attr in ['event_id', 'type', 'sender', 'room_name', 'room_alias', 'membership',
                      'sender_display_name', 'content', 'room_id']:
             if hasattr(n, attr):
                 data[attr] = getattr(n, attr)

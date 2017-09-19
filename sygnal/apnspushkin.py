@@ -112,6 +112,40 @@ class ApnsPushkin(Pushkin):
                 # failure because HSes should probably have a fresh token
                 # if they actually want to use it
 
+        payload = None
+        if n.event_id and not n.type:
+            payload = self.get_payload_event_id_only(n)
+        else:
+            payload = self.get_payload_full(n)
+
+        prio = 10
+        if n.prio == 'low':
+            prio = 5
+
+        tries = 0
+        for t,d in tokens.items():
+            while tries < ApnsPushkin.MAX_TRIES:
+                thispayload = payload
+                if 'aps' in thispayload:
+                    thispayload = payload.copy()
+                    thispayload['aps'] = thispayload['aps'].copy()
+                if d.tweaks.sound:
+                    thispayload['aps']['sound'] = d.tweaks.sound
+                logger.info("'%s' -> %s", thispayload, t)
+                try:
+                    res = self.pushbaby.send(thispayload, base64.b64decode(t), priority=prio)
+                    break
+                except:
+                    logger.exception("Exception sending push")
+
+                tries += 1
+
+        if tries == ApnsPushkin.MAX_TRIES:
+            raise NotificationDispatchException("Max retries exceeded")
+
+        return rejected
+
+    def get_payload_full(self, n):
         from_display = n.sender
         if n.sender_display_name is not None:
             from_display = n.sender_display_name
@@ -213,36 +247,29 @@ class ApnsPushkin(Pushkin):
             logger.info("Nothing to do for alert of type %s", n.type)
             return rejected
 
-        prio = 10
-        if n.prio == 'low':
-            prio = 5
-
         payload = {}
 
         if loc_key and n.room_id:
             payload['room_id'] = n.room_id
 
-        tries = 0
-        for t,d in tokens.items():
-            while tries < ApnsPushkin.MAX_TRIES:
-                thispayload = payload.copy()
-                thisaps = aps.copy()
-                if d.tweaks.sound:
-                    thisaps['sound'] = d.tweaks.sound
-                thispayload['aps'] = thisaps
-                logger.info("'%s' -> %s", thispayload, t)
-                try:
-                    res = self.pushbaby.send(thispayload, base64.b64decode(t), priority=prio)
-                    break
-                except:
-                    logger.exception("Exception sending push")
+        payload['aps'] = aps
 
-                tries += 1
-    
-        if tries == ApnsPushkin.MAX_TRIES:
-            raise NotificationDispatchException("Max retries exceeded")
+        return payload
 
-        return rejected
+    def get_payload_event_id_only(self, n):
+        payload = {}
+
+        if n.room_id:
+            payload['room_id'] = n.room_id
+        if n.event_id:
+            payload['event_id'] = n.event_id
+
+        if n.counts.unread is not None:
+            payload['unread_count'] = n.counts.unread
+        if n.counts.missed_calls is not None:
+            payload['missed_calls'] = n.counts.missed_calls
+
+        return payload
 
     def on_push_failed(self, token, identifier, status):
         logger.error("Error sending push to token %s, status %s", token, status)
