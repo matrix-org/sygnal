@@ -98,7 +98,7 @@ class GcmPushkin(Pushkin):
             poke_start_time = time.time()
 
             req = grequests.post(
-                GCM_URL, json=body, headers=headers
+                GCM_URL, json=body, headers=headers, timeout=10,
             )
             req.send()
 
