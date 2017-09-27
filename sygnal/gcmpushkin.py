@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2014 Leon Handreke
+# Copyright 2017 New Vector Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logging
+import time
 
 import grequests
 import gevent
@@ -93,10 +95,14 @@ class GcmPushkin(Pushkin):
             else:
                 body['registration_ids'] = pushkeys
 
+            poke_start_time = time.time()
+
             req = grequests.post(
                 GCM_URL, json=body, headers=headers
             )
             req.send()
+
+            logger.debug("GCM request took %f seconds", time.time() - poke_start_time)
 
             if req.response is None:
                 success = False
