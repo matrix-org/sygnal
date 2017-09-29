@@ -26,6 +26,11 @@ import sys
 import logging
 from logging.handlers import WatchedFileHandler
 
+# ZBox App For String only Tokens
+import base64
+from binascii import unhexlify
+format = '!cH32sH40s'
+
 logger = logging.getLogger(__name__)
 
 app = Flask('sygnal')
@@ -37,7 +42,8 @@ CONFIG_DEFAULTS = {
     'port': '5000',
     'loglevel': 'info',
     'logfile': '',
-    'dbfile': 'sygnal.db'
+    'dbfile': 'sygnal.db',
+    'string_pushkey': False
 }
 
 pushkins = {}
@@ -210,13 +216,17 @@ def notify():
             continue
 
         pushkin = pushkins[appid]
+        if pushkin.string_pushkey == 'yes':
+            d.pushkey = base64.b64encode(unhexlify(d.pushkey))
         try:
             rej.extend(pushkin.dispatchNotification(notif))
         except:
             logger.exception("Failed to send push")
             flask.abort(500, "Failed to send push")
     return flask.jsonify({
-        "rejected": rej
+        "rejected": rej,
+        "synapseRequest": request.data,
+        
     })
 
 

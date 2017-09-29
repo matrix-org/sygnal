@@ -4,3 +4,9 @@ gunicorn_config.py
 var/
 sygnal.pid
 sygnal.db
+venv/
+tmp/
+build/
+dist/
+matrix_sygnal.egg-info/
+certs/
