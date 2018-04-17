@@ -38,6 +38,7 @@ create_failed_index_query = u"""
 CREATE UNIQUE INDEX IF NOT EXISTS b64token on apns_failed(b64token);
 """
 
+MAX_FIELD_LENGTH = 1024
 
 class ApnsPushkin(Pushkin):
     MAX_TRIES = 2
@@ -149,15 +150,16 @@ class ApnsPushkin(Pushkin):
         from_display = n.sender
         if n.sender_display_name is not None:
             from_display = n.sender_display_name
+        from_display = from_display[0:MAX_FIELD_LENGTH]
 
         loc_key = None
         loc_args = None
         if n.type == 'm.room.message' or n.type == 'm.room.encrypted':
             room_display = None
             if n.room_name:
-                room_display = n.room_name
+                room_display = n.room_name[0:MAX_FIELD_LENGTH]
             elif n.room_alias:
-                room_display = n.room_alias
+                room_display = n.room_alias[0:MAX_FIELD_LENGTH]
 
             content_display = None
             action_display = None
@@ -209,10 +211,10 @@ class ApnsPushkin(Pushkin):
                 if n.membership == 'invite':
                     if n.room_name:
                         loc_key = 'USER_INVITE_TO_NAMED_ROOM'
-                        loc_args = [from_display, n.room_name]
+                        loc_args = [from_display, n.room_name[0:MAX_FIELD_LENGTH]]
                     elif n.room_alias:
                         loc_key = 'USER_INVITE_TO_NAMED_ROOM'
-                        loc_args = [from_display, n.room_alias]
+                        loc_args = [from_display, n.room_alias[0:MAX_FIELD_LENGTH]]
                     else:
                         loc_key = 'USER_INVITE_TO_CHAT'
                         loc_args = [from_display]
