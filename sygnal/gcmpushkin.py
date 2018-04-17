@@ -187,7 +187,7 @@ class GcmPushkin(Pushkin):
                      'sender_display_name', 'content', 'room_id']:
             if hasattr(n, attr):
                 data[attr] = getattr(n, attr)
-                if hasattar(data[attr], '__len__') and len(data[attr]) > MAX_BYTES_PER_FIELD:
+                if len(data[attr]) > MAX_BYTES_PER_FIELD:
                     data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
 
         data['prio'] = 'high'
