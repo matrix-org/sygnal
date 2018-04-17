@@ -168,7 +168,7 @@ class GcmPushkin(Pushkin):
                 pushkeys = new_pushkeys
 
             retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
-            if 'retry-after' in req.response.headers:
+            if req.response and 'retry-after' in req.response.headers:
                 try:
                     retry_delay = int(req.response.headers['retry-after'])
                 except:
