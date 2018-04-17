@@ -189,7 +189,7 @@ class GcmPushkin(Pushkin):
                 data[attr] = getattr(n, attr)
                 # Truncate fields to a sensible maximum length. If the whole
                 # body is too long, GCM will reject it.
-                if len(data[attr]) > MAX_BYTES_PER_FIELD:
+                if data[attr] is not None and len(data[attr]) > MAX_BYTES_PER_FIELD:
                     data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
 
         data['prio'] = 'high'
