@@ -38,6 +38,9 @@ create_failed_index_query = u"""
 CREATE UNIQUE INDEX IF NOT EXISTS b64token on apns_failed(b64token);
 """
 
+# Max length of individual fields. Pushbaby will truncate appropriate
+# fields of the push to fit the whole body in the max size, but it's
+# not very fast so keep things to a sensible size.
 MAX_FIELD_LENGTH = 1024
 
 class ApnsPushkin(Pushkin):
