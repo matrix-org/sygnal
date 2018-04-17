@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 GCM_URL = "https://fcm.googleapis.com/fcm/send"
 MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
+MAX_BYTES_PER_FIELD = 1024
 
 # The error codes that mean a registration ID will never
 # succeed and we should reject it upstream.
@@ -186,6 +187,8 @@ class GcmPushkin(Pushkin):
                      'sender_display_name', 'content', 'room_id']:
             if hasattr(n, attr):
                 data[attr] = getattr(n, attr)
+                if hasattar(data[attr], '__len__') and len(data[attr]) > MAX_BYTES_PER_FIELD:
+                    data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
 
         data['prio'] = 'high'
         if n.prio == 'low':
