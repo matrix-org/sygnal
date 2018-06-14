@@ -25,10 +25,12 @@ import gevent
 from . import Pushkin
 from .exceptions import PushkinSetupException
 
+#DEBUG
+import pika
+
 
 logger = logging.getLogger(__name__)
 
-GCM_URL = "https://fcm.googleapis.com/fcm/send"
 MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
 MAX_BYTES_PER_FIELD = 1024
@@ -96,86 +98,23 @@ class GcmPushkin(Pushkin):
             else:
                 body['registration_ids'] = pushkeys
 
-            poke_start_time = time.time()
+            #####
+            # DEBUG
+            logger.debug("[RABBITMQ]\nheader=%r\nbody=%r\n", headers.items(), body.items())
+            connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+            channel = connection.channel()
 
-            req = grequests.post(
-                GCM_URL, json=body, headers=headers, timeout=10,
-            )
-            req.send()
+            # Create a queue on the broker, idempotent operation
+            channel.queue_declare(queue='hello')
+            new_body = str(headers.items() + body.items())
+            channel.basic_publish(exchange='',
+                                routing_key='hello',
+                                body=new_body)
+            logger.debug(" [x] Sent 'Hello World!'")
+            connection.close()
 
-            logger.debug("GCM request took %f seconds", time.time() - poke_start_time)
-
-            if req.response is None:
-                success = False
-                logger.debug("Request failed, waiting to try again", req.exception)
-            elif req.response.status_code / 100 == 5:
-                success = False
-                logger.debug("%d from server, waiting to try again", req.response.status_code)
-            elif req.response.status_code == 400:
-                logger.error(
-                    "%d from server, we have sent something invalid! Error: %r",
-                    req.response.status_code,
-                    req.response.text,
-                )
-                # permanent failure: give up
-                raise Exception("Invalid request")
-            elif req.response.status_code == 401:
-                logger.error(
-                    "401 from server! Our API key is invalid? Error: %r",
-                    req.response.text,
-                )
-                # permanent failure: give up
-                raise Exception("Not authorized to push")
-            elif req.response.status_code / 100 == 2:
-                resp_object = req.response.json()
-                if 'results' not in resp_object:
-                    logger.error(
-                        "%d from server but response contained no 'results' key: %r",
-                        req.response.status_code, req.response.text,
-                    )
-                if len(resp_object['results']) < len(pushkeys):
-                    logger.error(
-                        "Sent %d notifications but only got %d responses!",
-                        len(n.devices), len(resp_object['results'])
-                    )
-
-                new_pushkeys = []
-                for i, result in enumerate(resp_object['results']):
-                    if 'registration_id' in result:
-                        self.canonical_reg_id_store.set_canonical_id(
-                            pushkeys[i], result['registration_id']
-                        )
-                    if 'error' in result:
-                        logger.warn("Error for pushkey %s: %s", pushkeys[i], result['error'])
-                        if result['error'] in BAD_PUSHKEY_FAILURE_CODES:
-                            logger.info(
-                                "Reg ID %r has permanently failed with code %r: rejecting upstream",
-                                 pushkeys[i], result['error']
-                            )
-                            failed.append(pushkeys[i])
-                        elif result['error'] in BAD_MESSAGE_FAILURE_CODES:
-                            logger.info(
-                                "Message for reg ID %r has permanently failed with code %r",
-                                 pushkeys[i], result['error']
-                            )
-                        else:
-                            logger.info(
-                                "Reg ID %r has temporarily failed with code %r",
-                                 pushkeys[i], result['error']
-                            )
-                            new_pushkeys.append(pushkeys[i])
-                if len(new_pushkeys) == 0:
-                    return failed
-                pushkeys = new_pushkeys
-
-            retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
-            if req.response and 'retry-after' in req.response.headers:
-                try:
-                    retry_delay = int(req.response.headers['retry-after'])
-                except:
-                    pass
-            logger.info("Retrying in %d seconds", retry_delay)
-            gevent.sleep(seconds=retry_delay)
+            ##
+            #####
 
         logger.info("Gave up retrying reg IDs: %r", pushkeys)
         return failed
