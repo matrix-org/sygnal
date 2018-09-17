@@ -180,34 +180,46 @@ class ApnsPushkin(Pushkin):
                     is_image = True
 
             if room_display:
-                if content_display:
+                if is_image:
+                    loc_key = 'IMAGE_FROM_USER_IN_ROOM'
+                    loc_args = [from_display, content_display, room_display]
+                elif content_display:
                     loc_key = 'MSG_FROM_USER_IN_ROOM_WITH_CONTENT'
                     loc_args = [from_display, room_display, content_display]
                 elif action_display:
                     loc_key = 'ACTION_FROM_USER_IN_ROOM'
                     loc_args = [room_display, from_display, action_display]
-                elif is_image:
-                    loc_key = 'IMAGE_FROM_USER_IN_ROOM'
-                    loc_args = [from_display, room_display]
                 else:
                     loc_key = 'MSG_FROM_USER_IN_ROOM'
                     loc_args = [from_display, room_display]
             else:
-                if content_display:
+                if is_image:
+                    loc_key = 'IMAGE_FROM_USER'
+                    loc_args = [from_display, content_display]
+                elif content_display:
                     loc_key = 'MSG_FROM_USER_WITH_CONTENT'
                     loc_args = [from_display, content_display]
                 elif action_display:
                     loc_key = 'ACTION_FROM_USER'
                     loc_args = [from_display, action_display]
-                elif is_image:
-                    loc_key = 'IMAGE_FROM_USER'
-                    loc_args = [from_display]
                 else:
                     loc_key = 'MSG_FROM_USER'
                     loc_args = [from_display]
 
         elif n.type == 'm.call.invite':
-            loc_key = 'VOICE_CALL_FROM_USER'
+            is_video_call = False
+
+            # This detection works only for hs that uses WebRTC for calls
+            if n.content and 'offer' in n.content and 'sdp' in n.content['offer']:
+                sdp = n.content['offer']['sdp']
+                if 'm=video' in sdp:
+                    is_video_call = True
+
+            if is_video_call:
+                loc_key = 'VIDEO_CALL_FROM_USER'
+            else:
+                loc_key = 'VOICE_CALL_FROM_USER'
+
             loc_args = [from_display]
         elif n.type == 'm.room.member':
             if n.user_is_target:
