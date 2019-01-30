@@ -21,6 +21,7 @@ import time
 
 import grequests
 import gevent
+from requests import adapters, Session
 
 from . import Pushkin
 from .exceptions import PushkinSetupException
@@ -59,6 +60,9 @@ class GcmPushkin(Pushkin):
 
     def __init__(self, name):
         super(GcmPushkin, self).__init__(name)
+        self.session = Session()
+        a = adapters.HTTPAdapter(pool_maxsize=20, pool_connections=20, pool_block=True)
+        self.session.mount("https://", a)
 
     def setup(self, ctx):
         self.db = ctx.database
@@ -100,6 +104,7 @@ class GcmPushkin(Pushkin):
 
             req = grequests.post(
                 GCM_URL, json=body, headers=headers, timeout=10,
+                session=self.session,
             )
             req.send()
 
