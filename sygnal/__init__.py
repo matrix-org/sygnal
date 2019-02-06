@@ -19,6 +19,7 @@ from six.moves import configparser
 
 import json
 import logging
+import os
 import sys
 import threading
 from logging.handlers import WatchedFileHandler
@@ -47,7 +48,6 @@ NOTIFS_BY_PUSHKIN = Counter(
     "Number of pushes sent via each type of pushkin",
     labelnames=["pushkin"],
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -200,11 +200,9 @@ def parse_config():
             cfg.add_section(sect)
         except configparser.DuplicateSectionError:
             pass
-    # it would be nice to be able to customise this the only
-    # way gunicorn lets us pass parameters to our app is by
-    # adding arguments to the module which is kind of grim
-    cfg.read("sygnal.conf")
+    cfg.read(os.getenv("SYGNAL_CONF", "sygnal.conf"))
     return cfg
+
 
 def make_pushkin(kind, name):
     if '.' in kind:

@@ -18,10 +18,10 @@ sygnal can use gunicorn's extra hook to perform a clean shutdown which tries as
 hard as possible to ensure no messages are lost.
 
 There are two config files:
- * sygnal.cfg (The app-specific config file)
+ * sygnal.conf (The app-specific config file)
  * gunicorn_config.py (gunicorn's config file)
 
-sygnal.cfg contains configuration for sygnal itself. This includes the location
+sygnal.conf contains configuration for sygnal itself. This includes the location
 and level of sygnal's log file. The [apps] section is where you set up different
 apps that are to be handled. Keys in this section take the form of the app_id
 and the name of the configuration key, joined by a single dot ('.'). The app_id
@@ -30,6 +30,9 @@ http://matrix.org/docs/spec/client_server/r0.2.0.html#post-matrix-client-r0-push
 the App ID of `com.example.myapp.ios.prod` would be specified as follows::
 
   com.example.myapp.ios.prod.type = foobar
+
+By default sygnal.conf is assumed to be in the working directory, but the path
+can be overriden by setting the `sygnal.conf` environment variable.
 
 The gunicorn sample config contains everything necessary to run sygnal from
 gunicorn. The shutdown hook handles clean shutdown. You can customise other
@@ -65,7 +68,7 @@ You can customise the gunicorn_config.py to determine whether this daemonizes or
 
 Gunicorn maintains its own logging in addition to the app's, so the access_log
 and error_log contain gunicorn's accesses and gunicorn specific errors. The log
-file in sygnal.cfg contains app level logging.
+file in sygnal.conf contains app level logging.
 
 Clean shutdown
 ==============
