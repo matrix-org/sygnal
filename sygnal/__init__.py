@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2014 OpenMarket Ltd
+# Copyright 2019 New Vector Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +15,18 @@
 # limitations under the License.
 
 
-from .exceptions import InvalidNotificationException
+import ConfigParser
+import json
+import logging
+import sys
+import threading
+from logging.handlers import WatchedFileHandler
+
 import flask
 from flask import Flask, request
 
 import sygnal.db
-
-import ConfigParser
-import json
-import sys
-import logging
-from logging.handlers import WatchedFileHandler
+from sygnal.exceptions import InvalidNotificationException
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,30 @@ CONFIG_DEFAULTS = {
 }
 
 pushkins = {}
+
+class RequestIdFilter(logging.Filter):
+    """A logging filter which adds the current request id to each record"""
+    def filter(self, record):
+        request_id = ''
+        if flask.has_request_context():
+            request_id = flask.g.get('request_id', '')
+        record.request_id = request_id
+        return True
+
+class RequestCounter(object):
+    def __init__(self):
+        self._count = 0
+        self._lock = threading.Lock()
+
+    def get(self):
+        with self._lock:
+            c = self._count
+            self._count = c + 1
+        return c
+
+
+request_count = RequestCounter()
+
 
 class Tweaks:
     def __init__(self, raw):
@@ -115,7 +141,7 @@ class Notification:
             self.counts = Counts({})
 
         self.devices = [Device(d) for d in notif['devices']]
-        
+
 
 class Pushkin(object):
     def __init__(self, name):
@@ -128,7 +154,7 @@ class Pushkin(object):
         if not self.cfg.has_option('apps', '%s.%s' % (self.name, key)):
             return None
         return self.cfg.get('apps', '%s.%s' % (self.name, key))
-        
+
     def dispatchNotification(self, n):
         pass
 
@@ -168,6 +194,23 @@ def make_pushkin(kind, name):
     pushkinmodule = getattr(toplevelmodule, "%spushkin" % kind)
     clarse = getattr(pushkinmodule, "%sPushkin" % kind.capitalize())
     return clarse(name)
+
+
+@app.before_request
+def log_request():
+    flask.g.request_id = "%s-%i" % (
+        request.method, request_count.get(),
+    )
+    logger.info("Processing request %s", request.url)
+
+
+@app.after_request
+def log_processed_request(response):
+    logger.info(
+        "Processed request %s: %i",
+        request.url, response.status_code,
+    )
+    return response
 
 @app.errorhandler(ClientError)
 def handle_client_error(e):
@@ -227,7 +270,10 @@ def setup():
     logfile = cfg.get('log', 'logfile')
     if logfile != '':
         handler = WatchedFileHandler(logfile)
-        formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+        handler.addFilter(RequestIdFilter())
+        formatter = logging.Formatter(
+            '%(asctime)s %(name)s %(levelname)s %(request_id)s - %(message)s'
+        )
         handler.setFormatter(formatter)
         logging.getLogger().addHandler(handler)
     else:
