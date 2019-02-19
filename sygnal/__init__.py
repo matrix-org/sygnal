@@ -241,7 +241,9 @@ def notify():
         flask.abort(400, e.message)
 
     if len(notif.devices) == 0:
-        flask.abort(400, "No devices in notification")
+        msg = "No devices in notification"
+        logger.warn(msg)
+        flask.abort(400, msg)
 
     rej = []
 
@@ -253,6 +255,10 @@ def notify():
             continue
 
         pushkin = pushkins[appid]
+        logger.debug(
+            "Sending push to pushkin %s for app ID %s",
+            pushkin.name, appid,
+        )
         try:
             rej.extend(pushkin.dispatchNotification(notif))
         except:
