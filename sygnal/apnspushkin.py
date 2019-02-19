@@ -70,7 +70,7 @@ class ApnsPushkin(Pushkin):
 
         self.db.query(create_failed_table_query)
         self.db.query(create_failed_index_query)
-            
+
         self.pushbaby = PushBaby(certfile=self.certfile, platform=self.plaf)
         self.pushbaby.on_push_failed = self.on_push_failed
         logger.info("APNS with cert file %s on %s platform", self.certfile, self.plaf)
@@ -135,12 +135,14 @@ class ApnsPushkin(Pushkin):
                     thispayload['aps'] = thispayload['aps'].copy()
                 if d.tweaks.sound:
                     thispayload['aps']['sound'] = d.tweaks.sound
-                logger.info("'%s' -> %s", thispayload, t)
+                logger.info("Sending (attempt %i): '%s' -> %s", tries, thispayload, t)
+                poke_start_time = time.time()
                 try:
                     res = self.pushbaby.send(thispayload, base64.b64decode(t), priority=prio)
+                    logger.info("Sent (%f secs): -> %s", time.time() - poke_start_time, t)
                     break
                 except:
-                    logger.exception("Exception sending push")
+                    logger.exception("Exception sending push -> %s" % (t, ))
 
                 tries += 1
 
