@@ -224,10 +224,12 @@ def root():
 
 @app.route('/_matrix/push/v1/notify', methods=['POST'])
 def notify():
+    logger.debug("notify")
     try:
         body = json.loads(request.data)
-    except:
+    except Exception as e:
         raise ClientError("Expecting json request body")
+    logger.debug("body: %s", body)
 
     if 'notification' not in body or not isinstance(body['notification'], dict):
         msg = "Invalid notification: expecting object in 'notification' key"
