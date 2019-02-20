@@ -278,7 +278,7 @@ def setup():
         handler = WatchedFileHandler(logfile)
         handler.addFilter(RequestIdFilter())
         formatter = logging.Formatter(
-            '%(asctime)s %(process)5d %(levelname)5s %(request_id)s '
+            '%(asctime)s %(levelname)-5s %(request_id)s-%(process)d '
             '%(name)s %(message)s'
         )
         handler.setFormatter(formatter)
