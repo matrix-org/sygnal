@@ -88,8 +88,6 @@ class GcmPushkin(Pushkin):
         # TODO: Implement collapse_key to queue only one message per room.
         failed = []
 
-        logger.info("%r => %r", data, pushkeys);
-
         for retry_number in range(0, MAX_TRIES):
             body = {
                 "data": data,
@@ -100,6 +98,7 @@ class GcmPushkin(Pushkin):
             else:
                 body['registration_ids'] = pushkeys
 
+            logger.info("Sending (attempt %i): %r => %r", retry_number, data, pushkeys);
             poke_start_time = time.time()
 
             req = grequests.post(
