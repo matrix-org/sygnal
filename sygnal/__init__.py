@@ -15,7 +15,10 @@
 # limitations under the License.
 
 
-import ConfigParser
+try:
+    import ConfigParser as configparser
+except ImportError:
+    import configparser
 import json
 import logging
 import sys
@@ -171,13 +174,16 @@ class ClientError(Exception):
 
 
 def parse_config():
-    cfg = ConfigParser.SafeConfigParser(CONFIG_DEFAULTS)
+    if hasattr(configparser, 'SafeConfigParser'):
+        cfg = configparser.SafeConfigParser(CONFIG_DEFAULTS)
+    else:
+        cfg = configparser.ConfigParser(CONFIG_DEFAULTS)
     # Make keys case-sensitive
     cfg.optionxform = str
     for sect in CONFIG_SECTIONS:
         try:
             cfg.add_section(sect)
-        except ConfigParser.DuplicateSectionError:
+        except configparser.DuplicateSectionError:
             pass
     # it would be nice to be able to customise this the only
     # way gunicorn lets us pass parameters to our app is by

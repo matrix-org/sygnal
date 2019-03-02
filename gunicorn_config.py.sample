@@ -30,7 +30,7 @@ def worker_exit(server, worker):
         # We swallow this exception because it's generally a completely
         # useless, "No module named sygnal" due to it failing to load
         # the sygnal module because an exception was thrown.
-        print "Failed to load sygnal - check your log file"
+        print("Failed to load sygnal - check your log file")
     # NB. We obviously need to clean up in the worker, not
     # the arbiter process. worker_exit runs in the worker
     # (despite the docs claiming it runs after the worker
