@@ -17,10 +17,7 @@
 import sqlite3
 import logging
 import threading
-try:
-    import Queue as queue
-except ImportError:
-    import queue
+from six.moves import queue
 import sys
 
 logger = logging.getLogger(__name__)
@@ -68,4 +65,3 @@ class Db:
             return res['rows']
         elif 'rowcount' in res:
             return res['rowcount']
-
