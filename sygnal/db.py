@@ -17,7 +17,7 @@
 import sqlite3
 import logging
 import threading
-import Queue
+from six.moves import queue
 import sys
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class Db:
     def __init__(self, dbfile):
         self.dbfile = dbfile
-        self.db_queue = Queue.Queue()
+        self.db_queue = queue.Queue()
         # Sqlite is blocking and does so in the c library so we can't
         # use gevent's monkey patching to make it play nice. We just
         # run all sqlite in a separate thread.
@@ -65,4 +65,3 @@ class Db:
             return res['rows']
         elif 'rowcount' in res:
             return res['rowcount']
-
