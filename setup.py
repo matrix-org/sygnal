@@ -32,7 +32,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*"]),
     description="Reference Push Gateway for Matrix Notifications",
     install_requires=[
-        "flask==0.10.1",
+        "flask>=1.0.2",
         "gevent>=1.0.1",
         "pushbaby>=0.0.9",
         "grequests",
