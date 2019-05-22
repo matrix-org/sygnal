@@ -37,14 +37,14 @@ NOTIFS_RECEIVED_COUNTER = Counter(
     "sygnal_notifications_received", "Number of notification pokes received",
 )
 
-NOTIFS_RECEIVED_COUNTER = Counter(
+NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER = Counter(
     "sygnal_notifications_devices_received",
     "Number of devices been asked to push",
 )
 
 NOTIFS_BY_PUSHKIN = Counter(
     "sygnal_per_pushkin_type",
-    "Number of pushes sent via type of pushkin",
+    "Number of pushes sent via each type of pushkin",
     labelnames=["pushkin"],
 )
 
@@ -271,7 +271,7 @@ def notify():
     rej = []
 
     for d in notif.devices:
-        NOTIFS_RECEIVED_COUNTER.inc()
+        NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
 
         appid = d.app_id
         if appid not in pushkins:
@@ -323,7 +323,10 @@ def setup():
         )
 
     if cfg.has_option("metrics", "prometheus_port"):
-        prometheus_client.start_http_server(cfg.get_int("metrics", "prometheus_port"))
+        prometheus_client.start_http_server(
+            port=cfg.getint("metrics", "prometheus_port"),
+            addr=cfg.get("metrics", "prometheus_addr", fallback=""),
+        )
 
     ctx = SygnalContext()
     ctx.database = sygnal.db.Db(cfg.get('db', 'dbfile'))
