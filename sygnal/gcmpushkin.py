@@ -22,9 +22,16 @@ import time
 import grequests
 import gevent
 from requests import adapters, Session
+from prometheus_client import Histogram
 
 from . import Pushkin
 from .exceptions import PushkinSetupException
+
+
+SEND_TIME_HISTOGRAM = Histogram(
+    "sygnal_gcm_request_time",
+    "Time taken to send HTTP request",
+)
 
 
 logger = logging.getLogger(__name__)
@@ -101,11 +108,12 @@ class GcmPushkin(Pushkin):
             logger.info("Sending (attempt %i): %r => %r", retry_number, data, pushkeys);
             poke_start_time = time.time()
 
-            req = grequests.post(
-                GCM_URL, json=body, headers=headers, timeout=10,
-                session=self.session,
-            )
-            req.send()
+            with SEND_TIME_HISTOGRAM.time():
+                req = grequests.post(
+                    GCM_URL, json=body, headers=headers, timeout=10,
+                    session=self.session,
+                )
+                req.send()
 
             logger.debug("GCM request took %f seconds", time.time() - poke_start_time)
 

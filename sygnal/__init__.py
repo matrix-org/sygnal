@@ -26,8 +26,28 @@ from logging.handlers import WatchedFileHandler
 import flask
 from flask import Flask, request
 
+import prometheus_client
+from prometheus_client import Counter
+
 import sygnal.db
 from sygnal.exceptions import InvalidNotificationException
+
+
+NOTIFS_RECEIVED_COUNTER = Counter(
+    "sygnal_notifications_received", "Number of notification pokes received",
+)
+
+NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER = Counter(
+    "sygnal_notifications_devices_received",
+    "Number of devices been asked to push",
+)
+
+NOTIFS_BY_PUSHKIN = Counter(
+    "sygnal_per_pushkin_type",
+    "Number of pushes sent via each type of pushkin",
+    labelnames=["pushkin"],
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +55,7 @@ app = Flask('sygnal')
 app.debug = False
 app.config.from_object(__name__)
 
-CONFIG_SECTIONS = ['http', 'log', 'apps', 'db']
+CONFIG_SECTIONS = ['http', 'log', 'apps', 'db', 'metrics']
 CONFIG_DEFAULTS = {
     'port': '5000',
     'loglevel': 'info',
@@ -246,9 +266,13 @@ def notify():
         logger.warn(msg)
         flask.abort(400, msg)
 
+    NOTIFS_RECEIVED_COUNTER.inc()
+
     rej = []
 
     for d in notif.devices:
+        NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
+
         appid = d.app_id
         if appid not in pushkins:
             logger.warn("Got notification for unknown app ID %s", appid)
@@ -260,6 +284,9 @@ def notify():
             "Sending push to pushkin %s for app ID %s",
             pushkin.name, appid,
         )
+
+        NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
+
         try:
             rej.extend(pushkin.dispatchNotification(notif))
         except:
@@ -286,6 +313,20 @@ def setup():
         logging.getLogger().addHandler(handler)
     else:
         logging.basicConfig()
+
+    if cfg.has_option("metrics", "sentry_dsn"):
+        # Only import sentry if enabled
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=cfg.get("metrics", "sentry_dsn"),
+            integrations=[sentry_sdk.integrations.flask.FlaskIntegration()],
+        )
+
+    if cfg.has_option("metrics", "prometheus_port"):
+        prometheus_client.start_http_server(
+            port=cfg.getint("metrics", "prometheus_port"),
+            addr=cfg.get("metrics", "prometheus_addr", fallback=""),
+        )
 
     ctx = SygnalContext()
     ctx.database = sygnal.db.Db(cfg.get('db', 'dbfile'))
