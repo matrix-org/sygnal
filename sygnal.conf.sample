@@ -4,7 +4,7 @@ logfile = var/sygnal.log
 
 # [metrics]
 # prometheus_port = 8800  # Enable prometheus metrics and bind to this port
-# prometheus_addr = 127.0.0.1  # Optional bind address
+# prometheus_addr = 127.0.0.1
 # sentry_dsn = https://...  # Enable sentry integration
 
 [apps]

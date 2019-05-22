@@ -317,15 +317,16 @@ def setup():
     if cfg.has_option("metrics", "sentry_dsn"):
         # Only import sentry if enabled
         import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
         sentry_sdk.init(
             dsn=cfg.get("metrics", "sentry_dsn"),
-            integrations=[sentry_sdk.integrations.flask.FlaskIntegration()],
+            integrations=[FlaskIntegration()],
         )
 
     if cfg.has_option("metrics", "prometheus_port"):
         prometheus_client.start_http_server(
             port=cfg.getint("metrics", "prometheus_port"),
-            addr=cfg.get("metrics", "prometheus_addr", fallback=""),
+            addr=cfg.get("metrics", "prometheus_addr"),
         )
 
     ctx = SygnalContext()
