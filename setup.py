@@ -37,6 +37,7 @@ setup(
         "pushbaby>=0.0.9",
         "grequests",
         "six",
+        "prometheus_client>=0.7.0,<0.8"
     ],
     long_description=read("README.rst"),
 )
