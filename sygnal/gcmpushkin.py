@@ -29,8 +29,7 @@ from .exceptions import PushkinSetupException
 
 
 SEND_TIME_HISTOGRAM = Histogram(
-    "sygnal_gcm_request_time",
-    "Time taken to send HTTP request",
+    "sygnal_gcm_request_time", "Time taken to send HTTP request"
 )
 
 
@@ -47,24 +46,20 @@ MAX_BYTES_PER_FIELD = 1024
 # though gcm-client 'helpfully' extracts these into a separate
 # list.
 BAD_PUSHKEY_FAILURE_CODES = [
-    'MissingRegistration',
-    'InvalidRegistration',
-    'NotRegistered',
-    'InvalidPackageName',
-    'MismatchSenderId',
+    "MissingRegistration",
+    "InvalidRegistration",
+    "NotRegistered",
+    "InvalidPackageName",
+    "MismatchSenderId",
 ]
 
 # Failure codes that mean the message in question will never
 # succeed, so don't retry, but the registration ID is fine
 # so we should not reject it upstream.
-BAD_MESSAGE_FAILURE_CODES = [
-    'MessageTooBig',
-    'InvalidDataKey',
-    'InvalidTtl',
-]
+BAD_MESSAGE_FAILURE_CODES = ["MessageTooBig", "InvalidDataKey", "InvalidTtl"]
+
 
 class GcmPushkin(Pushkin):
-
     def __init__(self, name):
         super(GcmPushkin, self).__init__(name)
         self.session = Session()
@@ -74,43 +69,50 @@ class GcmPushkin(Pushkin):
     def setup(self, ctx):
         self.db = ctx.database
 
-        self.api_key = self.getConfig('apiKey')
+        self.api_key = self.getConfig("apiKey")
         if not self.api_key:
             raise PushkinSetupException("No API key set in config")
         self.canonical_reg_id_store = CanonicalRegIdStore(self.db)
 
     def dispatchNotification(self, n):
-        pushkeys = [device.pushkey for device in n.devices if device.app_id == self.name]
+        pushkeys = [
+            device.pushkey for device in n.devices if device.app_id == self.name
+        ]
         # Resolve canonical IDs for all pushkeys
-        pushkeys = [canonical_reg_id or reg_id for (reg_id, canonical_reg_id) in
-                    self.canonical_reg_id_store.get_canonical_ids(pushkeys).items()]
+        pushkeys = [
+            canonical_reg_id or reg_id
+            for (
+                reg_id,
+                canonical_reg_id,
+            ) in self.canonical_reg_id_store.get_canonical_ids(pushkeys).items()
+        ]
 
         data = GcmPushkin.build_data(n)
         headers = {
             "User-Agent": "sygnal",
             "Content-Type": "application/json",
-            "Authorization": "key=%s" % (self.api_key,)
+            "Authorization": "key=%s" % (self.api_key,),
         }
 
         # TODO: Implement collapse_key to queue only one message per room.
         failed = []
 
         for retry_number in range(0, MAX_TRIES):
-            body = {
-                "data": data,
-                "priority": 'normal' if n.prio == 'low' else 'high',
-            }
+            body = {"data": data, "priority": "normal" if n.prio == "low" else "high"}
             if len(pushkeys) == 1:
-                body['to'] = pushkeys[0]
+                body["to"] = pushkeys[0]
             else:
-                body['registration_ids'] = pushkeys
+                body["registration_ids"] = pushkeys
 
-            logger.info("Sending (attempt %i): %r => %r", retry_number, data, pushkeys);
+            logger.info("Sending (attempt %i): %r => %r", retry_number, data, pushkeys)
             poke_start_time = time.time()
 
             with SEND_TIME_HISTOGRAM.time():
                 req = grequests.post(
-                    GCM_URL, json=body, headers=headers, timeout=10,
+                    GCM_URL,
+                    json=body,
+                    headers=headers,
+                    timeout=10,
                     session=self.session,
                 )
                 req.send()
@@ -122,7 +124,9 @@ class GcmPushkin(Pushkin):
                 logger.debug("Request failed, waiting to try again", req.exception)
             elif req.response.status_code / 100 == 5:
                 success = False
-                logger.debug("%d from server, waiting to try again", req.response.status_code)
+                logger.debug(
+                    "%d from server, waiting to try again", req.response.status_code
+                )
             elif req.response.status_code == 400:
                 logger.error(
                     "%d from server, we have sent something invalid! Error: %r",
@@ -140,40 +144,47 @@ class GcmPushkin(Pushkin):
                 raise Exception("Not authorized to push")
             elif req.response.status_code / 100 == 2:
                 resp_object = req.response.json()
-                if 'results' not in resp_object:
+                if "results" not in resp_object:
                     logger.error(
                         "%d from server but response contained no 'results' key: %r",
-                        req.response.status_code, req.response.text,
+                        req.response.status_code,
+                        req.response.text,
                     )
-                if len(resp_object['results']) < len(pushkeys):
+                if len(resp_object["results"]) < len(pushkeys):
                     logger.error(
                         "Sent %d notifications but only got %d responses!",
-                        len(n.devices), len(resp_object['results'])
+                        len(n.devices),
+                        len(resp_object["results"]),
                     )
 
                 new_pushkeys = []
-                for i, result in enumerate(resp_object['results']):
-                    if 'registration_id' in result:
+                for i, result in enumerate(resp_object["results"]):
+                    if "registration_id" in result:
                         self.canonical_reg_id_store.set_canonical_id(
-                            pushkeys[i], result['registration_id']
+                            pushkeys[i], result["registration_id"]
                         )
-                    if 'error' in result:
-                        logger.warn("Error for pushkey %s: %s", pushkeys[i], result['error'])
-                        if result['error'] in BAD_PUSHKEY_FAILURE_CODES:
+                    if "error" in result:
+                        logger.warn(
+                            "Error for pushkey %s: %s", pushkeys[i], result["error"]
+                        )
+                        if result["error"] in BAD_PUSHKEY_FAILURE_CODES:
                             logger.info(
                                 "Reg ID %r has permanently failed with code %r: rejecting upstream",
-                                 pushkeys[i], result['error']
+                                pushkeys[i],
+                                result["error"],
                             )
                             failed.append(pushkeys[i])
-                        elif result['error'] in BAD_MESSAGE_FAILURE_CODES:
+                        elif result["error"] in BAD_MESSAGE_FAILURE_CODES:
                             logger.info(
                                 "Message for reg ID %r has permanently failed with code %r",
-                                 pushkeys[i], result['error']
+                                pushkeys[i],
+                                result["error"],
                             )
                         else:
                             logger.info(
                                 "Reg ID %r has temporarily failed with code %r",
-                                 pushkeys[i], result['error']
+                                pushkeys[i],
+                                result["error"],
                             )
                             new_pushkeys.append(pushkeys[i])
                 if len(new_pushkeys) == 0:
@@ -181,9 +192,9 @@ class GcmPushkin(Pushkin):
                 pushkeys = new_pushkeys
 
             retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
-            if req.response and 'retry-after' in req.response.headers:
+            if req.response and "retry-after" in req.response.headers:
                 try:
-                    retry_delay = int(req.response.headers['retry-after'])
+                    retry_delay = int(req.response.headers["retry-after"])
                 except:
                     pass
             logger.info("Retrying in %d seconds", retry_delay)
@@ -195,8 +206,17 @@ class GcmPushkin(Pushkin):
     @staticmethod
     def build_data(n):
         data = {}
-        for attr in ['event_id', 'type', 'sender', 'room_name', 'room_alias', 'membership',
-                     'sender_display_name', 'content', 'room_id']:
+        for attr in [
+            "event_id",
+            "type",
+            "sender",
+            "room_name",
+            "room_alias",
+            "membership",
+            "sender_display_name",
+            "content",
+            "room_id",
+        ]:
             if hasattr(n, attr):
                 data[attr] = getattr(n, attr)
                 # Truncate fields to a sensible maximum length. If the whole
@@ -204,13 +224,13 @@ class GcmPushkin(Pushkin):
                 if data[attr] is not None and len(data[attr]) > MAX_BYTES_PER_FIELD:
                     data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
 
-        data['prio'] = 'high'
-        if n.prio == 'low':
-            data['prio'] = 'normal';
+        data["prio"] = "high"
+        if n.prio == "low":
+            data["prio"] = "normal"
 
-        if getattr(n, 'counts', None):
-            data['unread'] = n.counts.unread
-            data['missed_calls'] = n.counts.missed_calls
+        if getattr(n, "counts", None):
+            data["unread"] = n.counts.unread
+            data["missed_calls"] = n.counts.missed_calls
 
         return data
 
@@ -229,7 +249,8 @@ class CanonicalRegIdStore(object):
     def set_canonical_id(self, reg_id, canonical_reg_id):
         self.db.query(
             "INSERT OR REPLACE INTO gcm_canonical_reg_id VALUES (?, ?);",
-            (reg_id, canonical_reg_id))
+            (reg_id, canonical_reg_id),
+        )
 
     def get_canonical_ids(self, reg_ids):
         # TODO: Use one DB query
@@ -238,6 +259,8 @@ class CanonicalRegIdStore(object):
     def _get_canonical_id(self, reg_id):
         rows = self.db.query(
             "SELECT canonical_reg_id FROM gcm_canonical_reg_id WHERE reg_id = ?;",
-            (reg_id, ), fetch='all')
+            (reg_id,),
+            fetch="all",
+        )
         if rows:
             return rows[0][0]

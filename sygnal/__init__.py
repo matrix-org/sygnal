@@ -35,12 +35,11 @@ from sygnal.exceptions import InvalidNotificationException
 
 
 NOTIFS_RECEIVED_COUNTER = Counter(
-    "sygnal_notifications_received", "Number of notification pokes received",
+    "sygnal_notifications_received", "Number of notification pokes received"
 )
 
 NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER = Counter(
-    "sygnal_notifications_devices_received",
-    "Number of devices been asked to push",
+    "sygnal_notifications_devices_received", "Number of devices been asked to push"
 )
 
 NOTIFS_BY_PUSHKIN = Counter(
@@ -51,28 +50,31 @@ NOTIFS_BY_PUSHKIN = Counter(
 
 logger = logging.getLogger(__name__)
 
-app = Flask('sygnal')
+app = Flask("sygnal")
 app.debug = False
 app.config.from_object(__name__)
 
-CONFIG_SECTIONS = ['http', 'log', 'apps', 'db', 'metrics']
+CONFIG_SECTIONS = ["http", "log", "apps", "db", "metrics"]
 CONFIG_DEFAULTS = {
-    'port': '5000',
-    'loglevel': 'info',
-    'logfile': '',
-    'dbfile': 'sygnal.db'
+    "port": "5000",
+    "loglevel": "info",
+    "logfile": "",
+    "dbfile": "sygnal.db",
 }
 
 pushkins = {}
 
+
 class RequestIdFilter(logging.Filter):
     """A logging filter which adds the current request id to each record"""
+
     def filter(self, record):
-        request_id = ''
+        request_id = ""
         if flask.has_request_context():
-            request_id = flask.g.get('request_id', '')
+            request_id = flask.g.get("request_id", "")
         record.request_id = request_id
         return True
+
 
 class RequestCounter(object):
     def __init__(self):
@@ -93,8 +95,8 @@ class Tweaks:
     def __init__(self, raw):
         self.sound = None
 
-        if 'sound' in raw:
-            self.sound = raw['sound']
+        if "sound" in raw:
+            self.sound = raw["sound"]
 
 
 class Device:
@@ -105,20 +107,20 @@ class Device:
         self.data = None
         self.tweaks = None
 
-        if 'app_id' not in raw:
+        if "app_id" not in raw:
             raise InvalidNotificationException("Device with no app_id")
-        if 'pushkey' not in raw:
+        if "pushkey" not in raw:
             raise InvalidNotificationException("Device with no pushkey")
-        if 'pushkey_ts' in raw:
-            self.pushkey_ts = raw['pushkey_ts']
-        if 'tweaks' in raw:
-            self.tweaks = Tweaks(raw['tweaks'])
+        if "pushkey_ts" in raw:
+            self.pushkey_ts = raw["pushkey_ts"]
+        if "tweaks" in raw:
+            self.tweaks = Tweaks(raw["tweaks"])
         else:
             self.tweaks = Tweaks({})
-        self.app_id = raw['app_id']
-        self.pushkey = raw['pushkey']
-        if 'data' in raw:
-            self.data = raw['data']
+        self.app_id = raw["app_id"]
+        self.pushkey = raw["pushkey"]
+        if "data" in raw:
+            self.data = raw["data"]
 
 
 class Counts:
@@ -126,26 +128,26 @@ class Counts:
         self.unread = None
         self.missed_calls = None
 
-        if 'unread' in raw:
-            self.unread = raw['unread']
-        if 'missed_calls' in raw:
-            self.missed_calls = raw['missed_calls']
+        if "unread" in raw:
+            self.unread = raw["unread"]
+        if "missed_calls" in raw:
+            self.missed_calls = raw["missed_calls"]
 
 
 class Notification:
     def __init__(self, notif):
         optional_attrs = [
-            'room_name',
-            'room_alias',
-            'prio',
-            'membership',
-            'sender_display_name',
-            'content',
-            'event_id',
-            'room_id',
-            'user_is_target',
-            'type',
-            'sender',
+            "room_name",
+            "room_alias",
+            "prio",
+            "membership",
+            "sender_display_name",
+            "content",
+            "event_id",
+            "room_id",
+            "user_is_target",
+            "type",
+            "sender",
         ]
         for a in optional_attrs:
             if a in notif:
@@ -153,15 +155,15 @@ class Notification:
             else:
                 self.__dict__[a] = None
 
-        if 'devices' not in notif or not isinstance(notif['devices'], list):
-               raise InvalidNotificationException("Expected list in 'devices' key")
+        if "devices" not in notif or not isinstance(notif["devices"], list):
+            raise InvalidNotificationException("Expected list in 'devices' key")
 
-        if 'counts' in notif:
-            self.counts = Counts(notif['counts'])
+        if "counts" in notif:
+            self.counts = Counts(notif["counts"])
         else:
             self.counts = Counts({})
 
-        self.devices = [Device(d) for d in notif['devices']]
+        self.devices = [Device(d) for d in notif["devices"]]
 
 
 class Pushkin(object):
@@ -172,9 +174,9 @@ class Pushkin(object):
         pass
 
     def getConfig(self, key):
-        if not self.cfg.has_option('apps', '%s.%s' % (self.name, key)):
+        if not self.cfg.has_option("apps", "%s.%s" % (self.name, key)):
             return None
-        return self.cfg.get('apps', '%s.%s' % (self.name, key))
+        return self.cfg.get("apps", "%s.%s" % (self.name, key))
 
     def dispatchNotification(self, n):
         pass
@@ -205,7 +207,7 @@ def parse_config():
 
 
 def make_pushkin(kind, name):
-    if '.' in kind:
+    if "." in kind:
         toimport = kind
     else:
         toimport = "sygnal.%spushkin" % kind
@@ -217,44 +219,42 @@ def make_pushkin(kind, name):
 
 @app.before_request
 def log_request():
-    flask.g.request_id = "%s-%i" % (
-        request.method, request_count.get(),
-    )
+    flask.g.request_id = "%s-%i" % (request.method, request_count.get())
     logger.info("Processing request %s", request.url)
 
 
 @app.after_request
 def log_processed_request(response):
-    logger.info(
-        "Processed request %s: %i",
-        request.url, response.status_code,
-    )
+    logger.info("Processed request %s: %i", request.url, response.status_code)
     return response
+
 
 @app.errorhandler(ClientError)
 def handle_client_error(e):
-    resp = flask.jsonify({ 'error': { 'msg': str(e) }  })
+    resp = flask.jsonify({"error": {"msg": str(e)}})
     resp.status_code = 400
     return resp
 
-@app.route('/')
+
+@app.route("/")
 def root():
     return ""
 
-@app.route('/_matrix/push/v1/notify', methods=['POST'])
+
+@app.route("/_matrix/push/v1/notify", methods=["POST"])
 def notify():
     try:
         body = json.loads(request.data)
     except Exception:
         raise ClientError("Expecting json request body")
 
-    if 'notification' not in body or not isinstance(body['notification'], dict):
+    if "notification" not in body or not isinstance(body["notification"], dict):
         msg = "Invalid notification: expecting object in 'notification' key"
         logger.warn(msg)
         flask.abort(400, msg)
 
     try:
-        notif = Notification(body['notification'])
+        notif = Notification(body["notification"])
     except InvalidNotificationException as e:
         logger.exception("Invalid notification")
         flask.abort(400, e.message)
@@ -278,10 +278,7 @@ def notify():
             continue
 
         pushkin = pushkins[appid]
-        logger.debug(
-            "Sending push to pushkin %s for app ID %s",
-            pushkin.name, appid,
-        )
+        logger.debug("Sending push to pushkin %s for app ID %s", pushkin.name, appid)
 
         NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
 
@@ -290,22 +287,20 @@ def notify():
         except:
             logger.exception("Failed to send push")
             flask.abort(500, "Failed to send push")
-    return flask.jsonify({
-        "rejected": rej
-    })
+    return flask.jsonify({"rejected": rej})
 
 
 def setup():
     cfg = parse_config()
 
-    logging.getLogger().setLevel(getattr(logging, cfg.get('log', 'loglevel').upper()))
-    logfile = cfg.get('log', 'logfile')
-    if logfile != '':
+    logging.getLogger().setLevel(getattr(logging, cfg.get("log", "loglevel").upper()))
+    logfile = cfg.get("log", "logfile")
+    if logfile != "":
         handler = WatchedFileHandler(logfile)
         handler.addFilter(RequestIdFilter())
         formatter = logging.Formatter(
-            '%(asctime)s [%(process)d] %(levelname)-5s '
-            '%(request_id)s %(name)s %(message)s'
+            "%(asctime)s [%(process)d] %(levelname)-5s "
+            "%(request_id)s %(name)s %(message)s"
         )
         handler.setFormatter(formatter)
         logging.getLogger().addHandler(handler)
@@ -316,9 +311,9 @@ def setup():
         # Only import sentry if enabled
         import sentry_sdk
         from sentry_sdk.integrations.flask import FlaskIntegration
+
         sentry_sdk.init(
-            dsn=cfg.get("metrics", "sentry_dsn"),
-            integrations=[FlaskIntegration()],
+            dsn=cfg.get("metrics", "sentry_dsn"), integrations=[FlaskIntegration()]
         )
 
     if cfg.has_option("metrics", "prometheus_port"):
@@ -328,13 +323,13 @@ def setup():
         )
 
     ctx = SygnalContext()
-    ctx.database = sygnal.db.Db(cfg.get('db', 'dbfile'))
+    ctx.database = sygnal.db.Db(cfg.get("db", "dbfile"))
 
-    for key,val in cfg.items('apps'):
-        parts = key.rsplit('.', 1)
+    for key, val in cfg.items("apps"):
+        parts = key.rsplit(".", 1)
         if len(parts) < 2:
             continue
-        if parts[1] == 'type':
+        if parts[1] == "type":
             try:
                 pushkins[parts[0]] = make_pushkin(val, parts[0])
             except:
@@ -352,11 +347,12 @@ def setup():
 
     logger.error("Setup completed")
 
+
 def shutdown():
     logger.info("Starting shutdown...")
     i = 0
     for p in pushkins.values():
-        logger.info("Shutting down (%d/%d)..." % (i+1, len(pushkins)))
+        logger.info("Shutting down (%d/%d)..." % (i + 1, len(pushkins)))
         p.shutdown()
         i += 1
     logger.info("Shutdown complete...")

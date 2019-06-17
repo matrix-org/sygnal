@@ -22,6 +22,7 @@ import sys
 
 logger = logging.getLogger(__name__)
 
+
 class Db:
     def __init__(self, dbfile):
         self.dbfile = dbfile
@@ -42,26 +43,28 @@ class Db:
     def query(self, query, args=(), fetch=None):
         res = {}
         ev = threading.Event()
+
         def runquery():
             try:
                 c = self.db.cursor()
                 c.execute(query, args)
-                if fetch == 1 or fetch == 'one':
-                    res['rows'] = c.fetchone()
-                elif fetch == 'all':
-                    res['rows'] = c.fetchall()
+                if fetch == 1 or fetch == "one":
+                    res["rows"] = c.fetchone()
+                elif fetch == "all":
+                    res["rows"] = c.fetchall()
                 elif fetch == None:
                     self.db.commit()
-                    res['rowcount'] = c.rowcount
+                    res["rowcount"] = c.rowcount
             except:
                 logger.exception("Caught exception running db query %s", query)
-                res['ex'] = sys.exc_info()[1]
+                res["ex"] = sys.exc_info()[1]
             ev.set()
+
         self.db_queue.put(runquery)
         ev.wait()
-        if 'ex' in res:
-            raise res['ex']
-        elif 'rows' in res:
-            return res['rows']
-        elif 'rowcount' in res:
-            return res['rowcount']
+        if "ex" in res:
+            raise res["ex"]
+        elif "rows" in res:
+            return res["rows"]
+        elif "rowcount" in res:
+            return res["rowcount"]

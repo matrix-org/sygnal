@@ -43,9 +43,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS b64token on apns_failed(b64token);
 # not very fast so keep things to a sensible size.
 MAX_FIELD_LENGTH = 1024
 
+
 class ApnsPushkin(Pushkin):
     MAX_TRIES = 2
-    DELETE_FEEDBACK_AFTER_SECS = 28 * 24 * 60 * 60 # a month(ish)
+    DELETE_FEEDBACK_AFTER_SECS = 28 * 24 * 60 * 60  # a month(ish)
     # These are the only ones of the errors returned in the APNS stream
     # that we want to feed back. Anything else is nothing to do with the
     # token.
@@ -55,16 +56,16 @@ class ApnsPushkin(Pushkin):
     )
 
     def __init__(self, name):
-        super(ApnsPushkin, self).__init__(name);
+        super(ApnsPushkin, self).__init__(name)
 
     def setup(self, ctx):
         self.db = ctx.database
-        self.certfile = self.getConfig('certfile')
-        plaf = self.getConfig('platform')
-        if not plaf or plaf == 'production' or plaf == 'prod':
-            self.plaf = 'prod'
-        elif plaf == 'sandbox':
-            self.plaf = 'sandbox'
+        self.certfile = self.getConfig("certfile")
+        plaf = self.getConfig("platform")
+        if not plaf or plaf == "production" or plaf == "prod":
+            self.plaf = "prod"
+        elif plaf == "sandbox":
+            self.plaf = "sandbox"
         else:
             raise PushkinSetupException("Invalid platform: %s" % plaf)
 
@@ -85,19 +86,24 @@ class ApnsPushkin(Pushkin):
 
         # check for tokens that have previously failed
         token_set_str = u"(" + u",".join([u"?" for _ in tokens.keys()]) + u")"
-        feed_back_errors_set_str =  u"(" + u",".join([u"?" for _ in ApnsPushkin.ERRORS_TO_FEED_BACK]) + u")"
+        feed_back_errors_set_str = (
+            u"(" + u",".join([u"?" for _ in ApnsPushkin.ERRORS_TO_FEED_BACK]) + u")"
+        )
         q = (
-            "SELECT b64token,last_failure_type,last_failure_code,token_invalidated_ts "+
-            "FROM apns_failed WHERE b64token IN "+token_set_str+
-            " and ("+
-            "(last_failure_type = 'error' and last_failure_code in "+feed_back_errors_set_str+") "+
-            "or (last_failure_type = 'feedback')"+
-            ")"
-            )
+            "SELECT b64token,last_failure_type,last_failure_code,token_invalidated_ts "
+            + "FROM apns_failed WHERE b64token IN "
+            + token_set_str
+            + " and ("
+            + "(last_failure_type = 'error' and last_failure_code in "
+            + feed_back_errors_set_str
+            + ") "
+            + "or (last_failure_type = 'feedback')"
+            + ")"
+        )
         args = []
         args.extend([unicode(t) for t in tokens.keys()])
         args.extend([(u"%d" % e) for e in ApnsPushkin.ERRORS_TO_FEED_BACK])
-        rows = self.db.query(q, args, fetch='all')
+        rows = self.db.query(q, args, fetch="all")
 
         rejected = []
         for row in rows:
@@ -106,12 +112,23 @@ class ApnsPushkin(Pushkin):
             if token_pushkey_ts < token_invalidated_ts:
                 logger.warn(
                     "Rejecting token %s with ts %d. Last failure of type '%s' code %d, invalidated at %d",
-                    row[0], token_pushkey_ts, row[1], row[2], token_invalidated_ts
+                    row[0],
+                    token_pushkey_ts,
+                    row[1],
+                    row[2],
+                    token_invalidated_ts,
                 )
                 rejected.append(row[0])
                 del tokens[row[0]]
             else:
-                logger.info("Have a failure for token %s of type '%s' at %d code %d but this token postdates it (%d): allowing.", row[0], row[1], token_invalidated_ts, row[2], token_pushkey_ts)
+                logger.info(
+                    "Have a failure for token %s of type '%s' at %d code %d but this token postdates it (%d): allowing.",
+                    row[0],
+                    row[1],
+                    token_invalidated_ts,
+                    row[2],
+                    token_pushkey_ts,
+                )
                 # This pushkey may be alive again, but we don't delete the
                 # failure because HSes should probably have a fresh token
                 # if they actually want to use it
@@ -123,26 +140,30 @@ class ApnsPushkin(Pushkin):
             payload = self.get_payload_full(n)
 
         prio = 10
-        if n.prio == 'low':
+        if n.prio == "low":
             prio = 5
 
         tries = 0
-        for t,d in tokens.items():
+        for t, d in tokens.items():
             while tries < ApnsPushkin.MAX_TRIES:
                 thispayload = payload
-                if 'aps' in thispayload:
+                if "aps" in thispayload:
                     thispayload = payload.copy()
-                    thispayload['aps'] = thispayload['aps'].copy()
+                    thispayload["aps"] = thispayload["aps"].copy()
                 if d.tweaks.sound:
-                    thispayload['aps']['sound'] = d.tweaks.sound
+                    thispayload["aps"]["sound"] = d.tweaks.sound
                 logger.info("Sending (attempt %i): '%s' -> %s", tries, thispayload, t)
                 poke_start_time = time.time()
                 try:
-                    res = self.pushbaby.send(thispayload, base64.b64decode(t), priority=prio)
-                    logger.info("Sent (%f secs): -> %s", time.time() - poke_start_time, t)
+                    res = self.pushbaby.send(
+                        thispayload, base64.b64decode(t), priority=prio
+                    )
+                    logger.info(
+                        "Sent (%f secs): -> %s", time.time() - poke_start_time, t
+                    )
                     break
                 except:
-                    logger.exception("Exception sending push -> %s" % (t, ))
+                    logger.exception("Exception sending push -> %s" % (t,))
 
                 tries += 1
 
@@ -159,7 +180,7 @@ class ApnsPushkin(Pushkin):
 
         loc_key = None
         loc_args = None
-        if n.type == 'm.room.message' or n.type == 'm.room.encrypted':
+        if n.type == "m.room.message" or n.type == "m.room.encrypted":
             room_display = None
             if n.room_name:
                 room_display = n.room_name[0:MAX_FIELD_LENGTH]
@@ -169,84 +190,84 @@ class ApnsPushkin(Pushkin):
             content_display = None
             action_display = None
             is_image = False
-            if n.content and 'msgtype' in n.content and 'body' in n.content:
-                if 'body' in n.content:
-                    if n.content['msgtype'] == 'm.text':
-                        content_display = n.content['body']
-                    elif n.content['msgtype'] == 'm.emote':
-                        action_display = n.content['body']
+            if n.content and "msgtype" in n.content and "body" in n.content:
+                if "body" in n.content:
+                    if n.content["msgtype"] == "m.text":
+                        content_display = n.content["body"]
+                    elif n.content["msgtype"] == "m.emote":
+                        action_display = n.content["body"]
                     else:
                         # fallback: 'body' should always be user-visible text in an m.room.message
-                        content_display = n.content['body']
-                if n.content['msgtype'] == 'm.image':
+                        content_display = n.content["body"]
+                if n.content["msgtype"] == "m.image":
                     is_image = True
 
             if room_display:
                 if is_image:
-                    loc_key = 'IMAGE_FROM_USER_IN_ROOM'
+                    loc_key = "IMAGE_FROM_USER_IN_ROOM"
                     loc_args = [from_display, content_display, room_display]
                 elif content_display:
-                    loc_key = 'MSG_FROM_USER_IN_ROOM_WITH_CONTENT'
+                    loc_key = "MSG_FROM_USER_IN_ROOM_WITH_CONTENT"
                     loc_args = [from_display, room_display, content_display]
                 elif action_display:
-                    loc_key = 'ACTION_FROM_USER_IN_ROOM'
+                    loc_key = "ACTION_FROM_USER_IN_ROOM"
                     loc_args = [room_display, from_display, action_display]
                 else:
-                    loc_key = 'MSG_FROM_USER_IN_ROOM'
+                    loc_key = "MSG_FROM_USER_IN_ROOM"
                     loc_args = [from_display, room_display]
             else:
                 if is_image:
-                    loc_key = 'IMAGE_FROM_USER'
+                    loc_key = "IMAGE_FROM_USER"
                     loc_args = [from_display, content_display]
                 elif content_display:
-                    loc_key = 'MSG_FROM_USER_WITH_CONTENT'
+                    loc_key = "MSG_FROM_USER_WITH_CONTENT"
                     loc_args = [from_display, content_display]
                 elif action_display:
-                    loc_key = 'ACTION_FROM_USER'
+                    loc_key = "ACTION_FROM_USER"
                     loc_args = [from_display, action_display]
                 else:
-                    loc_key = 'MSG_FROM_USER'
+                    loc_key = "MSG_FROM_USER"
                     loc_args = [from_display]
 
-        elif n.type == 'm.call.invite':
+        elif n.type == "m.call.invite":
             is_video_call = False
 
             # This detection works only for hs that uses WebRTC for calls
-            if n.content and 'offer' in n.content and 'sdp' in n.content['offer']:
-                sdp = n.content['offer']['sdp']
-                if 'm=video' in sdp:
+            if n.content and "offer" in n.content and "sdp" in n.content["offer"]:
+                sdp = n.content["offer"]["sdp"]
+                if "m=video" in sdp:
                     is_video_call = True
 
             if is_video_call:
-                loc_key = 'VIDEO_CALL_FROM_USER'
+                loc_key = "VIDEO_CALL_FROM_USER"
             else:
-                loc_key = 'VOICE_CALL_FROM_USER'
+                loc_key = "VOICE_CALL_FROM_USER"
 
             loc_args = [from_display]
-        elif n.type == 'm.room.member':
+        elif n.type == "m.room.member":
             if n.user_is_target:
-                if n.membership == 'invite':
+                if n.membership == "invite":
                     if n.room_name:
-                        loc_key = 'USER_INVITE_TO_NAMED_ROOM'
+                        loc_key = "USER_INVITE_TO_NAMED_ROOM"
                         loc_args = [from_display, n.room_name[0:MAX_FIELD_LENGTH]]
                     elif n.room_alias:
-                        loc_key = 'USER_INVITE_TO_NAMED_ROOM'
+                        loc_key = "USER_INVITE_TO_NAMED_ROOM"
                         loc_args = [from_display, n.room_alias[0:MAX_FIELD_LENGTH]]
                     else:
-                        loc_key = 'USER_INVITE_TO_CHAT'
+                        loc_key = "USER_INVITE_TO_CHAT"
                         loc_args = [from_display]
         elif n.type:
             # A type of message was received that we don't know about
             # but it was important enough for a push to have got to us
-            loc_key = 'MSG_FROM_USER'
+            loc_key = "MSG_FROM_USER"
             loc_args = [from_display]
 
         aps = {}
         if loc_key:
-            aps['alert'] = {'loc-key': loc_key }
+            aps["alert"] = {"loc-key": loc_key}
 
         if loc_args:
-            aps['alert']['loc-args'] = loc_args
+            aps["alert"]["loc-args"] = loc_args
 
         badge = None
         if n.counts.unread is not None:
@@ -257,10 +278,10 @@ class ApnsPushkin(Pushkin):
             badge += n.counts.missed_calls
 
         if badge is not None:
-            aps['badge'] = badge
+            aps["badge"] = badge
 
         if loc_key:
-            aps['content-available'] = 1
+            aps["content-available"] = 1
 
         if loc_key is None and badge is None:
             logger.info("Nothing to do for alert of type %s", n.type)
@@ -269,9 +290,9 @@ class ApnsPushkin(Pushkin):
         payload = {}
 
         if loc_key and n.room_id:
-            payload['room_id'] = n.room_id
+            payload["room_id"] = n.room_id
 
-        payload['aps'] = aps
+        payload["aps"] = aps
 
         return payload
 
@@ -279,14 +300,14 @@ class ApnsPushkin(Pushkin):
         payload = {}
 
         if n.room_id:
-            payload['room_id'] = n.room_id
+            payload["room_id"] = n.room_id
         if n.event_id:
-            payload['event_id'] = n.event_id
+            payload["event_id"] = n.event_id
 
         if n.counts.unread is not None:
-            payload['unread_count'] = n.counts.unread
+            payload["unread_count"] = n.counts.unread
         if n.counts.missed_calls is not None:
-            payload['missed_calls'] = n.counts.missed_calls
+            payload["missed_calls"] = n.counts.missed_calls
 
         return payload
 
@@ -296,10 +317,10 @@ class ApnsPushkin(Pushkin):
         # through logs) but note that not all failures mean we should stop sending
         # to that token.
         self.db.query(
-            "INSERT OR REPLACE INTO apns_failed "+
-            "(b64token, last_failure_ts, last_failure_type, last_failure_code, token_invalidated_ts) "+
-            " VALUES (?, ?, 'error', ?, ?)",
-            (base64.b64encode(token), long(time.time()), status, long(time.time()))
+            "INSERT OR REPLACE INTO apns_failed "
+            + "(b64token, last_failure_ts, last_failure_type, last_failure_code, token_invalidated_ts) "
+            + " VALUES (?, ?, 'error', ?, ?)",
+            (base64.b64encode(token), long(time.time()), status, long(time.time())),
         )
 
     def do_feedback_poll(self):
@@ -308,12 +329,16 @@ class ApnsPushkin(Pushkin):
             feedback = self.pushbaby.get_all_feedback()
             for fb in feedback:
                 b64token = unicode(base64.b64encode(fb.token))
-                logger.info("Got feedback for token %s which is invalid as of %d", b64token, long(fb.ts))
+                logger.info(
+                    "Got feedback for token %s which is invalid as of %d",
+                    b64token,
+                    long(fb.ts),
+                )
                 self.db.query(
-                    "INSERT OR REPLACE INTO apns_failed "+
-                    "(b64token, last_failure_ts, last_failure_type, token_invalidated_ts) "+
-                    " VALUES (?, ?, 'feedback', ?)",
-                    (b64token, long(time.time()), long(fb.ts))
+                    "INSERT OR REPLACE INTO apns_failed "
+                    + "(b64token, last_failure_ts, last_failure_type, token_invalidated_ts) "
+                    + " VALUES (?, ?, 'feedback', ?)",
+                    (b64token, long(time.time()), long(fb.ts)),
                 )
             logger.info("Stored %d feedback items", len(feedback))
 
@@ -334,8 +359,7 @@ class ApnsPushkin(Pushkin):
         """
         cutoff = long(time.time()) - ApnsPushkin.DELETE_FEEDBACK_AFTER_SECS
         deleted = self.db.query(
-            "DELETE FROM apns_failed WHERE last_failure_ts < ?",
-            (cutoff,)
+            "DELETE FROM apns_failed WHERE last_failure_ts < ?", (cutoff,)
         )
         logger.info("deleted %d stale items from failure table", deleted)
 

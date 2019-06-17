@@ -26,6 +26,7 @@ from setuptools import setup, find_packages
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+
 setup(
     name="matrix-sygnal",
     version=read("VERSION").strip(),
@@ -37,7 +38,7 @@ setup(
         "pushbaby>=0.0.9",
         "grequests",
         "six",
-        "prometheus_client>=0.7.0,<0.8"
+        "prometheus_client>=0.7.0,<0.8",
     ],
     long_description=read("README.rst"),
 )
