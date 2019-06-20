@@ -17,6 +17,7 @@
 
 
 import configparser
+import importlib
 import logging
 import os
 import sys
@@ -84,7 +85,7 @@ class Sygnal(object):
                 continue
             if parts[1] == 'type':
                 try:
-                    self.pushkins[parts[0]] = self._make_pushkin(val, parts[0])  # todo do setup in mk_pk
+                    self.pushkins[parts[0]] = self._make_pushkin(val, parts[0])
                 except Exception:
                     logger.exception("Failed to load module for kind %s", val)
                     raise
@@ -93,23 +94,19 @@ class Sygnal(object):
             logger.error("No app IDs are configured. Edit sygnal.conf to define some.")
             sys.exit(1)
 
-        for p in self.pushkins:
-            self.pushkins[p].cfg = cfg
-            self.pushkins[p].setup(self)  # todo pass in cfg rather than .=
-
         logger.info("Configured with app IDs: %r", self.pushkins.keys())
-
         logger.info("Setup completed")
 
     def _make_pushkin(self, kind, name):
-        if '.' in kind:  # todo look into proper helper methods for importing
+        if '.' in kind:
             toimport = kind
         else:
             toimport = f"sygnal.{kind}pushkin"
-        toplevelmodule = __import__(toimport)
+
+        toplevelmodule = importlib.import_module(toimport)
         pushkinmodule = getattr(toplevelmodule, f"{kind}pushkin")
         clarse = getattr(pushkinmodule, f"{kind.capitalize()}Pushkin")
-        return clarse(name)
+        return clarse(name, self, self.config)
 
     def run(self):
         self._setup()

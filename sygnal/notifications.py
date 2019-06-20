@@ -94,18 +94,17 @@ class Notification:
 
 
 class Pushkin(object):
-    def __init__(self, name):
+    def __init__(self, name, sygnal, config):
         self.name = name
-
-    def setup(self, sygnal):
-        pass
+        self.cfg = config
+        self.sygnal = sygnal
 
     def getConfig(self, key):
         if not self.cfg.has_option('apps', '%s.%s' % (self.name, key)):
             return None
         return self.cfg.get('apps', '%s.%s' % (self.name, key))
 
-    async def dispatchNotification(self, n, device):
+    async def dispatch_notification(self, n, device):
         """
         Attempt to dispatch the notification for the device specified.
 

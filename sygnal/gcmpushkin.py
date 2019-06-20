@@ -68,8 +68,8 @@ DEFAULT_MAX_CONNECTIONS = 20
 
 class GcmPushkin(Pushkin):
 
-    def __init__(self, name):
-        super(GcmPushkin, self).__init__(name)
+    def __init__(self, name, sygnal, config):
+        super(GcmPushkin, self).__init__(name, sygnal, config)
 
         self.http_agent = None
         self.http_pool = None
@@ -77,7 +77,6 @@ class GcmPushkin(Pushkin):
         self.api_key = None
         self.canonical_reg_id_store = None
 
-    def setup(self, sygnal):  # todo eliminate setup class
         # todo (all) do docstrings incl on classes. Use Synapse docstring syntax (Google format?)
         self.http_pool = HTTPConnectionPool(sygnal.reactor)
         self.http_pool.maxPersistentPerHost = self.getConfig("max_connections") or DEFAULT_MAX_CONNECTIONS
@@ -91,7 +90,7 @@ class GcmPushkin(Pushkin):
             raise PushkinSetupException("No API key set in config")
         self.canonical_reg_id_store = CanonicalRegIdStore(self.db)
 
-    async def dispatchNotification(self, n, device):  # TODO use snake_case
+    async def dispatch_notification(self, n, device):
         pushkeys = [device.pushkey for device in n.devices if device.app_id == self.name]
         # Resolve canonical IDs for all pushkeys
 
@@ -153,7 +152,7 @@ class GcmPushkin(Pushkin):
 
             if response is None:
                 pass
-            elif response.code / 100 == 5:  # todo 500 <= response.code < 600
+            elif 500 <= response.code < 600:
                 logger.debug("%d from server, waiting to try again", response.code)
             elif response.code == 400:
                 logger.error(
@@ -170,7 +169,7 @@ class GcmPushkin(Pushkin):
                 )
                 # permanent failure: give up
                 raise Exception("Not authorized to push")  # todo <-- don't use Exception(…)
-            elif response.code / 100 == 2:  # todo 200 <= response.code < 300
+            elif 200 <= response.code < 300:
                 # todo context object. Assign IDs to requests. Don't log sensitive info
                 # todo OpenTracing -> do context, get it almost for free
                 resp_object = json.loads(response_text)

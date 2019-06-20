@@ -109,7 +109,7 @@ class V1NotifyHandler(Resource):
 
             futures.append(
                 asyncio.ensure_future(wrap_handle_errors(
-                    pushkin.dispatchNotification(notif, d)
+                    pushkin.dispatch_notification(notif, d)
                 ))
             )
 

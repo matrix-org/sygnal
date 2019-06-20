@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class DummyPushkin(Pushkin):
-    async def dispatchNotification(self, n, device):
+    async def dispatch_notification(self, n, device):
         prefix = self.getConfig("prefix")
         delay = float(self.getConfig("delay"))
         logger.info(f"DUMMY: SENDING {prefix} {self.name} {n}")
