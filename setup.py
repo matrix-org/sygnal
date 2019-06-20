@@ -2,6 +2,7 @@
 
 # Copyright 2014 OpenMarket Ltd
 # Copyright 2017 Vector Creations Ltd
+# Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
 # limitations under the License.
 
 import os
+
 from setuptools import setup, find_packages
 
 
@@ -33,11 +35,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*"]),
     description="Reference Push Gateway for Matrix Notifications",
     install_requires=[
-        "flask>=1.0.2",
-        "gevent>=1.0.1",
-        "pushbaby>=0.0.9",
-        "grequests",
-        "six",
+        "Twisted>=19.2.1",
         "prometheus_client>=0.7.0,<0.8",
     ],
     long_description=read("README.rst"),
