@@ -24,6 +24,7 @@ import sys
 from logging.handlers import WatchedFileHandler
 
 from twisted.internet import reactor
+from twisted.internet.defer import gatherResults, ensureDeferred
 
 from sygnal.http import PushGatewayApiServer
 from .database import Database
@@ -77,7 +78,7 @@ class Sygnal(object):
         #         addr=cfg.get("metrics", "prometheus_addr"),
         #     )
 
-        self.database = Database(cfg.get('db', 'dbfile'))
+        self.database = Database(cfg.get('db', 'dbfile'), self.reactor)
 
         for key, val in cfg.items('apps'):
             parts = key.rsplit('.', 1)
@@ -103,9 +104,9 @@ class Sygnal(object):
         else:
             toimport = f"sygnal.{kind}pushkin"
 
-        toplevelmodule = importlib.import_module(toimport)
-        pushkinmodule = getattr(toplevelmodule, f"{kind}pushkin")
-        clarse = getattr(pushkinmodule, f"{kind.capitalize()}Pushkin")
+        logger.info("Creating pushkin: %s", toimport)
+        pushkin_module = importlib.import_module(toimport)
+        clarse = getattr(pushkin_module, f"{kind.capitalize()}Pushkin")
         return clarse(name, self, self.config)
 
     def run(self):
@@ -113,8 +114,17 @@ class Sygnal(object):
         port = int(self.config.get('http', 'port'))
         pushgateway_api = PushGatewayApiServer(self)
         logger.info("Listening on port %d", port)
-        self.reactor.listenTCP(port, pushgateway_api.site)
-        logger.info("Starting")
+
+        start_deferred = gatherResults([ensureDeferred(pushkin.start(self)) for pushkin in self.pushkins.values()],
+                                       consumeErrors=True)
+
+        def on_started(_):
+            logger.info("Starting listening")
+            self.reactor.listenTCP(port, pushgateway_api.site)
+
+        start_deferred.addCallback(on_started)
+
+        logger.info("Starting pushkins")
         self.reactor.run()
 
     def shutdown(self):

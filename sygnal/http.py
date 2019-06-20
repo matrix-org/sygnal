@@ -17,12 +17,14 @@
 import json
 import logging
 
+from twisted.internet import defer
 from twisted.internet.defer import gatherResults, ensureDeferred
+from twisted.python.failure import Failure
 from twisted.web import server
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from .exceptions import InvalidNotificationException
+from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
 
 # TODO ?
@@ -105,8 +107,26 @@ class V1NotifyHandler(Resource):
 
             request.finish()
 
-        aggregate = gatherResults(deferreds)
+        def errback(failure: Failure):
+            # due to gatherResults, errors will be wrapped in FirstError.
+            if issubclass(failure.type, defer.FirstError):
+                subfailure = failure.value.subFailure
+                if issubclass(subfailure.type, NotificationDispatchException):
+                    request.setResponseCode(502)
+                    logging.warning("Failed to dispatch notification.\n%s", subfailure)
+                else:
+                    request.setResponseCode(500)
+                    # TODO is this a decent way to handle Failure?
+                    logging.error("Exception whilst dispatching notification.\n%s", subfailure)
+            else:
+                request.setResponseCode(500)
+                logging.error("Exception whilst dispatching notification.\n%s", failure)
+
+            request.finish()
+
+        aggregate = gatherResults(deferreds, consumeErrors=True)
         aggregate.addCallback(callback)
+        aggregate.addErrback(errback)
 
         # we have to try and send the notifications first, so we can find out which ones to reject
         return NOT_DONE_YET

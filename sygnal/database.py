@@ -32,6 +32,7 @@ class Database:
         self.dbexecutor.submit(self._db_setup)
 
     def _db_setup(self):
+        logger.info("Opening SQLite database: %s", self.dbfile)
         self.db = sqlite3.connect(self.dbfile)
 
     def query(self, query, args=(), fetch=None):

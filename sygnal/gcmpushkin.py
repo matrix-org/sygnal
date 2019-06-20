@@ -18,12 +18,13 @@ import json
 import logging
 import time
 from io import BytesIO
+from json import JSONDecodeError
 
 from prometheus_client import Histogram
 from twisted.web.client import HTTPConnectionPool, Agent, FileBodyProducer, readBody
 from twisted.web.http_headers import Headers
 
-from sygnal.exceptions import TemporaryNotificationDispatchException
+from sygnal.exceptions import TemporaryNotificationDispatchException, NotificationDispatchException
 from sygnal.utils import twisted_sleep
 from .exceptions import PushkinSetupException
 from .notifications import Pushkin
@@ -77,6 +78,7 @@ class GcmPushkin(Pushkin):
         self.api_key = None
         self.canonical_reg_id_store = None
 
+    async def start(self, sygnal):
         # todo (all) do docstrings incl on classes. Use Synapse docstring syntax (Google format?)
         self.http_pool = HTTPConnectionPool(sygnal.reactor)
         self.http_pool.maxPersistentPerHost = self.getConfig("max_connections") or DEFAULT_MAX_CONNECTIONS
@@ -88,7 +90,11 @@ class GcmPushkin(Pushkin):
         self.api_key = self.getConfig('apiKey')
         if not self.api_key:
             raise PushkinSetupException("No API key set in config")
-        self.canonical_reg_id_store = CanonicalRegIdStore(self.db)
+
+        logger.info("About to set up CanonicalRegId Store")
+        self.canonical_reg_id_store = CanonicalRegIdStore()
+        await self.canonical_reg_id_store.setup(self.db)
+        logger.info("Finished setting up CanonicalRegId Store")
 
     async def dispatch_notification(self, n, device):
         async def request_dispatch(pushkeys):
@@ -135,7 +141,10 @@ class GcmPushkin(Pushkin):
             elif 200 <= response.code < 300:
                 # todo context object. Assign IDs to requests. Don't log sensitive info
                 # todo OpenTracing -> do context, get it almost for free
-                resp_object = json.loads(response_text)
+                try:
+                    resp_object = json.loads(response_text)
+                except JSONDecodeError:
+                    raise NotificationDispatchException("Invalid JSON response from GCM.")
                 if 'results' not in resp_object:
                     logger.error(
                         "%d from server but response contained no 'results' key: %r",
@@ -273,6 +282,7 @@ class CanonicalRegIdStore(object):
             db (Database): database to prepare
 
         """
+        self.db = db
         await self.db.query(self.TABLE_CREATE_QUERY)
 
     async def set_canonical_id(self, reg_id, canonical_reg_id):

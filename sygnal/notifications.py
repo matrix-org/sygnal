@@ -99,6 +99,9 @@ class Pushkin(object):
         self.cfg = config
         self.sygnal = sygnal
 
+    async def start(self, sygnal):
+        pass
+
     def getConfig(self, key):
         if not self.cfg.has_option('apps', '%s.%s' % (self.name, key)):
             return None
