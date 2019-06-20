@@ -1,6 +1,6 @@
-import asyncio
 import logging
 
+from sygnal.utils import twisted_sleep
 from .notifications import Pushkin
 
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ class DummyPushkin(Pushkin):
         prefix = self.getConfig("prefix")
         delay = float(self.getConfig("delay"))
         logger.info(f"DUMMY: SENDING {prefix} {self.name} {n}")
-        await asyncio.sleep(delay)
+        await twisted_sleep(delay)
 
         rejected = not device.pushkey.startswith(prefix)
 

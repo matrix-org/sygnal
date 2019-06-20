@@ -14,17 +14,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import asyncio
 import json
 import logging
 import time
-import traceback
 from io import BytesIO
 
 from prometheus_client import Histogram
 from twisted.web.client import HTTPConnectionPool, Agent, FileBodyProducer, readBody
 from twisted.web.http_headers import Headers
 
+from sygnal.exceptions import TemporaryNotificationDispatchException
+from sygnal.utils import twisted_sleep
 from .exceptions import PushkinSetupException
 from .notifications import Pushkin
 
@@ -91,61 +91,24 @@ class GcmPushkin(Pushkin):
         self.canonical_reg_id_store = CanonicalRegIdStore(self.db)
 
     async def dispatch_notification(self, n, device):
-        pushkeys = [device.pushkey for device in n.devices if device.app_id == self.name]
-        # Resolve canonical IDs for all pushkeys
-
-        reg_id_mappings = await self.canonical_reg_id_store.get_canonical_ids(pushkeys)
-
-        pushkeys = [canonical_reg_id or reg_id for (reg_id, canonical_reg_id) in
-                    reg_id_mappings.items()]
-
-        if pushkeys[0] != device.pushkey:
-            # Only send notifications once, to all devices at once.
-            # TODO(rei) check this carefully, including tests
-            return []
-
-        data = GcmPushkin.build_data(n)
-        headers = {
-            b"User-Agent": ["sygnal"],
-            b"Content-Type": ["application/json"],
-            b"Authorization": ["key=%s" % (self.api_key,)]
-        }
-
-        # TODO: Implement collapse_key to queue only one message per room.
-        failed = []
-
-        # todo count status codes in prometheus
-
-        for retry_number in range(0, MAX_TRIES):
-            body = {
-                "data": data,
-                "priority": 'normal' if n.prio == 'low' else 'high',
-            }
-            if len(pushkeys) == 1:
-                body['to'] = pushkeys[0]
-            else:
-                body['registration_ids'] = pushkeys
-
-            logger.info("Sending (attempt %i): %r => %r", retry_number, data, pushkeys)
+        async def request_dispatch(pushkeys):
             poke_start_time = time.time()
 
             response = None
-            with SEND_TIME_HISTOGRAM.time():  # <---
+            with SEND_TIME_HISTOGRAM.time():
                 body_producer = FileBodyProducer(BytesIO(json.dumps(body).encode()))
                 try:
-                    # responseA = self.http_agent.request(b'POST', GCM_URL,
-                    #                                         headers=Headers(headers), bodyProducer=body_producer)
-                    responseA = self.http_agent.request(b'POST', GCM_URL,
-                                                        headers=Headers(headers),
-                                                        bodyProducer=body_producer)
-                    response = await responseA.asFuture(asyncio.get_event_loop())
-                except Exception as exception:  # todo pull out this code. Reraise as custom exception
-                    # raise CustomExc from exception
-                    logger.debug("Request failed, waiting to try again:")
-                    traceback.print_exc()
-                    logger.exception(exception)
+                    response = await self.http_agent.request(b'POST', GCM_URL,
+                                                             headers=Headers(headers),
+                                                             bodyProducer=body_producer)
+                except Exception as exception:
+                    raise TemporaryNotificationDispatchException("GCM request failure") from exception
 
+            # todo can we reuse the histogram for this?
             logger.debug("GCM request took %f seconds", time.time() - poke_start_time)
+
+            # todo check b'retry-after' in response.headers and raise custom exception then
+            #   lowercase before comparison? It's for 500–599 errors.
 
             if response is not None:
                 response_text = (await readBody(response)).decode()
@@ -215,14 +178,54 @@ class GcmPushkin(Pushkin):
                     return failed
                 pushkeys = new_pushkeys
 
-            retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
-            if response and 'retry-after' in response.headers:
-                try:
-                    retry_delay = int(response.headers['retry-after'])
-                except (KeyError, ValueError):
-                    pass
-            logger.info("Retrying in %d seconds", retry_delay)
-            await asyncio.sleep(retry_delay)
+        pushkeys = [device.pushkey for device in n.devices if device.app_id == self.name]
+        # Resolve canonical IDs for all pushkeys
+
+        reg_id_mappings = await self.canonical_reg_id_store.get_canonical_ids(pushkeys)
+
+        pushkeys = [canonical_reg_id or reg_id for (reg_id, canonical_reg_id) in
+                    reg_id_mappings.items()]
+
+        if pushkeys[0] != device.pushkey:
+            # Only send notifications once, to all devices at once.
+            # TODO(rei) check this carefully, including tests
+            return []
+
+        data = GcmPushkin.build_data(n)
+        headers = {
+            b"User-Agent": ["sygnal"],
+            b"Content-Type": ["application/json"],
+            b"Authorization": ["key=%s" % (self.api_key,)]
+        }
+
+        # TODO: Implement collapse_key to queue only one message per room.
+        failed = []
+
+        # todo count status codes in prometheus
+
+        body = {
+            "data": data,
+            "priority": 'normal' if n.prio == 'low' else 'high',
+        }
+        if len(pushkeys) == 1:
+            body['to'] = pushkeys[0]
+        else:
+            body['registration_ids'] = pushkeys
+
+        for retry_number in range(0, MAX_TRIES):
+            logger.info("Sending (attempt %i): %r => %r", retry_number, data, pushkeys)
+
+            try:
+                await request_dispatch(pushkeys)
+                break
+            except TemporaryNotificationDispatchException as exc:
+                retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
+                if exc.custom_retry_delay is not None:
+                    retry_delay = exc.custom_retry_delay
+
+                logger.exception("Temporary failure, will retry in %d seconds", retry_delay)
+
+                await twisted_sleep(retry_delay)
 
         logger.info("Gave up retrying reg IDs: %r", pushkeys)
         return failed
@@ -256,9 +259,21 @@ class CanonicalRegIdStore(object):
             reg_id TEXT PRIMARY KEY,
             canonical_reg_id TEXT NOT NULL);"""
 
-    def __init__(self, db):
-        self.db = db
-        asyncio.get_event_loop().run_until_complete(self.db.query(self.TABLE_CREATE_QUERY))
+    def __init__(self):
+        self.db = None
+
+    async def setup(self, db):
+        """
+        Prepares, if necessary, the database for storing canonical registration IDs.
+
+        Separate method from the constructor because we wait for an async request to complete,
+        so it must be an `async def` method.
+
+        Args:
+            db (Database): database to prepare
+
+        """
+        await self.db.query(self.TABLE_CREATE_QUERY)
 
     async def set_canonical_id(self, reg_id, canonical_reg_id):
         await self.db.query(
@@ -267,7 +282,6 @@ class CanonicalRegIdStore(object):
 
     async def get_canonical_ids(self, reg_ids):
         # TODO: Use one DB query
-        # TODO parallelise these queries or indeed combine them into 1
         return {reg_id: await self._get_canonical_id(reg_id) for reg_id in reg_ids}
 
     async def _get_canonical_id(self, reg_id):

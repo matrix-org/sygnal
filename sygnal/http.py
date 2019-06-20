@@ -14,11 +14,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import asyncio
 import json
 import logging
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import gatherResults, ensureDeferred
 from twisted.web import server
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
@@ -43,21 +42,6 @@ class V1NotifyHandler(Resource):
     isLeaf = True
 
     def render_POST(self, request):
-        async def wrap_handle_errors(coro):
-            """
-            Prevents exceptions, originating from one pushkin,
-            from disrupting dispatch to other pushkins and feedback/returning the API response.
-            :param coro: The coroutine or other awaitable to wrap
-            :return: A wrapped awaitable which does not propagate the exception, returning
-            [] on failure. (That is, the pushkeys will not be marked as failed.)
-            """
-            # TODO check this is what we want; maybe we should give 500 in event of failure?
-            try:
-                return await coro
-            except Exception:
-                logger.exception("Exception whilst dispatching notification to pushkin")
-                return []
-
         try:
             body = json.loads(request.content.read())
         except Exception:
@@ -86,7 +70,7 @@ class V1NotifyHandler(Resource):
             return msg.encode()
 
         rej = []
-        futures = []
+        deferreds = []
 
         pushkins = self.sygnal.pushkins
 
@@ -107,11 +91,9 @@ class V1NotifyHandler(Resource):
 
             # TODO NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
 
-            futures.append(
-                asyncio.ensure_future(wrap_handle_errors(
-                    pushkin.dispatch_notification(notif, d)
-                ))
-            )
+            deferreds.append(ensureDeferred(
+                pushkin.dispatch_notification(notif, d)
+            ))
 
         def callback(rejected_lists):
             # combine all rejected pushkeys into one list
@@ -123,7 +105,7 @@ class V1NotifyHandler(Resource):
 
             request.finish()
 
-        aggregate = Deferred.fromFuture(asyncio.gather(*futures))
+        aggregate = gatherResults(deferreds)
         aggregate.addCallback(callback)
 
         # we have to try and send the notifications first, so we can find out which ones to reject

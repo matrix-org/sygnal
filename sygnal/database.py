@@ -14,17 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 import sqlite3
-import sys
 from concurrent.futures import ThreadPoolExecutor
+
+from twisted.internet.defer import Deferred
 
 logger = logging.getLogger(__name__)
 
 
 class Database:
-    def __init__(self, dbfile):
+    def __init__(self, dbfile, twisted_reactor):
+        self.twisted_reactor = twisted_reactor
         self.dbfile = dbfile
         # SQLite is blocking, so run queries in a separate thread
         self.dbexecutor = ThreadPoolExecutor(max_workers=1)
@@ -33,29 +34,26 @@ class Database:
     def _db_setup(self):
         self.db = sqlite3.connect(self.dbfile)
 
-    async def query(self, query, args=(), fetch=None):
+    def query(self, query, args=(), fetch=None):
+        deferred = Deferred()
+
         def runquery():
-            result = {}
+            result = None
             try:
                 c = self.db.cursor()
                 c.execute(query, args)
                 if fetch == 1 or fetch == 'one':
-                    result['rows'] = c.fetchone()
+                    result = c.fetchone()
                 elif fetch == 'all':
-                    result['rows'] = c.fetchall()
+                    result = c.fetchall()
                 elif fetch is None:
                     self.db.commit()
-                    result['rowcount'] = c.rowcount
-            except Exception:
+                    result = c.rowcount
+                self.twisted_reactor.callFromThread(deferred.callback, result)
+            except Exception as exception:
                 logger.exception("Caught exception running db query %s", query)
-                result['ex'] = sys.exc_info()[1]
-            return result
+                self.twisted_reactor.callFromThread(deferred.errback, exception)
 
-        res = await asyncio.get_event_loop().run_in_executor(self.dbexecutor, runquery)
+        self.dbexecutor.submit(runquery)
 
-        if 'ex' in res:
-            raise res['ex']
-        elif 'rows' in res:
-            return res['rows']
-        elif 'rowcount' in res:
-            return res['rowcount']
+        return deferred
