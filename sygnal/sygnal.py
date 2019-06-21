@@ -49,8 +49,8 @@ class Sygnal(object):
     def _setup(self):
         cfg = self.config
 
-        logging.getLogger().setLevel(getattr(logging, cfg.get('log', 'loglevel').upper()))
-        logfile = cfg.get('log', 'logfile')
+        logging.getLogger().setLevel(getattr(logging, cfg['log']['loglevel'].upper()))
+        logfile = cfg['log']['logfile']
         if logfile != '':
             handler = WatchedFileHandler(logfile)
             # TODO not sure how to port this over to Twisted Web handler.addFilter(RequestIdFilter())
@@ -78,9 +78,9 @@ class Sygnal(object):
         #         addr=cfg.get("metrics", "prometheus_addr"),
         #     )
 
-        self.database = Database(cfg.get('db', 'dbfile'), self.reactor)
+        self.database = Database(cfg['db']['dbfile'], self.reactor)
 
-        for key, val in cfg.items('apps'):
+        for key, val in cfg['apps'].items():
             parts = key.rsplit('.', 1)
             if len(parts) < 2:
                 continue
@@ -100,13 +100,17 @@ class Sygnal(object):
 
     def _make_pushkin(self, kind, name):
         if '.' in kind:
-            toimport = kind
+            kind_split = kind.rsplit('.', 1)
+            to_import = kind_split[0]
+            to_construct = kind_split[1]
         else:
-            toimport = f"sygnal.{kind}pushkin"
+            to_import = f"sygnal.{kind}pushkin"
+            to_construct = f"{kind.capitalize()}Pushkin"
 
-        logger.info("Creating pushkin: %s", toimport)
-        pushkin_module = importlib.import_module(toimport)
-        clarse = getattr(pushkin_module, f"{kind.capitalize()}Pushkin")
+        logger.info("Importing pushkin module: %s", to_import)
+        pushkin_module = importlib.import_module(to_import)
+        logger.info("Creating pushkin: %s", to_construct)
+        clarse = getattr(pushkin_module, to_construct)
         return clarse(name, self, self.config)
 
     def run(self):

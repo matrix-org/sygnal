@@ -24,6 +24,7 @@ from twisted.web import server
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
+from sygnal.notifications import NotificationContext, NotificationLoggerAdapter
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
 
@@ -43,7 +44,28 @@ class V1NotifyHandler(Resource):
 
     isLeaf = True
 
+    def _make_request_id(self):
+        """
+        Generates a request ID, intended to be unique, for a request so it can be traced through logging.
+        Returns: a request ID for the request.
+        """
+        return "42"  # TODO actually generate IDs
+
     def render_POST(self, request):
+        request_id = self._make_request_id()
+
+        tracing_id = None
+
+        # TODO check for OpenTracing header if configured to do so (make header name configurable?)
+        # request.headers.…
+
+        context = NotificationContext(request_id, tracing_id)
+
+        log = NotificationLoggerAdapter(logger, {'request_id': request_id})
+
+        if tracing_id is not None:
+            log.info("Tracing ID: %s", tracing_id)
+
         try:
             body = json.loads(request.content.read())
         except Exception:
@@ -51,14 +73,14 @@ class V1NotifyHandler(Resource):
 
         if 'notification' not in body or not isinstance(body['notification'], dict):
             msg = "Invalid notification: expecting object in 'notification' key"
-            logger.warning(msg)
+            log.warning(msg)
             request.setResponseCode(400)
             return msg.encode()
 
         try:
             notif = Notification(body['notification'])
         except InvalidNotificationException as e:
-            logger.exception("Invalid notification")
+            log.exception("Invalid notification")
             request.setResponseCode(400)
             # return e.message.encode()
             return str(e).encode()
@@ -67,7 +89,7 @@ class V1NotifyHandler(Resource):
 
         if len(notif.devices) == 0:
             msg = "No devices in notification"
-            logger.warning(msg)
+            log.warning(msg)
             request.setResponseCode(400)
             return msg.encode()
 
@@ -81,24 +103,29 @@ class V1NotifyHandler(Resource):
 
             appid = d.app_id
             if appid not in pushkins:
-                logger.warning("Got notification for unknown app ID %s", appid)
+                log.warning("Got notification for unknown app ID %s", appid)
                 rej.append(d.pushkey)
                 continue
 
             pushkin = pushkins[appid]
-            logger.debug(
+            log.debug(
                 "Sending push to pushkin %s for app ID %s",
                 pushkin.name, appid,
             )
 
             # TODO NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
 
-            deferreds.append(ensureDeferred(
-                pushkin.dispatch_notification(notif, d)
-            ))
+            async def dispatch_checked():
+                result = await pushkin.dispatch_notification(notif, d, context)
+                if not isinstance(result, list):
+                    raise TypeError("Pushkin should return list.")
+                return result
+
+            deferreds.append(ensureDeferred(dispatch_checked()))
 
         def callback(rejected_lists):
             # combine all rejected pushkeys into one list
+
             rejected = sum(rejected_lists, rej)
 
             request.write(json.dumps({

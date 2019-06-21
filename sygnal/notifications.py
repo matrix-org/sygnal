@@ -14,6 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from logging import LoggerAdapter
 
 from .exceptions import InvalidNotificationException
 
@@ -107,15 +108,33 @@ class Pushkin(object):
             return None
         return self.cfg.get('apps', '%s.%s' % (self.name, key))
 
-    async def dispatch_notification(self, n, device):
+    async def dispatch_notification(self, n, device, context):
         """
-        Attempt to dispatch the notification for the device specified.
+        Args:
+            n: The notification to dispatch via this pushkin
+            device: The device to dispatch the notification for.
+            context (NotificationContext): the request context
 
-        :param n: The notification to dispatch via this pushkin
-        :param device: The device to dispatch the notification for.
-        :return: A list of rejected pushkeys, to be reported back to the homeserver
+        Returns:
+            A list of rejected pushkeys, to be reported back to the homeserver
         """
         pass
 
     async def shutdown(self):
         pass
+
+
+class NotificationContext(object):
+    def __init__(self, request_id, tracing_id=None):
+        """
+        Args:
+            request_id (str): An ID for the request, or None to have it generated automatically.
+            tracing_id (str, optional): A tracing ID for the request.
+        """
+        self.request_id = request_id
+        self.tracing_id = tracing_id
+
+
+class NotificationLoggerAdapter(LoggerAdapter):  # todo move to utils?
+    def process(self, msg, kwargs):
+        return f"[{self.extra['request_id']}] {msg}", kwargs

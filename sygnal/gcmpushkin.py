@@ -25,6 +25,7 @@ from twisted.web.client import HTTPConnectionPool, Agent, FileBodyProducer, read
 from twisted.web.http_headers import Headers
 
 from sygnal.exceptions import TemporaryNotificationDispatchException, NotificationDispatchException
+from sygnal.notifications import NotificationLoggerAdapter
 from sygnal.utils import twisted_sleep
 from .exceptions import PushkinSetupException
 from .notifications import Pushkin
@@ -36,7 +37,7 @@ SEND_TIME_HISTOGRAM = Histogram(
 
 logger = logging.getLogger(__name__)
 
-# GCM_URL = b"https://fcm.googleapis.com/fcm/send"
+# GCM_URL = b"https://fcm.googleapis.com/fcm/send" # TODO <--
 GCM_URL = b"http://localhost:8000/10qmd681/fcm/send"
 MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
@@ -96,48 +97,56 @@ class GcmPushkin(Pushkin):
         await self.canonical_reg_id_store.setup(self.db)
         logger.info("Finished setting up CanonicalRegId Store")
 
-    async def dispatch_notification(self, n, device):
+    async def _perform_http_request(self, body, headers):
+        body_producer = FileBodyProducer(BytesIO(json.dumps(body).encode()))
+        try:
+            response = await self.http_agent.request(b'POST', GCM_URL,
+                                                     headers=Headers(headers),
+                                                     bodyProducer=body_producer)
+        except Exception as exception:
+            raise TemporaryNotificationDispatchException("GCM request failure") from exception
+        response_text = (await readBody(response)).decode()
+        return response, response_text
+
+    async def dispatch_notification(self, n, device, context):
+        log = NotificationLoggerAdapter(logger, {
+            'request_id': context.request_id
+        })
+
         async def request_dispatch(pushkeys):
             poke_start_time = time.time()
 
-            response = None
             with SEND_TIME_HISTOGRAM.time():
-                body_producer = FileBodyProducer(BytesIO(json.dumps(body).encode()))
-                try:
-                    response = await self.http_agent.request(b'POST', GCM_URL,
-                                                             headers=Headers(headers),
-                                                             bodyProducer=body_producer)
-                except Exception as exception:
-                    raise TemporaryNotificationDispatchException("GCM request failure") from exception
+                response, response_text = await self._perform_http_request(body, headers)
 
             # todo can we reuse the histogram for this?
-            logger.debug("GCM request took %f seconds", time.time() - poke_start_time)
+            log.debug("GCM request took %f seconds", time.time() - poke_start_time)
 
-            # todo check b'retry-after' in response.headers and raise custom exception then
-            #   lowercase before comparison? It's for 500–599 errors.
+            if 500 <= response.code < 600:
+                log.debug("%d from server, waiting to try again", response.code)
 
-            if response is not None:
-                response_text = (await readBody(response)).decode()
+                retry_after = None
 
-            if response is None:
-                pass
-            elif 500 <= response.code < 600:
-                logger.debug("%d from server, waiting to try again", response.code)
+                for header_value in response.headers.getRawHeader(b'retry-after', default=[]):
+                    retry_after = int(header_value)
+
+                raise TemporaryNotificationDispatchException("GCM server error, hopefully temporary.",
+                                                             custom_retry_delay=retry_after)
             elif response.code == 400:
-                logger.error(
+                log.error(
                     "%d from server, we have sent something invalid! Error: %r",
                     response.code,
                     response_text,
                 )
                 # permanent failure: give up
-                raise Exception("Invalid request")  # todo <-- don't use Exception(…)
+                raise NotificationDispatchException("Invalid request")
             elif response.code == 401:
-                logger.error(
+                log.error(
                     "401 from server! Our API key is invalid? Error: %r",
                     response_text,
                 )
                 # permanent failure: give up
-                raise Exception("Not authorized to push")  # todo <-- don't use Exception(…)
+                raise NotificationDispatchException("Not authorised to push")
             elif 200 <= response.code < 300:
                 # todo context object. Assign IDs to requests. Don't log sensitive info
                 # todo OpenTracing -> do context, get it almost for free
@@ -146,12 +155,12 @@ class GcmPushkin(Pushkin):
                 except JSONDecodeError:
                     raise NotificationDispatchException("Invalid JSON response from GCM.")
                 if 'results' not in resp_object:
-                    logger.error(
+                    log.error(
                         "%d from server but response contained no 'results' key: %r",
                         response.status_code, response.text,
                     )
                 if len(resp_object['results']) < len(pushkeys):
-                    logger.error(
+                    log.error(
                         "Sent %d notifications but only got %d responses!",
                         len(n.devices), len(resp_object['results'])
                     )
@@ -164,28 +173,25 @@ class GcmPushkin(Pushkin):
                             pushkeys[i], result['registration_id']
                         )
                     if 'error' in result:
-                        logger.warning("Error for pushkey %s: %s", pushkeys[i], result['error'])
+                        log.warning("Error for pushkey %s: %s", pushkeys[i], result['error'])
                         if result['error'] in BAD_PUSHKEY_FAILURE_CODES:
-                            logger.info(
+                            log.info(
                                 "Reg ID %r has permanently failed with code %r: rejecting upstream",
                                 pushkeys[i], result['error']
                             )
                             failed.append(pushkeys[i])
                         elif result['error'] in BAD_MESSAGE_FAILURE_CODES:
-                            logger.info(
+                            log.info(
                                 "Message for reg ID %r has permanently failed with code %r",
                                 pushkeys[i], result['error']
                             )
                         else:
-                            logger.info(
+                            log.info(
                                 "Reg ID %r has temporarily failed with code %r",
                                 pushkeys[i], result['error']
                             )
                             new_pushkeys.append(pushkeys[i])
-                if len(new_pushkeys) == 0:
-                    # we are done – no more retries needed
-                    return failed
-                pushkeys = new_pushkeys
+                return failed, new_pushkeys
 
         pushkeys = [device.pushkey for device in n.devices if device.app_id == self.name]
         # Resolve canonical IDs for all pushkeys
@@ -222,21 +228,26 @@ class GcmPushkin(Pushkin):
             body['registration_ids'] = pushkeys
 
         for retry_number in range(0, MAX_TRIES):
-            logger.info("Sending (attempt %i): %r => %r", retry_number, data, pushkeys)
+            log.info("Sending (attempt %i): %r => %r",
+                     retry_number, data, pushkeys)
 
             try:
-                await request_dispatch(pushkeys)
-                break
+                new_failed, new_pushkeys = await request_dispatch(pushkeys)
+                pushkeys = new_pushkeys
+                failed += new_failed
+                if len(pushkeys) == 0:
+                    break
             except TemporaryNotificationDispatchException as exc:
                 retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
                 if exc.custom_retry_delay is not None:
                     retry_delay = exc.custom_retry_delay
 
-                logger.exception("Temporary failure, will retry in %d seconds", retry_delay)
+                log.exception("Temporary failure, will retry in %d seconds",
+                              retry_delay)
 
                 await twisted_sleep(retry_delay)
 
-        logger.info("Gave up retrying reg IDs: %r", pushkeys)
+        log.info("Gave up retrying reg IDs: %r", pushkeys)
         return failed
 
     @staticmethod
@@ -253,7 +264,7 @@ class GcmPushkin(Pushkin):
 
         data['prio'] = 'high'
         if n.prio == 'low':
-            data['prio'] = 'normal';
+            data['prio'] = 'normal'
 
         if getattr(n, 'counts', None):
             data['unread'] = n.counts.unread
