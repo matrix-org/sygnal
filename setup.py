@@ -34,6 +34,11 @@ setup(
     version=read("VERSION").strip(),
     packages=find_packages(exclude=["tests", "tests.*"]),
     description="Reference Push Gateway for Matrix Notifications",
-    install_requires=["Twisted>=19.2.1", "prometheus_client>=0.7.0,<0.8"],
+    install_requires=[
+        "Twisted>=19.2.1",
+        "prometheus_client>=0.7.0,<0.8",
+        "aioapns>=1.6.2",
+        "pyyaml>=5.1.1"
+    ],
     long_description=read("README.rst"),
 )

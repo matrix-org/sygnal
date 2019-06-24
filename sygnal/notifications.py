@@ -103,10 +103,10 @@ class Pushkin(object):
     async def start(self, sygnal):
         pass
 
-    def getConfig(self, key):
-        if not self.cfg.has_option("apps", "%s.%s" % (self.name, key)):
-            return None
-        return self.cfg.get("apps", "%s.%s" % (self.name, key))
+    def get_config(self, key, default=None):
+        if key not in self.cfg:
+            return default
+        return self.cfg[key]
 
     async def dispatch_notification(self, n, device, context):
         """

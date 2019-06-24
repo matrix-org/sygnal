@@ -19,7 +19,7 @@ from threading import Condition
 
 from twisted.internet.defer import gatherResults, ensureDeferred
 from twisted.test.proto_helpers import MemoryReactorClock
-from twisted.trial.unittest import TestCase
+from twisted.trial import unittest
 from twisted.web.http_headers import Headers
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.test.requesthelper import DummyRequest
@@ -31,7 +31,7 @@ from sygnal.sygnal import Sygnal
 REQ_PATH = b"/_matrix/push/v1/notify"
 
 
-class TestCase(TestCase):
+class TestCase(unittest.TestCase):
     def config_setup(self, config):
         config["db"]["dbfile"] = ":memory:"
 

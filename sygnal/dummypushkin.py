@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 class DummyPushkin(Pushkin):
     async def dispatch_notification(self, n, device, context):
-        prefix = self.getConfig("prefix")
-        delay = float(self.getConfig("delay"))
+        prefix = self.get_config("prefix")
+        delay = float(self.get_config("delay"))
         logger.info(f"DUMMY: SENDING {prefix} {self.name} {n}")
         await twisted_sleep(delay)
 

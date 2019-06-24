@@ -1,5 +1,6 @@
 *.pyc
 sygnal.conf
+sygnal.yaml
 gunicorn_config.py
 var/
 sygnal.pid

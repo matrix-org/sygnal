@@ -16,13 +16,13 @@
 # limitations under the License.
 
 
-import configparser
 import importlib
 import logging
 import os
 import sys
 from logging.handlers import WatchedFileHandler
 
+import yaml
 from twisted.internet import reactor
 from twisted.internet.defer import gatherResults, ensureDeferred
 
@@ -79,38 +79,34 @@ class Sygnal(object):
 
         self.database = Database(cfg["db"]["dbfile"], self.reactor)
 
-        for key, val in cfg["apps"].items():
-            parts = key.rsplit(".", 1)
-            if len(parts) < 2:
-                continue
-            if parts[1] == "type":
-                try:
-                    self.pushkins[parts[0]] = self._make_pushkin(val, parts[0])
-                except Exception:
-                    logger.exception("Failed to load module for kind %s", val)
-                    raise
+        for app_id, app_cfg in cfg["apps"].items():
+            try:
+                self.pushkins[app_id] = self._make_pushkin(app_cfg, app_id)
+            except Exception:
+                logger.exception("Failed to load module for kind %s", app_cfg)
+                raise
 
         if len(self.pushkins) == 0:
-            logger.error("No app IDs are configured. Edit sygnal.conf to define some.")
+            logger.error("No app IDs are configured. Edit sygnal.yaml to define some.")
             sys.exit(1)
 
         logger.info("Configured with app IDs: %r", self.pushkins.keys())
         logger.info("Setup completed")
 
-    def _make_pushkin(self, kind, name):
-        if "." in kind:
-            kind_split = kind.rsplit(".", 1)
+    def _make_pushkin(self, app_type, app_name, app_config):
+        if "." in app_type:
+            kind_split = app_type.rsplit(".", 1)
             to_import = kind_split[0]
             to_construct = kind_split[1]
         else:
-            to_import = f"sygnal.{kind}pushkin"
-            to_construct = f"{kind.capitalize()}Pushkin"
+            to_import = f"sygnal.{app_type}pushkin"
+            to_construct = f"{app_type.capitalize()}Pushkin"
 
         logger.info("Importing pushkin module: %s", to_import)
         pushkin_module = importlib.import_module(to_import)
         logger.info("Creating pushkin: %s", to_construct)
         clarse = getattr(pushkin_module, to_construct)
-        return clarse(name, self, self.config)
+        return clarse(app_name, self, app_config)
 
     def run(self):
         self._setup()
@@ -137,19 +133,14 @@ class Sygnal(object):
 
 
 def parse_config():
-    cfg = configparser.ConfigParser(CONFIG_DEFAULTS)
-    # Make keys case-sensitive
-    cfg.optionxform = str
-    for sect in CONFIG_SECTIONS:
-        try:
-            cfg.add_section(sect)
-        except configparser.DuplicateSectionError:
-            pass
-    cfg.read(os.getenv("SYGNAL_CONF", "sygnal.conf"))
-    return cfg
+    config_path = os.getenv("SYGNAL_CONF", "sygnal.yaml")
+    with open(config_path) as file_handle:
+        return yaml.safe_load(file_handle)
 
 
 if __name__ == "__main__":
     config = parse_config()
+    print(config)
+    stop()  # todo
     sygnal = Sygnal(config)
     sygnal.run()

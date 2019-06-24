@@ -72,23 +72,22 @@ class GcmPushkin(Pushkin):
         self.http_agent = None
         self.http_pool = None
         self.db = None
-        self.api_key = None
         self.canonical_reg_id_store = None
+
+        self.api_key = self.get_config("api_key")
+        if not self.api_key:
+            raise PushkinSetupException("No API key set in config")
 
     async def start(self, sygnal):
         # todo (all) do docstrings incl on classes. Use Synapse docstring syntax (Google format?)
         self.http_pool = HTTPConnectionPool(sygnal.reactor)
         self.http_pool.maxPersistentPerHost = (
-                self.getConfig("max_connections") or DEFAULT_MAX_CONNECTIONS
+            self.get_config("max_connections", DEFAULT_MAX_CONNECTIONS)
         )
 
         self.http_agent = Agent(sygnal.reactor, pool=self.http_pool)
 
         self.db = sygnal.database
-
-        self.api_key = self.getConfig("apiKey")
-        if not self.api_key:
-            raise PushkinSetupException("No API key set in config")
 
         logger.debug("About to set up CanonicalRegId Store")
         self.canonical_reg_id_store = CanonicalRegIdStore()
@@ -146,7 +145,6 @@ class GcmPushkin(Pushkin):
             # permanent failure: give up
             raise NotificationDispatchException("Not authorised to push")
         elif 200 <= response.code < 300:
-            # todo context object. Assign IDs to requests. Don't log sensitive info
             # todo OpenTracing -> do context, get it almost for free
             try:
                 resp_object = json.loads(response_text)
