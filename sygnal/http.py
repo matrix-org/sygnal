@@ -28,13 +28,7 @@ from sygnal.notifications import NotificationContext, NotificationLoggerAdapter
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
 
-# TODO ?
 logger = logging.getLogger(__name__)
-
-
-# TODO sort this out.
-class ClientError(Exception):
-    pass
 
 
 class V1NotifyHandler(Resource):
@@ -61,7 +55,7 @@ class V1NotifyHandler(Resource):
 
         context = NotificationContext(request_id, tracing_id)
 
-        log = NotificationLoggerAdapter(logger, {'request_id': request_id})
+        log = NotificationLoggerAdapter(logger, {"request_id": request_id})
 
         if tracing_id is not None:
             log.info("Tracing ID: %s", tracing_id)
@@ -69,16 +63,19 @@ class V1NotifyHandler(Resource):
         try:
             body = json.loads(request.content.read())
         except Exception:
-            raise ClientError("Expected JSON request body")
+            msg = "Expected JSON request body"
+            log.warning(msg)
+            request.setResponseCode(400)
+            return msg.encode()
 
-        if 'notification' not in body or not isinstance(body['notification'], dict):
+        if "notification" not in body or not isinstance(body["notification"], dict):
             msg = "Invalid notification: expecting object in 'notification' key"
             log.warning(msg)
             request.setResponseCode(400)
             return msg.encode()
 
         try:
-            notif = Notification(body['notification'])
+            notif = Notification(body["notification"])
         except InvalidNotificationException as e:
             log.exception("Invalid notification")
             request.setResponseCode(400)
@@ -108,10 +105,7 @@ class V1NotifyHandler(Resource):
                 continue
 
             pushkin = pushkins[appid]
-            log.debug(
-                "Sending push to pushkin %s for app ID %s",
-                pushkin.name, appid,
-            )
+            log.debug("Sending push to pushkin %s for app ID %s", pushkin.name, appid)
 
             # TODO NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
 
@@ -128,9 +122,7 @@ class V1NotifyHandler(Resource):
 
             rejected = sum(rejected_lists, rej)
 
-            request.write(json.dumps({
-                "rejected": rejected
-            }).encode())
+            request.write(json.dumps({"rejected": rejected}).encode())
 
             request.finish()
 
@@ -144,7 +136,9 @@ class V1NotifyHandler(Resource):
                 else:
                     request.setResponseCode(500)
                     # TODO is this a decent way to handle Failure?
-                    logging.error("Exception whilst dispatching notification.\n%s", subfailure)
+                    logging.error(
+                        "Exception whilst dispatching notification.\n%s", subfailure
+                    )
             else:
                 request.setResponseCode(500)
                 logging.error("Exception whilst dispatching notification.\n%s", failure)
@@ -167,9 +161,9 @@ class PushGatewayApiServer(object):
         v1 = Resource()
 
         # Note that using plain strings here will lead to silent failure
-        root.putChild(b'_matrix', matrix)
-        matrix.putChild(b'push', push)
-        push.putChild(b'v1', v1)
-        v1.putChild(b'notify', V1NotifyHandler(sygnal))
+        root.putChild(b"_matrix", matrix)
+        matrix.putChild(b"push", push)
+        push.putChild(b"v1", v1)
+        v1.putChild(b"notify", V1NotifyHandler(sygnal))
 
         self.site = server.Site(root)

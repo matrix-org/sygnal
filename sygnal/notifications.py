@@ -23,8 +23,8 @@ class Tweaks:
     def __init__(self, raw):
         self.sound = None
 
-        if 'sound' in raw:
-            self.sound = raw['sound']
+        if "sound" in raw:
+            self.sound = raw["sound"]
 
 
 class Device:
@@ -35,20 +35,20 @@ class Device:
         self.data = None
         self.tweaks = None
 
-        if 'app_id' not in raw:
+        if "app_id" not in raw:
             raise InvalidNotificationException("Device with no app_id")
-        if 'pushkey' not in raw:
+        if "pushkey" not in raw:
             raise InvalidNotificationException("Device with no pushkey")
-        if 'pushkey_ts' in raw:
-            self.pushkey_ts = raw['pushkey_ts']
-        if 'tweaks' in raw:
-            self.tweaks = Tweaks(raw['tweaks'])
+        if "pushkey_ts" in raw:
+            self.pushkey_ts = raw["pushkey_ts"]
+        if "tweaks" in raw:
+            self.tweaks = Tweaks(raw["tweaks"])
         else:
             self.tweaks = Tweaks({})
-        self.app_id = raw['app_id']
-        self.pushkey = raw['pushkey']
-        if 'data' in raw:
-            self.data = raw['data']
+        self.app_id = raw["app_id"]
+        self.pushkey = raw["pushkey"]
+        if "data" in raw:
+            self.data = raw["data"]
 
 
 class Counts:
@@ -56,26 +56,26 @@ class Counts:
         self.unread = None
         self.missed_calls = None
 
-        if 'unread' in raw:
-            self.unread = raw['unread']
-        if 'missed_calls' in raw:
-            self.missed_calls = raw['missed_calls']
+        if "unread" in raw:
+            self.unread = raw["unread"]
+        if "missed_calls" in raw:
+            self.missed_calls = raw["missed_calls"]
 
 
 class Notification:
     def __init__(self, notif):
         optional_attrs = [
-            'room_name',
-            'room_alias',
-            'prio',
-            'membership',
-            'sender_display_name',
-            'content',
-            'event_id',
-            'room_id',
-            'user_is_target',
-            'type',
-            'sender',
+            "room_name",
+            "room_alias",
+            "prio",
+            "membership",
+            "sender_display_name",
+            "content",
+            "event_id",
+            "room_id",
+            "user_is_target",
+            "type",
+            "sender",
         ]
         for a in optional_attrs:
             if a in notif:
@@ -83,15 +83,15 @@ class Notification:
             else:
                 self.__dict__[a] = None
 
-        if 'devices' not in notif or not isinstance(notif['devices'], list):
+        if "devices" not in notif or not isinstance(notif["devices"], list):
             raise InvalidNotificationException("Expected list in 'devices' key")
 
-        if 'counts' in notif:
-            self.counts = Counts(notif['counts'])
+        if "counts" in notif:
+            self.counts = Counts(notif["counts"])
         else:
             self.counts = Counts({})
 
-        self.devices = [Device(d) for d in notif['devices']]
+        self.devices = [Device(d) for d in notif["devices"]]
 
 
 class Pushkin(object):
@@ -104,9 +104,9 @@ class Pushkin(object):
         pass
 
     def getConfig(self, key):
-        if not self.cfg.has_option('apps', '%s.%s' % (self.name, key)):
+        if not self.cfg.has_option("apps", "%s.%s" % (self.name, key)):
             return None
-        return self.cfg.get('apps', '%s.%s' % (self.name, key))
+        return self.cfg.get("apps", "%s.%s" % (self.name, key))
 
     async def dispatch_notification(self, n, device, context):
         """

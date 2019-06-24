@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-
 # Copyright 2014 matrix.org
+# Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,9 +43,9 @@ class Database:
             try:
                 c = self.db.cursor()
                 c.execute(query, args)
-                if fetch == 1 or fetch == 'one':
+                if fetch == 1 or fetch == "one":
                     result = c.fetchone()
-                elif fetch == 'all':
+                elif fetch == "all":
                     result = c.fetchall()
                 elif fetch is None:
                     self.db.commit()

@@ -31,12 +31,12 @@ from .database import Database
 
 logger = logging.getLogger(__name__)
 
-CONFIG_SECTIONS = ['http', 'log', 'apps', 'db', 'metrics']
+CONFIG_SECTIONS = ["http", "log", "apps", "db", "metrics"]
 CONFIG_DEFAULTS = {
-    'port': '5000',
-    'loglevel': 'info',
-    'logfile': '',
-    'dbfile': 'sygnal.db'
+    "port": "5000",
+    "loglevel": "info",
+    "logfile": "",
+    "dbfile": "sygnal.db",
 }
 
 
@@ -49,14 +49,13 @@ class Sygnal(object):
     def _setup(self):
         cfg = self.config
 
-        logging.getLogger().setLevel(getattr(logging, cfg['log']['loglevel'].upper()))
-        logfile = cfg['log']['logfile']
-        if logfile != '':
+        logging.getLogger().setLevel(getattr(logging, cfg["log"]["loglevel"].upper()))
+        logfile = cfg["log"]["logfile"]
+        if logfile != "":
             handler = WatchedFileHandler(logfile)
-            # TODO not sure how to port this over to Twisted Web handler.addFilter(RequestIdFilter())
             formatter = logging.Formatter(
-                '%(asctime)s [%(process)d] %(levelname)-5s '
-                '%%(request_id)s %(name)s %(message)s'
+                "%(asctime)s [%(process)d] %(levelname)-5s "
+                "%%(request_id)s %(name)s %(message)s"
             )
             handler.setFormatter(formatter)
             logging.getLogger().addHandler(handler)
@@ -78,13 +77,13 @@ class Sygnal(object):
         #         addr=cfg.get("metrics", "prometheus_addr"),
         #     )
 
-        self.database = Database(cfg['db']['dbfile'], self.reactor)
+        self.database = Database(cfg["db"]["dbfile"], self.reactor)
 
-        for key, val in cfg['apps'].items():
-            parts = key.rsplit('.', 1)
+        for key, val in cfg["apps"].items():
+            parts = key.rsplit(".", 1)
             if len(parts) < 2:
                 continue
-            if parts[1] == 'type':
+            if parts[1] == "type":
                 try:
                     self.pushkins[parts[0]] = self._make_pushkin(val, parts[0])
                 except Exception:
@@ -99,8 +98,8 @@ class Sygnal(object):
         logger.info("Setup completed")
 
     def _make_pushkin(self, kind, name):
-        if '.' in kind:
-            kind_split = kind.rsplit('.', 1)
+        if "." in kind:
+            kind_split = kind.rsplit(".", 1)
             to_import = kind_split[0]
             to_construct = kind_split[1]
         else:
@@ -115,12 +114,14 @@ class Sygnal(object):
 
     def run(self):
         self._setup()
-        port = int(self.config.get('http', 'port'))
+        port = int(self.config.get("http", "port"))
         pushgateway_api = PushGatewayApiServer(self)
         logger.info("Listening on port %d", port)
 
-        start_deferred = gatherResults([ensureDeferred(pushkin.start(self)) for pushkin in self.pushkins.values()],
-                                       consumeErrors=True)
+        start_deferred = gatherResults(
+            [ensureDeferred(pushkin.start(self)) for pushkin in self.pushkins.values()],
+            consumeErrors=True,
+        )
 
         def on_started(_):
             logger.info("Starting listening")
@@ -148,7 +149,7 @@ def parse_config():
     return cfg
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     config = parse_config()
     sygnal = Sygnal(config)
     sygnal.run()
