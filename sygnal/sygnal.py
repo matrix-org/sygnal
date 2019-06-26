@@ -37,7 +37,7 @@ CONFIG_DEFAULTS = {
     "log": {"level": "info", "file": ""},
     "db": {"dbfile": "sygnal.db"},
     "metrics": {"prometheus": {"address": "127.0.0.1", "port": 8000}},
-    "apps": {}
+    "apps": {},
 }
 
 

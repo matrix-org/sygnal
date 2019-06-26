@@ -137,8 +137,6 @@ class ApnsPushkin(Pushkin):
 
             response = await self.apns_client.send_notification(request)
 
-            # TODO asyncio compat **is** required.
-
             code = int(response.status)
 
             if response.is_successful:
