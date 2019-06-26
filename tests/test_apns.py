@@ -19,10 +19,6 @@ from aioapns.common import NotificationResult
 from sygnal import apnstruncate
 from tests import testutils
 
-# todo
-#   test: truncation
-#   test: rejection in various circumstances as well as retry for these
-#   test: no retry for 4xx errors
 PUSHKIN_ID = "com.example.apns"
 
 TEST_CERTFILE_PATH = "/path/to/my/certfile.pem"

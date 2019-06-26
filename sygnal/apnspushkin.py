@@ -138,7 +138,6 @@ class ApnsPushkin(Pushkin):
             response = await self.apns_client.send_notification(request)
 
             # TODO asyncio compat **is** required.
-            # TODO does APNs perform the required truncation like pushbaby used to?
 
             code = int(response.status)
 
