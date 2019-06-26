@@ -100,8 +100,8 @@ class TruncateTestCase(unittest.TestCase):
         # it works fine on Linux.
         if len(u"\U0001F430") != 1:
             msg = (
-                    "Unicode support is broken in your Python binary. "
-                    + "Truncating messages with multibyte unicode characters will fail."
+                "Unicode support is broken in your Python binary. "
+                + "Truncating messages with multibyte unicode characters will fail."
             )
             self.fail(msg)
 

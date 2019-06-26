@@ -146,8 +146,8 @@ class ApnsPushkin(Pushkin):
             else:
                 # .description corresponds to the 'reason' response field
                 if (
-                        code == self.TOKEN_ERROR_CODE
-                        or response.description == self.TOKEN_ERROR_REASON
+                    code == self.TOKEN_ERROR_CODE
+                    or response.description == self.TOKEN_ERROR_REASON
                 ):
                     return [device.pushkey]
                 else:
@@ -218,16 +218,16 @@ class ApnsPushkin(Pushkin):
         from_display = n.sender
         if n.sender_display_name is not None:
             from_display = n.sender_display_name
-        from_display = from_display[0: self.MAX_FIELD_LENGTH]
+        from_display = from_display[0 : self.MAX_FIELD_LENGTH]
 
         loc_key = None
         loc_args = None
         if n.type == "m.room.message" or n.type == "m.room.encrypted":
             room_display = None
             if n.room_name:
-                room_display = n.room_name[0: self.MAX_FIELD_LENGTH]
+                room_display = n.room_name[0 : self.MAX_FIELD_LENGTH]
             elif n.room_alias:
-                room_display = n.room_alias[0: self.MAX_FIELD_LENGTH]
+                room_display = n.room_alias[0 : self.MAX_FIELD_LENGTH]
 
             content_display = None
             action_display = None
@@ -293,13 +293,13 @@ class ApnsPushkin(Pushkin):
                         loc_key = "USER_INVITE_TO_NAMED_ROOM"
                         loc_args = [
                             from_display,
-                            n.room_name[0: self.MAX_FIELD_LENGTH],
+                            n.room_name[0 : self.MAX_FIELD_LENGTH],
                         ]
                     elif n.room_alias:
                         loc_key = "USER_INVITE_TO_NAMED_ROOM"
                         loc_args = [
                             from_display,
-                            n.room_alias[0: self.MAX_FIELD_LENGTH],
+                            n.room_alias[0 : self.MAX_FIELD_LENGTH],
                         ]
                     else:
                         loc_key = "USER_INVITE_TO_CHAT"
