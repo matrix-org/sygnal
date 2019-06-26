@@ -21,6 +21,7 @@ import os
 import sys
 from logging.handlers import WatchedFileHandler
 
+import prometheus_client
 import yaml
 from twisted.internet import reactor
 from twisted.internet.defer import gatherResults, ensureDeferred
@@ -72,11 +73,15 @@ class Sygnal(object):
         #         integrations=[FlaskIntegration()],
         #     )
 
-        # TODO if cfg.has_option("metrics", "prometheus_port"):
-        #     prometheus_client.start_http_server(
-        #         port=cfg.getint("metrics", "prometheus_port"),
-        #         addr=cfg.get("metrics", "prometheus_addr"),
-        #     )
+        promcfg = config["metrics"]["prometheus"]
+        if promcfg["enabled"] is True:
+            prom_addr = promcfg["address"]
+            prom_port = int(promcfg["port"])
+            logging.info(
+                "Starting Prometheus Server on %s port %d", prom_addr, prom_port
+            )
+
+            prometheus_client.start_http_server(port=prom_port, addr=prom_addr or "")
 
         self.database = Database(cfg["db"]["dbfile"], self.reactor)
 

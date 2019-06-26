@@ -29,6 +29,24 @@ http:
   #
   port: 5000
 
+## Metrics #
+#
+metrics:
+  ## Prometheus #
+  #
+  prometheus:
+    # Specify whether or not to enable Prometheus.
+    #
+    enabled: false
+
+    # Specify an address for the Prometheus HTTP Server to listen on.
+    #
+    address: '127.0.0.1'
+
+    # Specify a port for the Prometheus HTTP Server to listen on.
+    #
+    port: 8000
+
 ## Pushkins/Apps #
 #
 # Add a section for every push application here.
