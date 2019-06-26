@@ -84,27 +84,27 @@ class ApnsPushkin(Pushkin):
                 raise PushkinSetupException(
                     f"The APNs key file '{keyfile}' does not exist."
                 )
-            if not self.get_config('key_id'):
-                raise PushkinSetupException('You must supply key_id.')
-            if not self.get_config('team_id'):
-                raise PushkinSetupException('You must supply team_id.')
-            if not self.get_config('topic'):
-                raise PushkinSetupException('You must supply topic.')
+            if not self.get_config("key_id"):
+                raise PushkinSetupException("You must supply key_id.")
+            if not self.get_config("team_id"):
+                raise PushkinSetupException("You must supply team_id.")
+            if not self.get_config("topic"):
+                raise PushkinSetupException("You must supply topic.")
 
         self.apns_client = None
 
     async def start(self, sygnal):
-        if self.get_config('certfile') is not None:
+        if self.get_config("certfile") is not None:
             self.apns_client = APNs(
                 client_cert=self.get_config("certfile"), use_sandbox=self.use_sandbox
             )
         else:
             self.apns_client = APNs(
-                key=self.get_config('keyfile'),
-                key_id=self.get_config('key_id'),
-                team_id=self.get_config('team_id'),
-                topic=self.get_config('topic'),
-                use_sandbox=self.use_sandbox
+                key=self.get_config("keyfile"),
+                key_id=self.get_config("key_id"),
+                team_id=self.get_config("team_id"),
+                topic=self.get_config("topic"),
+                use_sandbox=self.use_sandbox,
             )
 
     async def dispatch_notification(self, n, device, context):
@@ -175,9 +175,13 @@ class ApnsPushkin(Pushkin):
                 )
 
                 if retry_number == self.MAX_TRIES - 1:
-                    raise NotificationDispatchException('Retried too many times.') from exc
+                    raise NotificationDispatchException(
+                        "Retried too many times."
+                    ) from exc
                 else:
-                    await twisted_sleep(retry_delay, twisted_reactor=self.sygnal.reactor)
+                    await twisted_sleep(
+                        retry_delay, twisted_reactor=self.sygnal.reactor
+                    )
 
     def _get_payload_event_id_only(self, n):
         """

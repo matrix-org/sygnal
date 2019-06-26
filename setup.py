@@ -39,7 +39,7 @@ setup(
         "prometheus_client>=0.7.0,<0.8",
         "aioapns>=1.6.2",
         "pyyaml>=5.1.1",
-        "service_identity>=18.1.0"
+        "service_identity>=18.1.0",
     ],
     long_description=read("README.rst"),
 )
