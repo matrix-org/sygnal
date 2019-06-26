@@ -14,8 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+import copy
 import importlib
 import logging
 import os
@@ -31,12 +30,10 @@ from .database import Database
 
 logger = logging.getLogger(__name__)
 
-CONFIG_SECTIONS = ["http", "log", "apps", "db", "metrics"]
 CONFIG_DEFAULTS = {
-    "port": "5000",
-    "loglevel": "info",
-    "logfile": "",
-    "dbfile": "sygnal.db",
+    "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
+    "log": {"level": "info", "file": ""},
+    "db": {"dbfile": "sygnal.db"},
 }
 
 
@@ -49,8 +46,12 @@ class Sygnal(object):
     def _setup(self):
         cfg = self.config
 
-        logging.getLogger().setLevel(getattr(logging, cfg["log"]["loglevel"].upper()))
-        logfile = cfg["log"]["logfile"]
+        if "loglevel" in cfg["log"]:
+            logging.getLogger().setLevel(getattr(logging, cfg["log"]["level"].upper()))
+        if "file" in cfg["log"]:
+            logfile = cfg["log"]["file"]
+        else:
+            logfile = ""
         if logfile != "":
             handler = WatchedFileHandler(logfile)
             formatter = logging.Formatter(
@@ -81,9 +82,11 @@ class Sygnal(object):
 
         for app_id, app_cfg in cfg["apps"].items():
             try:
-                self.pushkins[app_id] = self._make_pushkin(app_cfg, app_id)
+                self.pushkins[app_id] = self._make_pushkin(app_id, app_cfg)
             except Exception:
-                logger.exception("Failed to load module for kind %s", app_cfg)
+                logger.exception(
+                    "Failed to load and create pushkin for kind %s", app_cfg["type"]
+                )
                 raise
 
         if len(self.pushkins) == 0:
@@ -93,7 +96,8 @@ class Sygnal(object):
         logger.info("Configured with app IDs: %r", self.pushkins.keys())
         logger.info("Setup completed")
 
-    def _make_pushkin(self, app_type, app_name, app_config):
+    def _make_pushkin(self, app_name, app_config):
+        app_type = app_config["type"]
         if "." in app_type:
             kind_split = app_type.rsplit(".", 1)
             to_import = kind_split[0]
@@ -110,7 +114,8 @@ class Sygnal(object):
 
     def run(self):
         self._setup()
-        port = int(self.config.get("http", "port"))
+        port = int(self.config["http"]["port"])
+        bind_addresses = self.config["http"]["bind_addresses"]
         pushgateway_api = PushGatewayApiServer(self)
         logger.info("Listening on port %d", port)
 
@@ -120,8 +125,9 @@ class Sygnal(object):
         )
 
         def on_started(_):
-            logger.info("Starting listening")
-            self.reactor.listenTCP(port, pushgateway_api.site)
+            for interface in bind_addresses:
+                logger.info("Starting listening on %s port %d", interface, port)
+                self.reactor.listenTCP(port, pushgateway_api.site, interface=interface)
 
         start_deferred.addCallback(on_started)
 
@@ -138,9 +144,52 @@ def parse_config():
         return yaml.safe_load(file_handle)
 
 
+def check_config(config):
+    UNDERSTOOD_CONFIG_FIELDS = {"apps", "http", "log"}
+
+    def check_section(section_name, known_keys):
+        nonunderstood = set(config[section_name].keys()).difference(known_keys)
+        if len(nonunderstood) > 0:
+            logger.warning(
+                f"The following configuration fields in '{section_name}' are not understood: %s",
+                nonunderstood,
+            )
+
+    nonunderstood = set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS)
+    if len(nonunderstood) > 0:
+        logger.warning(
+            "The following configuration fields are not understood: %s", nonunderstood
+        )
+
+    check_section("http", {"port", "bind_addresses"})
+    check_section("log", {"file", "level"})
+    check_section("db", {"dbfile"})
+
+
+def merge_left_with_defaults(defaults, loaded_config):
+    result = defaults.copy()
+
+    # copy defaults or override them
+    for k, v in result.items():
+        if isinstance(v, dict):
+            if k in loaded_config:
+                result[k] = merge_left_with_defaults(v, loaded_config[k])
+            else:
+                result[k] = copy.deepcopy(v)
+        elif k in loaded_config:
+            result[k] = loaded_config[k]
+
+    # copy things with no defaults
+    for k, v in loaded_config.items():
+        if k not in result:
+            result[k] = v
+
+    return result
+
+
 if __name__ == "__main__":
     config = parse_config()
-    print(config)
-    stop()  # todo
+    config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
+    check_config(config)
     sygnal = Sygnal(config)
     sygnal.run()
