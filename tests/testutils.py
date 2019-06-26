@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-from configparser import ConfigParser
 from io import BytesIO
 from threading import Condition
 
@@ -24,7 +23,6 @@ from twisted.web.http_headers import Headers
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.test.requesthelper import DummyRequest
 
-import sygnal.sygnal
 from sygnal.http import PushGatewayApiServer
 from sygnal.sygnal import Sygnal
 
@@ -38,9 +36,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         reactor = ExtendedMemoryReactorClock()
 
-        config = ConfigParser(sygnal.sygnal.CONFIG_DEFAULTS)
-        for section in sygnal.sygnal.CONFIG_SECTIONS:
-            config.add_section(section)
+        config = {"apps": {}, "db": {}, "log": {}}
 
         self.config_setup(config)
 
@@ -174,3 +170,10 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
 class DummyResponse(object):
     def __init__(self, code):
         self.code = code
+
+
+def make_async_magic_mock(ret_val):
+    async def dummy(*args, **kwargs):
+        return ret_val
+
+    return dummy

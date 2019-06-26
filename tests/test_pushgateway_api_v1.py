@@ -70,9 +70,9 @@ class TestPushkin(Pushkin):
 class PushGatewayApiV1TestCase(testutils.TestCase):
     def config_setup(self, config):
         super(PushGatewayApiV1TestCase, self).config_setup(config)
-        config["apps"][
-            "com.example.spqr.type"
-        ] = "tests.test_pushgateway_api_v1.TestPushkin"
+        config["apps"]["com.example.spqr"] = {
+            "type": "tests.test_pushgateway_api_v1.TestPushkin"
+        }
 
     def test_good_requests_give_200(self):
         # 200 codes cause the result to be parsed instead of returning the code
