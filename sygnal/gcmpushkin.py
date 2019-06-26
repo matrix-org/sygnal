@@ -20,7 +20,7 @@ import time
 from io import BytesIO
 from json import JSONDecodeError
 
-from prometheus_client import Histogram
+from prometheus_client import Histogram, Counter
 from twisted.web.client import HTTPConnectionPool, Agent, FileBodyProducer, readBody
 from twisted.web.http_headers import Headers
 
@@ -34,8 +34,15 @@ from .exceptions import PushkinSetupException
 from .notifications import Pushkin
 
 SEND_TIME_HISTOGRAM = Histogram(
-    "sygnal_gcm_request_time", "Time taken to send HTTP request"
+    "sygnal_gcm_request_time", "Time taken to send HTTP request to GCM"
 )
+
+RESPONSE_STATUS_CODES_COUNTER = Counter(
+    "sygnal_gcm_status_codes",
+    "Number of HTTP response status codes received from GCM",
+    labelnames=["pushkin", "code"],
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +143,10 @@ class GcmPushkin(Pushkin):
 
         with SEND_TIME_HISTOGRAM.time():
             response, response_text = await self._perform_http_request(body, headers)
+
+        RESPONSE_STATUS_CODES_COUNTER.labels(
+            pushkin=self.name, code=response.code
+        ).inc()
 
         log.debug("GCM request took %f seconds", time.time() - poke_start_time)
 
@@ -249,8 +260,6 @@ class GcmPushkin(Pushkin):
 
         # TODO: Implement collapse_key to queue only one message per room.
         failed = []
-
-        # todo count status codes in prometheus
 
         body = {"data": data, "priority": "normal" if n.prio == "low" else "high"}
 

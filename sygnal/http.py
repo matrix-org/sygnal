@@ -17,6 +17,7 @@
 import json
 import logging
 
+from prometheus_client import Counter
 from twisted.internet import defer
 from twisted.internet.defer import gatherResults, ensureDeferred
 from twisted.python.failure import Failure
@@ -29,6 +30,20 @@ from .exceptions import InvalidNotificationException, NotificationDispatchExcept
 from .notifications import Notification
 
 logger = logging.getLogger(__name__)
+
+NOTIFS_RECEIVED_COUNTER = Counter(
+    "sygnal_notifications_received", "Number of notification pokes received"
+)
+
+NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER = Counter(
+    "sygnal_notifications_devices_received", "Number of devices been asked to push"
+)
+
+NOTIFS_BY_PUSHKIN = Counter(
+    "sygnal_per_pushkin_type",
+    "Number of pushes sent via each type of pushkin",
+    labelnames=["pushkin"],
+)
 
 
 class V1NotifyHandler(Resource):
@@ -82,7 +97,7 @@ class V1NotifyHandler(Resource):
             # return e.message.encode()
             return str(e).encode()
 
-        # TODO NOTIFS_RECEIVED_COUNTER.inc()
+        NOTIFS_RECEIVED_COUNTER.inc()
 
         if len(notif.devices) == 0:
             msg = "No devices in notification"
@@ -96,7 +111,7 @@ class V1NotifyHandler(Resource):
         pushkins = self.sygnal.pushkins
 
         for d in notif.devices:
-            # TODO NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
+            NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
 
             appid = d.app_id
             if appid not in pushkins:
@@ -107,7 +122,7 @@ class V1NotifyHandler(Resource):
             pushkin = pushkins[appid]
             log.debug("Sending push to pushkin %s for app ID %s", pushkin.name, appid)
 
-            # TODO NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
+            NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
 
             async def dispatch_checked():
                 result = await pushkin.dispatch_notification(notif, d, context)
