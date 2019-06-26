@@ -94,21 +94,18 @@ class ApnsPushkin(Pushkin):
         self.apns_client = None
 
     async def start(self, sygnal):
-        # TODO how about token (non-cert) auth?
-
-        # TODO if not self.AC in case of testing?
-
-        self.apns_client = APNs(
-            client_cert=self.get_config("certfile"), use_sandbox=self.use_sandbox
-        )
-
-        self.apns_client = APNs(
-            key=self.get_config('keyfile'),
-            key_id=self.get_config('key_id'),
-            team_id=self.get_config('team_id'),
-            topic=self.get_config('topic'),
-            use_sandbox=self.use_sandbox
-        )
+        if self.get_config('certfile') is not None:
+            self.apns_client = APNs(
+                client_cert=self.get_config("certfile"), use_sandbox=self.use_sandbox
+            )
+        else:
+            self.apns_client = APNs(
+                key=self.get_config('keyfile'),
+                key_id=self.get_config('key_id'),
+                team_id=self.get_config('team_id'),
+                topic=self.get_config('topic'),
+                use_sandbox=self.use_sandbox
+            )
 
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
