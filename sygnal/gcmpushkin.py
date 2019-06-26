@@ -66,8 +66,21 @@ DEFAULT_MAX_CONNECTIONS = 20
 
 
 class GcmPushkin(Pushkin):
+    """
+    Pushkin that relays notifications to Google/Firebase Cloud Messaging.
+    """
+
+    UNDERSTOOD_CONFIG_FIELDS = {"type", "api_key"}
+
     def __init__(self, name, sygnal, config):
         super(GcmPushkin, self).__init__(name, sygnal, config)
+
+        nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
+        if len(nonunderstood) > 0:
+            logger.warning(
+                "The following configuration fields are not understood: %s",
+                nonunderstood,
+            )
 
         self.http_agent = None
         self.http_pool = None
@@ -79,10 +92,9 @@ class GcmPushkin(Pushkin):
             raise PushkinSetupException("No API key set in config")
 
     async def start(self, sygnal):
-        # todo (all) do docstrings incl on classes. Use Synapse docstring syntax (Google format?)
         self.http_pool = HTTPConnectionPool(sygnal.reactor)
-        self.http_pool.maxPersistentPerHost = (
-            self.get_config("max_connections", DEFAULT_MAX_CONNECTIONS)
+        self.http_pool.maxPersistentPerHost = self.get_config(
+            "max_connections", DEFAULT_MAX_CONNECTIONS
         )
 
         self.http_agent = Agent(sygnal.reactor, pool=self.http_pool)
@@ -95,6 +107,16 @@ class GcmPushkin(Pushkin):
         logger.debug("Finished setting up CanonicalRegId Store")
 
     async def _perform_http_request(self, body, headers):
+        """
+        Perform an HTTP request to the FCM server with the body and headers
+        specified.
+        Args:
+            body (nested dict): Body. Will be JSON-encoded.
+            headers (Headers): HTTP Headers.
+
+        Returns:
+
+        """
         body_producer = FileBodyProducer(BytesIO(json.dumps(body).encode()))
         try:
             response = await self.http_agent.request(
@@ -218,7 +240,7 @@ class GcmPushkin(Pushkin):
 
         inverse_reg_id_mappings = {v: k for (k, v) in reg_id_mappings.items()}
 
-        data = GcmPushkin.build_data(n)
+        data = GcmPushkin._build_data(n)
         headers = {
             b"User-Agent": ["sygnal"],
             b"Content-Type": ["application/json"],
@@ -263,14 +285,22 @@ class GcmPushkin(Pushkin):
                     "Temporary failure, will retry in %d seconds", retry_delay
                 )
 
-                await twisted_sleep(retry_delay)
+                await twisted_sleep(retry_delay, twisted_reactor=self.sygnal.reactor)
 
         if len(pushkeys) > 0:
             log.info("Gave up retrying reg IDs: %r", pushkeys)
         return failed
 
     @staticmethod
-    def build_data(n):
+    def _build_data(n):
+        """
+        Build the payload data to be sent.
+        Args:
+            n: Notification to build the payload for.
+
+        Returns:
+            JSON-compatible dict
+        """
         data = {}
         for attr in [
             "event_id",
@@ -332,14 +362,11 @@ class CanonicalRegIdStore(object):
 
     async def get_canonical_ids(self, reg_ids):
         # TODO: Use one DB query
-        return {reg_id: await self.get_canonical_id(reg_id)
-                for reg_id in reg_ids}
+        return {reg_id: await self.get_canonical_id(reg_id) for reg_id in reg_ids}
 
     async def get_canonical_id(self, reg_id):
         rows = await self.db.query(
-            "SELECT canonical_reg_id"
-            " FROM gcm_canonical_reg_id"
-            " WHERE reg_id = ?;",
+            "SELECT canonical_reg_id" " FROM gcm_canonical_reg_id" " WHERE reg_id = ?;",
             (reg_id,),
             fetch="all",
         )
