@@ -36,6 +36,23 @@ class Database:
         self.db = sqlite3.connect(self.dbfile)
 
     def query(self, query, args=(), fetch=None):
+        """
+        Execute a query asynchronously.
+        Args:
+            query (str): The query string
+            args (tuple): Arguments for ?-substitution in the query string
+            fetch (str, optional): determines what part of the result is received
+
+        Returns:
+            a Deferred which will fire with the query result when the
+            query is completed.
+
+            fetch modes are:
+            - 'one': return one row or None
+            - 'all': return a list of rows
+            - None: return a row count
+
+        """
         deferred = Deferred()
 
         def runquery():
