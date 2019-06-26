@@ -23,10 +23,11 @@ from logging.handlers import WatchedFileHandler
 
 import prometheus_client
 import yaml
-from twisted.internet import reactor
-from twisted.internet.defer import gatherResults, ensureDeferred
+from twisted.internet import reactor, asyncioreactor
+from twisted.internet.defer import ensureDeferred
 
 from sygnal.http import PushGatewayApiServer
+from sygnal.utils import collect_all_deferreds
 from .database import Database
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,8 @@ CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"level": "info", "file": ""},
     "db": {"dbfile": "sygnal.db"},
+    "metrics": {"prometheus": {"address": "127.0.0.1", "port": 8000}},
+    "apps": {}
 }
 
 
@@ -47,12 +50,9 @@ class Sygnal(object):
     def _setup(self):
         cfg = self.config
 
-        if "loglevel" in cfg["log"]:
-            logging.getLogger().setLevel(getattr(logging, cfg["log"]["level"].upper()))
-        if "file" in cfg["log"]:
-            logfile = cfg["log"]["file"]
-        else:
-            logfile = ""
+        logging.getLogger().setLevel(getattr(logging, cfg["log"]["level"].upper()))
+        logfile = cfg["log"]["file"]
+
         if logfile != "":
             handler = WatchedFileHandler(logfile)
             formatter = logging.Formatter(
@@ -122,22 +122,31 @@ class Sygnal(object):
         port = int(self.config["http"]["port"])
         bind_addresses = self.config["http"]["bind_addresses"]
         pushgateway_api = PushGatewayApiServer(self)
-        logger.info("Listening on port %d", port)
 
-        start_deferred = gatherResults(
-            [ensureDeferred(pushkin.start(self)) for pushkin in self.pushkins.values()],
-            consumeErrors=True,
+        start_deferred = collect_all_deferreds(
+            [ensureDeferred(pushkin.start(self)) for pushkin in self.pushkins.values()]
         )
+
+        exit_code = 0
 
         def on_started(_):
             for interface in bind_addresses:
                 logger.info("Starting listening on %s port %d", interface, port)
                 self.reactor.listenTCP(port, pushgateway_api.site, interface=interface)
 
+        def on_failed_to_start(failure):
+            nonlocal exit_code
+            exit_code = 1
+            logger.error("Failed to start due to exception", failure)
+            self.reactor.callLater(0, self.reactor.stop)
+
         start_deferred.addCallback(on_started)
+        start_deferred.addErrback(on_failed_to_start)
 
         logger.info("Starting pushkins")
         self.reactor.run()
+
+        sys.exit(exit_code)
 
     def shutdown(self):
         pass  # TODO
@@ -150,7 +159,7 @@ def parse_config():
 
 
 def check_config(config):
-    UNDERSTOOD_CONFIG_FIELDS = {"apps", "http", "log"}
+    UNDERSTOOD_CONFIG_FIELDS = CONFIG_DEFAULTS.keys()
 
     def check_section(section_name, known_keys):
         nonunderstood = set(config[section_name].keys()).difference(known_keys)
@@ -196,5 +205,5 @@ if __name__ == "__main__":
     config = parse_config()
     config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
     check_config(config)
-    sygnal = Sygnal(config)
+    sygnal = Sygnal(config, custom_reactor=asyncioreactor.AsyncioSelectorReactor())
     sygnal.run()

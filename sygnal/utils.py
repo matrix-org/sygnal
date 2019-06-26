@@ -1,5 +1,5 @@
 import twisted.internet.reactor
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, DeferredList
 
 
 async def twisted_sleep(delay, twisted_reactor=twisted.internet.reactor):
@@ -17,3 +17,17 @@ async def twisted_sleep(delay, twisted_reactor=twisted.internet.reactor):
     deferred = Deferred()
     twisted_reactor.callLater(delay, deferred.callback, None)
     await deferred
+
+
+def collect_all_deferreds(deferreds):
+    deferred = Deferred()
+    dlist = DeferredList(deferreds, consumeErrors=True, fireOnOneErrback=True)
+
+    def on_success(results):
+        print(results)
+        stop()
+
+    dlist.addCallback(on_success)
+    dlist.addErrback(deferred.errback)
+
+    return deferred
