@@ -1,0 +1,58 @@
+##
+# This is a configuration for Sygnal, the reference Push Gateway for Matrix
+# See: matrix.org
+##
+
+## Logging #
+#
+log:
+  # Specify a log level to report. Choose from error, warn, info, debug.
+  #
+  level: debug
+  # Specify a file to log to, or omit this option to log to stderr.
+  #
+  file: var/sygnal.log
+
+## HTTP Server (Matrix Push Gateway API) #
+#
+http:
+  # Specify a list of interface addresses to bind to.
+  #
+  # This example listens on the IPv4 loopback device:
+  bind_addresses: ['127.0.0.1']
+  # This example listens on all IPv4 interfaces:
+  #bind_addresses: ['0.0.0.0']
+  # This example listens on all IPv4 and IPv6 interfaces:
+  #bind_addresses: ['0.0.0.0', '::']
+
+  # Specify the port number to listen on.
+  #
+  port: 5000
+
+## Pushkins/Apps #
+#
+# Add a section for every push application here.
+# Specify the pushkey for the application and also the type.
+# For the type, you may specify a fully-qualified Python classname if desired.
+#
+apps:
+# This is an example APNs push configuration using certificate authentication.
+#
+#com.example.myapp.ios:
+#  type: apns
+#  certfile: com.example.myApp_prod_APNS.pem
+
+# This is an example APNs push configuration using key authentication.
+#
+#com.example.myapp2.ios:
+#  type: apns
+#  keyfile: my_key.p8
+#  key_id: MY_KEY_ID
+#  team_id: MY_TEAM_ID
+#  topic: MY_TOPIC
+
+# This is an example GCM/FCM push configuration.
+#
+#com.example.myapp.android:
+#  type: gcm
+#  api_key: your_api_key_for_gcm
