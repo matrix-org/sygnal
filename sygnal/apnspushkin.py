@@ -14,10 +14,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 import logging
 import os
 
+import aioapns
 from aioapns import APNs, NotificationRequest
+from prometheus_client import Histogram, Counter
+from twisted.internet.defer import Deferred
 
 from sygnal import apnstruncate
 from sygnal.exceptions import (
@@ -29,6 +33,16 @@ from sygnal.notifications import Pushkin, NotificationLoggerAdapter
 from sygnal.utils import twisted_sleep
 
 logger = logging.getLogger(__name__)
+
+SEND_TIME_HISTOGRAM = Histogram(
+    "sygnal_apns_request_time", "Time taken to send HTTP request to APNS"
+)
+
+RESPONSE_STATUS_CODES_COUNTER = Counter(
+    "sygnal_apns_status_codes",
+    "Number of HTTP response status codes received from APNS",
+    labelnames=["pushkin", "code"],
+)
 
 
 class ApnsPushkin(Pushkin):
@@ -107,78 +121,114 @@ class ApnsPushkin(Pushkin):
                 use_sandbox=self.use_sandbox,
             )
 
+        # without this, aioapns will retry every second forever.
+        self.apns_client.pool.max_connection_attempts = 3
+
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
-        if n.event_id and not n.type:
-            payload = self._get_payload_event_id_only(n)
-        else:
-            payload = self._get_payload_full(n, log)
+        # todo is it OK to keep the pushkey?
+        span_tags = {
+            "pushkey": device.pushkey,
+        }
 
-        prio = 10
-        if n.prio == "low":
-            prio = 5
+        with self.sygnal.tracer.start_span(
+            "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
+        ) as span_parent:
 
-        shaved_payload = apnstruncate.truncate(
-            payload, max_length=self.MAX_JSON_BODY_SIZE
-        )
+            if n.event_id and not n.type:
+                payload = self._get_payload_event_id_only(n)
+            else:
+                payload = self._get_payload_full(n, log)
 
-        async def dispatch_request():
-            """
-            Actually attempts to dispatch the notification once.
-            """
-            request = NotificationRequest(
-                device_token=device.pushkey,
-                message=shaved_payload,
-                priority=prio
-                # todo notification_id=str(uuid4()) ?
-                # todo time_to_live=3 ?
+            prio = 10
+            if n.prio == "low":
+                prio = 5
+
+            shaved_payload = apnstruncate.truncate(
+                payload, max_length=self.MAX_JSON_BODY_SIZE
             )
 
-            response = await self.apns_client.send_notification(request)
-
-            code = int(response.status)
-
-            if response.is_successful:
-                return []
-            else:
-                # .description corresponds to the 'reason' response field
-                if (
-                    code == self.TOKEN_ERROR_CODE
-                    or response.description == self.TOKEN_ERROR_REASON
-                ):
-                    return [device.pushkey]
-                else:
-                    if 500 <= code < 600:
-                        raise TemporaryNotificationDispatchException(
-                            f"{response.status} {response.description}"
-                        )
-                    else:
-                        raise NotificationDispatchException(
-                            f"{response.status} {response.description}"
-                        )
-
-        for retry_number in range(self.MAX_TRIES):
-            try:
-                log.debug("Trying")
-                return await dispatch_request()
-            except TemporaryNotificationDispatchException as exc:
-                retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
-                if exc.custom_retry_delay is not None:
-                    retry_delay = exc.custom_retry_delay
-
-                log.exception(
-                    "Temporary failure, will retry in %d seconds", retry_delay
+            async def dispatch_request(span):
+                """
+                Actually attempts to dispatch the notification once.
+                """
+                request = NotificationRequest(
+                    device_token=device.pushkey,
+                    message=shaved_payload,
+                    priority=prio
+                    # todo notification_id=str(uuid4()) ?
+                    # todo time_to_live=3 ?
                 )
 
-                if retry_number == self.MAX_TRIES - 1:
-                    raise NotificationDispatchException(
-                        "Retried too many times."
-                    ) from exc
-                else:
-                    await twisted_sleep(
-                        retry_delay, twisted_reactor=self.sygnal.reactor
+                try:
+                    with SEND_TIME_HISTOGRAM.time():
+                        # we must use this 2-step conversion process because:
+                        # - as we use Twisted, we can only await on a coroutine or Deferred
+                        # - aioapns awaits on a Future internally
+                        sn_coro = self.apns_client.send_notification(request)
+                        sn_future = asyncio.ensure_future(sn_coro)
+                        sn_deferred = Deferred.fromFuture(sn_future)
+                        response = await sn_deferred
+                except aioapns.ConnectionError:
+                    raise TemporaryNotificationDispatchException(
+                        "aioapns Connection Failure"
                     )
+
+                code = int(response.status)
+
+                span.log_kv({'status': code})
+
+                RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
+
+                if response.is_successful:
+                    return []
+                else:
+                    # .description corresponds to the 'reason' response field
+                    if (
+                        code == self.TOKEN_ERROR_CODE
+                        or response.description == self.TOKEN_ERROR_REASON
+                    ):
+                        return [device.pushkey]
+                    else:
+                        if 500 <= code < 600:
+                            raise TemporaryNotificationDispatchException(
+                                f"{response.status} {response.description}"
+                            )
+                        else:
+                            raise NotificationDispatchException(
+                                f"{response.status} {response.description}"
+                            )
+
+            for retry_number in range(self.MAX_TRIES):
+                try:
+                    log.debug("Trying")
+
+                    span_tags = {
+                        "retry_num": retry_number,
+                    }
+
+                    with self.sygnal.tracer.start_span(
+                            "apns_dispatch_try", tags=span_tags, child_of=span_parent
+                    ) as span:
+                        return await dispatch_request(span)
+                except TemporaryNotificationDispatchException as exc:
+                    retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
+                    if exc.custom_retry_delay is not None:
+                        retry_delay = exc.custom_retry_delay
+
+                    log.exception(
+                        "Temporary failure, will retry in %d seconds", retry_delay
+                    )
+
+                    if retry_number == self.MAX_TRIES - 1:
+                        raise NotificationDispatchException(
+                            "Retried too many times."
+                        ) from exc
+                    else:
+                        await twisted_sleep(
+                            retry_delay, twisted_reactor=self.sygnal.reactor
+                        )
 
     def _get_payload_event_id_only(self, n):
         """

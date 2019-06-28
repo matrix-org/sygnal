@@ -126,9 +126,11 @@ class GcmPushkin(Pushkin):
         """
         body_producer = FileBodyProducer(BytesIO(json.dumps(body).encode()))
         try:
+            logger.debug("entering")
             response = await self.http_agent.request(
                 b"POST", GCM_URL, headers=Headers(headers), bodyProducer=body_producer
             )
+            logger.debug("returned")
         except Exception as exception:
             raise TemporaryNotificationDispatchException(
                 "GCM request failure"
@@ -136,7 +138,7 @@ class GcmPushkin(Pushkin):
         response_text = (await readBody(response)).decode()
         return response, response_text
 
-    async def _request_dispatch(self, n, log, body, headers, pushkeys):
+    async def _request_dispatch(self, n, log, body, headers, pushkeys, span):
         poke_start_time = time.time()
 
         failed = []
@@ -150,6 +152,8 @@ class GcmPushkin(Pushkin):
 
         log.debug("GCM request took %f seconds", time.time() - poke_start_time)
 
+        span.log_kv({'status': response.code})
+
         if 500 <= response.code < 600:
             log.debug("%d from server, waiting to try again", response.code)
 
@@ -159,6 +163,7 @@ class GcmPushkin(Pushkin):
                 b"retry-after", default=[]
             ):
                 retry_after = int(header_value)
+                span.log_kv({'gcm_retry_after': retry_after})
 
             raise TemporaryNotificationDispatchException(
                 "GCM server error, hopefully temporary.", custom_retry_delay=retry_after
@@ -240,65 +245,80 @@ class GcmPushkin(Pushkin):
         if pushkeys[0] != device.pushkey:
             # Only send notifications once, to all devices at once.
             # TODO(rei) check this carefully, including tests
+            log.info("!")
             return []
 
-        reg_id_mappings = await self.canonical_reg_id_store.get_canonical_ids(pushkeys)
-
-        reg_id_mappings = {
-            reg_id: canonical_reg_id or reg_id
-            for (reg_id, canonical_reg_id) in reg_id_mappings.items()
+        span_tags = {
+            "pushkeys": pushkeys,
         }
 
-        inverse_reg_id_mappings = {v: k for (k, v) in reg_id_mappings.items()}
+        with self.sygnal.tracer.start_span(
+                "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
+        ) as span_parent:
+            reg_id_mappings = await self.canonical_reg_id_store.get_canonical_ids(pushkeys)
 
-        data = GcmPushkin._build_data(n)
-        headers = {
-            b"User-Agent": ["sygnal"],
-            b"Content-Type": ["application/json"],
-            b"Authorization": ["key=%s" % (self.api_key,)],
-        }
+            reg_id_mappings = {
+                reg_id: canonical_reg_id or reg_id
+                for (reg_id, canonical_reg_id) in reg_id_mappings.items()
+            }
 
-        # TODO: Implement collapse_key to queue only one message per room.
-        failed = []
+            inverse_reg_id_mappings = {v: k for (k, v) in reg_id_mappings.items()}
 
-        body = {"data": data, "priority": "normal" if n.prio == "low" else "high"}
+            data = GcmPushkin._build_data(n)
+            headers = {
+                b"User-Agent": ["sygnal"],
+                b"Content-Type": ["application/json"],
+                b"Authorization": ["key=%s" % (self.api_key,)],
+            }
 
-        for retry_number in range(0, MAX_TRIES):
-            mapped_pushkeys = [reg_id_mappings[pk] for pk in pushkeys]
+            # TODO: Implement collapse_key to queue only one message per room.
+            failed = []
 
-            if len(pushkeys) == 1:
-                body["to"] = mapped_pushkeys[0]
-            else:
-                body["registration_ids"] = mapped_pushkeys
+            body = {"data": data, "priority": "normal" if n.prio == "low" else "high"}
 
-            log.info(
-                "Sending (attempt %i): %r => %r", retry_number, data, mapped_pushkeys
-            )
+            for retry_number in range(0, MAX_TRIES):
+                mapped_pushkeys = [reg_id_mappings[pk] for pk in pushkeys]
 
-            try:
-                new_failed, new_pushkeys = await self._request_dispatch(
-                    n, log, body, headers, mapped_pushkeys
-                )
-                pushkeys = new_pushkeys
-                failed += [
-                    inverse_reg_id_mappings[canonical_pk] for canonical_pk in new_failed
-                ]
-                if len(pushkeys) == 0:
-                    break
-            except TemporaryNotificationDispatchException as exc:
-                retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
-                if exc.custom_retry_delay is not None:
-                    retry_delay = exc.custom_retry_delay
+                if len(pushkeys) == 1:
+                    body["to"] = mapped_pushkeys[0]
+                else:
+                    body["registration_ids"] = mapped_pushkeys
 
-                log.exception(
-                    "Temporary failure, will retry in %d seconds", retry_delay
+                log.info(
+                    "Sending (attempt %i): %r => %r", retry_number, data, mapped_pushkeys
                 )
 
-                await twisted_sleep(retry_delay, twisted_reactor=self.sygnal.reactor)
+                try:
+                    span_tags = {
+                        "retry_num": retry_number,
+                    }
 
-        if len(pushkeys) > 0:
-            log.info("Gave up retrying reg IDs: %r", pushkeys)
-        return failed
+                    with self.sygnal.tracer.start_span(
+                            "gcm_dispatch_try", tags=span_tags, child_of=span_parent
+                    ) as span:
+                        new_failed, new_pushkeys = await self._request_dispatch(
+                            n, log, body, headers, mapped_pushkeys, span
+                        )
+                    pushkeys = new_pushkeys
+                    failed += [
+                        inverse_reg_id_mappings[canonical_pk] for canonical_pk in new_failed
+                    ]
+                    if len(pushkeys) == 0:
+                        break
+                except TemporaryNotificationDispatchException as exc:
+                    retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
+                    if exc.custom_retry_delay is not None:
+                        retry_delay = exc.custom_retry_delay
+
+                    log.exception(
+                        "Temporary failure, will retry in %d seconds", retry_delay
+                    )
+
+                    await twisted_sleep(retry_delay, twisted_reactor=self.sygnal.reactor)
+
+            if len(pushkeys) > 0:
+                log.info("Gave up retrying reg IDs: %r", pushkeys)
+            return failed
 
     @staticmethod
     def _build_data(n):

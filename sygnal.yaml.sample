@@ -47,6 +47,29 @@ metrics:
     #
     port: 8000
 
+  ## OpenTracing #
+  #
+  opentracing:
+    # Specify whether or not to enable OpenTracing.
+    #
+    enabled: true
+
+    # Specify an implementation of OpenTracing to use. Currently only 'jaeger'
+    # is supported.
+    #
+    implementation: jaeger
+
+    # Specify configuration values to pass to jaeger_client.
+    #
+    jaeger:
+      sampler:
+        type: 'const'
+        param: 1
+      #      local_agent:
+      #        reporting_host: '127.0.0.1'
+      #        reporting_port:
+      logging: true
+
 ## Pushkins/Apps #
 #
 # Add a section for every push application here.

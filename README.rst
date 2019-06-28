@@ -1,14 +1,14 @@
 Introduction
 ============
 
-sygnal is a reference Push Gateway for Matrix (http://matrix.org/).
+Sygnal is a reference Push Gateway for Matrix (http://matrix.org/).
 
 See
-http://matrix.org/docs/spec/client_server/r0.2.0.html#id51 for a high level overview of how notifications work in Matrix.
+https://matrix.org/docs/spec/client_server/r0.5.0#id510 for a high level overview of how notifications work in Matrix.
 
-http://matrix.org/docs/spec/push_gateway/unstable.html#post-matrix-push-r0-notify
+https://matrix.org/docs/spec/push_gateway/r0.1.0
 describes the protocol that Matrix Home Servers use to send notifications to
-Push Gateways such as sygnal.
+Push Gateways such as Sygnal.
 
 Setup
 =====
@@ -17,7 +17,7 @@ will create a complete, standalone webserver.  When used with gunicorn,
 sygnal can use gunicorn's extra hook to perform a clean shutdown which tries as
 hard as possible to ensure no messages are lost.
 
-There are two config files:
+There are two config files: # TODO
  * sygnal.conf (The app-specific config file)
  * gunicorn_config.py (gunicorn's config file)
 
@@ -49,9 +49,14 @@ There are two supported App Types:
 
 apns
   This sends push notifications to iOS apps via the Apple Push Notification
-  Service (APNS). It expects the 'certfile' parameter to be a path relative to
+  Service (APNS). It expects either:
+  
+  - the 'certfile' parameter to be a path relative to
   sygnal's working directory of a PEM file containing the APNS certificate and
   unencrypted private key.
+  - OR:
+	- the 'keyfile' parameter to be a path relative to Sygnal's working directory of a p8 file
+	- # TODO
 
 gcm
   This sends messages via Google Cloud Messaging (GCM) and hence can be used
@@ -60,18 +65,14 @@ gcm
 
 Running
 =======
-To run with gunicorn:
 
-gunicorn -c gunicorn_config.py sygnal:app
+`python -m sygnal.sygnal`
 
-You can customise the gunicorn_config.py to determine whether this daemonizes or runs in the foreground.
-
-Gunicorn maintains its own logging in addition to the app's, so the access_log
-and error_log contain gunicorn's accesses and gunicorn specific errors. The log
-file in sygnal.conf contains app level logging.
+Python 3.6 or higher is required. You may therefore need to use e.g. `python3.6` on your system. # TODO suggest venv?
 
 Clean shutdown
 ==============
+# TODO this is obsolete
 The code for APNS uses a grace period where it waits for errors to come down the
 socket before declaring it safe for the app to shut down (due to the design of
 APNS). Terminating using SIGTERM performs a clean shutdown::
@@ -84,6 +85,7 @@ Restarting sygnal using SIGHUP will handle this gracefully::
 
 Log Rotation
 ============
+# obsolete-ish
 Gunicorn appends to files but does not use a rotating logger.
 Sygnal's app logging does the same. Gunicorn will re-open all log files
 (including the app's) when sent SIGUSR1.  The recommended configuration is

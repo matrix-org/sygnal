@@ -125,14 +125,14 @@ class Pushkin(object):
 
 
 class NotificationContext(object):
-    def __init__(self, request_id, tracing_id=None):
+    def __init__(self, request_id, opentracing_span):
         """
         Args:
             request_id (str): An ID for the request, or None to have it generated automatically.
-            tracing_id (str, optional): A tracing ID for the request.
+            opentracing_span (Span): The span for the API request triggering the notification.
         """
         self.request_id = request_id
-        self.tracing_id = tracing_id
+        self.opentracing_span = opentracing_span
 
 
 class NotificationLoggerAdapter(LoggerAdapter):  # todo move to utils?

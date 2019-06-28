@@ -17,6 +17,7 @@
 import json
 import logging
 
+from opentracing import Format, tags
 from prometheus_client import Counter
 from twisted.internet import defer
 from twisted.internet.defer import gatherResults, ensureDeferred
@@ -55,117 +56,130 @@ class V1NotifyHandler(Resource):
 
     def _make_request_id(self):
         """
-        Generates a request ID, intended to be unique, for a request so it can be traced through logging.
+        Generates a request ID, intended to be unique, for a request so it can
+        be traced through logging.
         Returns: a request ID for the request.
         """
         return "42"  # TODO actually generate IDs
 
     def render_POST(self, request):
         request_id = self._make_request_id()
+        header_dict = {
+            k.decode(): v[0].decode() for k, v in request.requestHeaders.getAllRawHeaders()
+        }
 
-        tracing_id = None
+        span_ctx = self.sygnal.tracer.extract(Format.HTTP_HEADERS, header_dict)
+        span_tags = {
+            tags.SPAN_KIND: tags.SPAN_KIND_RPC_SERVER,
+            "request_id": request_id,
+        }
 
-        # TODO check for OpenTracing header if configured to do so (make header name configurable?)
-        # request.headers.…
+        with self.sygnal.tracer.start_span(
+            "pushgateway_v1_notify", child_of=span_ctx, tags=span_tags
+        ) as root_span:
 
-        context = NotificationContext(request_id, tracing_id)
+            context = NotificationContext(request_id, root_span)
 
-        log = NotificationLoggerAdapter(logger, {"request_id": request_id})
+            log = NotificationLoggerAdapter(logger, {"request_id": request_id})
 
-        if tracing_id is not None:
-            log.info("Tracing ID: %s", tracing_id)
+            try:
+                body = json.loads(request.content.read())
+            except Exception:
+                msg = "Expected JSON request body"
+                log.warning(msg)
+                request.setResponseCode(400)
+                return msg.encode()
 
-        try:
-            body = json.loads(request.content.read())
-        except Exception:
-            msg = "Expected JSON request body"
-            log.warning(msg)
-            request.setResponseCode(400)
-            return msg.encode()
+            if "notification" not in body or not isinstance(body["notification"], dict):
+                msg = "Invalid notification: expecting object in 'notification' key"
+                log.warning(msg)
+                request.setResponseCode(400)
+                return msg.encode()
 
-        if "notification" not in body or not isinstance(body["notification"], dict):
-            msg = "Invalid notification: expecting object in 'notification' key"
-            log.warning(msg)
-            request.setResponseCode(400)
-            return msg.encode()
+            try:
+                notif = Notification(body["notification"])
+            except InvalidNotificationException as e:
+                log.exception("Invalid notification")
+                request.setResponseCode(400)
+                # return e.message.encode()
+                return str(e).encode()
 
-        try:
-            notif = Notification(body["notification"])
-        except InvalidNotificationException as e:
-            log.exception("Invalid notification")
-            request.setResponseCode(400)
-            # return e.message.encode()
-            return str(e).encode()
+            NOTIFS_RECEIVED_COUNTER.inc()
 
-        NOTIFS_RECEIVED_COUNTER.inc()
+            if len(notif.devices) == 0:
+                msg = "No devices in notification"
+                log.warning(msg)
+                request.setResponseCode(400)
+                return msg.encode()
 
-        if len(notif.devices) == 0:
-            msg = "No devices in notification"
-            log.warning(msg)
-            request.setResponseCode(400)
-            return msg.encode()
+            rej = []
+            deferreds = []
 
-        rej = []
-        deferreds = []
+            pushkins = self.sygnal.pushkins
 
-        pushkins = self.sygnal.pushkins
+            for d in notif.devices:
+                NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
 
-        for d in notif.devices:
-            NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
+                appid = d.app_id
+                if appid not in pushkins:
+                    log.warning("Got notification for unknown app ID %s", appid)
+                    rej.append(d.pushkey)
+                    continue
 
-            appid = d.app_id
-            if appid not in pushkins:
-                log.warning("Got notification for unknown app ID %s", appid)
-                rej.append(d.pushkey)
-                continue
+                pushkin = pushkins[appid]
+                log.debug(
+                    "Sending push to pushkin %s for app ID %s", pushkin.name, appid
+                )
 
-            pushkin = pushkins[appid]
-            log.debug("Sending push to pushkin %s for app ID %s", pushkin.name, appid)
+                NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
 
-            NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
+                async def dispatch_checked():
+                    result = await pushkin.dispatch_notification(notif, d, context)
+                    if not isinstance(result, list):
+                        raise TypeError("Pushkin should return list.")
+                    return result
 
-            async def dispatch_checked():
-                result = await pushkin.dispatch_notification(notif, d, context)
-                if not isinstance(result, list):
-                    raise TypeError("Pushkin should return list.")
-                return result
+                deferreds.append(ensureDeferred(dispatch_checked()))
 
-            deferreds.append(ensureDeferred(dispatch_checked()))
+            def callback(rejected_lists):
+                # combine all rejected pushkeys into one list
 
-        def callback(rejected_lists):
-            # combine all rejected pushkeys into one list
+                rejected = sum(rejected_lists, rej)
 
-            rejected = sum(rejected_lists, rej)
+                request.write(json.dumps({"rejected": rejected}).encode())
 
-            request.write(json.dumps({"rejected": rejected}).encode())
+                request.finish()
 
-            request.finish()
-
-        def errback(failure: Failure):
-            # due to gatherResults, errors will be wrapped in FirstError.
-            if issubclass(failure.type, defer.FirstError):
-                subfailure = failure.value.subFailure
-                if issubclass(subfailure.type, NotificationDispatchException):
-                    request.setResponseCode(502)
-                    logging.warning("Failed to dispatch notification.\n%s", subfailure)
+            def errback(failure: Failure):
+                # due to gatherResults, errors will be wrapped in FirstError.
+                if issubclass(failure.type, defer.FirstError):
+                    subfailure = failure.value.subFailure
+                    if issubclass(subfailure.type, NotificationDispatchException):
+                        request.setResponseCode(502)
+                        logging.warning(
+                            "Failed to dispatch notification.\n%s", subfailure
+                        )
+                    else:
+                        request.setResponseCode(500)
+                        # TODO is this a decent way to handle Failure?
+                        logging.error(
+                            "Exception whilst dispatching notification.\n%s", subfailure
+                        )
                 else:
                     request.setResponseCode(500)
-                    # TODO is this a decent way to handle Failure?
                     logging.error(
-                        "Exception whilst dispatching notification.\n%s", subfailure
+                        "Exception whilst dispatching notification.\n%s", failure
                     )
-            else:
-                request.setResponseCode(500)
-                logging.error("Exception whilst dispatching notification.\n%s", failure)
 
-            request.finish()
+                request.finish()
 
-        aggregate = gatherResults(deferreds, consumeErrors=True)
-        aggregate.addCallback(callback)
-        aggregate.addErrback(errback)
+            aggregate = gatherResults(deferreds, consumeErrors=True)
+            aggregate.addCallback(callback)
+            aggregate.addErrback(errback)
 
-        # we have to try and send the notifications first, so we can find out which ones to reject
-        return NOT_DONE_YET
+            # we have to try and send the notifications first,
+            # so we can find out which ones to reject
+            return NOT_DONE_YET
 
 
 class PushGatewayApiServer(object):

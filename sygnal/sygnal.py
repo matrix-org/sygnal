@@ -21,10 +21,14 @@ import os
 import sys
 from logging.handlers import WatchedFileHandler
 
+import opentracing
 import prometheus_client
 import yaml
-from twisted.internet import reactor, asyncioreactor
+from opentracing.scope_managers.asyncio import AsyncioScopeManager
+from twisted.internet import asyncioreactor
 from twisted.internet.defer import ensureDeferred
+
+asyncioreactor.install() # TODO why is this required?
 
 from sygnal.http import PushGatewayApiServer
 from sygnal.utils import collect_all_deferreds
@@ -36,16 +40,32 @@ CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"level": "info", "file": ""},
     "db": {"dbfile": "sygnal.db"},
-    "metrics": {"prometheus": {"address": "127.0.0.1", "port": 8000}},
+    "metrics": {
+        "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
+        "opentracing": {
+            "enabled": False,
+            "implementation": None,
+            "jaeger": {},
+            "service_name": "sygnal",
+        },
+    },
     "apps": {},
 }
 
 
 class Sygnal(object):
-    def __init__(self, config, custom_reactor=reactor):
+    def __init__(self, config, custom_reactor, tracer=opentracing.tracer):
+        """
+        Object that holds state for the entirety of a Sygnal instance.
+        Args:
+            config (dict): Configuration for this Sygnal
+            custom_reactor: a Twisted Reactor to use.
+            tracer (optional): an OpenTracing tracer. The default is the no-op tracer.
+        """
         self.config = config
         self.reactor = custom_reactor
         self.pushkins = {}
+        self.tracer = tracer
 
     def _setup(self):
         cfg = self.config
@@ -82,6 +102,32 @@ class Sygnal(object):
             )
 
             prometheus_client.start_http_server(port=prom_port, addr=prom_addr or "")
+
+        tracecfg = config["metrics"]["opentracing"]
+        if tracecfg["enabled"] is True:
+            if tracecfg["implementation"] == "jaeger":
+                try:
+                    import jaeger_client
+
+                    jaeger_cfg = jaeger_client.Config(
+                        config=tracecfg["jaeger"], service_name=tracecfg["service_name"],
+                        scope_manager=AsyncioScopeManager()
+                    )
+
+                    sygnal.tracer = jaeger_cfg.initialize_tracer()
+
+                    logging.info("Enabled OpenTracing support with Jaeger")
+                except ModuleNotFoundError:
+                    logger.critical(
+                        "You have asked for OpenTracing with Jaeger but do not have"
+                        " the Python package 'jaeger_client' installed."
+                    )
+                    raise
+            else:
+                logger.error(
+                    "Unknown OpenTracing implementation: %s.", tracecfg["impl"]
+                )
+                sys.exit(1)
 
         self.database = Database(cfg["db"]["dbfile"], self.reactor)
 
@@ -137,7 +183,7 @@ class Sygnal(object):
         def on_failed_to_start(failure):
             nonlocal exit_code
             exit_code = 1
-            logger.error("Failed to start due to exception", failure)
+            logger.error("Failed to start due to exception: %s", failure)
             self.reactor.callLater(0, self.reactor.stop)
 
         start_deferred.addCallback(on_started)

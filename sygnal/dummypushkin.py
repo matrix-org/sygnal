@@ -11,7 +11,7 @@ class DummyPushkin(Pushkin):
         prefix = self.get_config("prefix")
         delay = float(self.get_config("delay"))
         logger.info(f"DUMMY: SENDING {prefix} {self.name} {n}")
-        await twisted_sleep(delay)
+        await twisted_sleep(delay, self.sygnal.reactor)
 
         rejected = not device.pushkey.startswith(prefix)
 
