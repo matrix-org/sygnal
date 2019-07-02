@@ -152,6 +152,15 @@ class Sygnal(object):
         logger.info("Setup completed")
 
     def _make_pushkin(self, app_name, app_config):
+        """
+        Load and instantiate a pushkin.
+        Args:
+            app_name (str): The pushkin's app_id
+            app_config (dict): The pushkin's configuration
+
+        Returns (Pushkin):
+            A pushkin of the desired type.
+        """
         app_type = app_config["type"]
         if "." in app_type:
             kind_split = app_type.rsplit(".", 1)
@@ -168,6 +177,9 @@ class Sygnal(object):
         return clarse(app_name, self, app_config)
 
     def run(self):
+        """
+        Attempt to run Sygnal and then exit the application.
+        """
         self._setup()
         port = int(self.config["http"]["port"])
         bind_addresses = self.config["http"]["bind_addresses"]
@@ -203,12 +215,22 @@ class Sygnal(object):
 
 
 def parse_config():
+    """
+    Find and load Sygnal's configuration file.
+    Returns (dict):
+        A loaded configuration.
+    """
     config_path = os.getenv("SYGNAL_CONF", "sygnal.yaml")
     with open(config_path) as file_handle:
         return yaml.safe_load(file_handle)
 
 
 def check_config(config):
+    """
+    Lightly check the configuration and issue warnings as appropriate.
+    Args:
+        config: The loaded configuration.
+    """
     UNDERSTOOD_CONFIG_FIELDS = CONFIG_DEFAULTS.keys()
 
     def check_section(section_name, known_keys):
@@ -231,6 +253,15 @@ def check_config(config):
 
 
 def merge_left_with_defaults(defaults, loaded_config):
+    """
+    Merge two configurations, with one of them overriding the other.
+    Args:
+        defaults (dict): A configuration of defaults
+        loaded_config (dict): A configuration, as loaded from disk.
+
+    Returns (dict):
+        A merged configuration, with loaded_config preferred over defaults.
+    """
     result = defaults.copy()
 
     # copy defaults or override them
