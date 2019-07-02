@@ -221,8 +221,14 @@ def parse_config():
         A loaded configuration.
     """
     config_path = os.getenv("SYGNAL_CONF", "sygnal.yaml")
-    with open(config_path) as file_handle:
-        return yaml.safe_load(file_handle)
+    try:
+        with open(config_path) as file_handle:
+            return yaml.safe_load(file_handle)
+    except FileNotFoundError:
+        logger.critical('Could not find configuration file!\n'
+                        'Path: %s\n'
+                        'Absolute Path: %s', config_path, os.path.realpath(config_path))
+        raise
 
 
 def check_config(config):
