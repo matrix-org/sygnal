@@ -1,0 +1,27 @@
+
+steps:
+  - command:
+      - "python -m pip install black"
+      - "black --check ."
+    label: "Check Code Formatting"
+    plugins:
+      - docker#v3.0.1:
+          image: "python:3.7"
+
+  - command:
+      - "python -m pip install flake8"
+      - "flake8 ."
+    label: "Check Code Style"
+    plugins:
+      - docker#v3.0.1:
+          image: "python:3.7"
+
+  - wait
+
+  - command:
+      - "python -m pip install -e ."
+      - "trial tests"
+    label: "Run unit tests"
+    plugins:
+      - docker#v3.0.1:
+          image: "python:3.7"
