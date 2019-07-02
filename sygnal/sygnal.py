@@ -23,16 +23,19 @@ from logging.handlers import WatchedFileHandler
 
 import opentracing
 import prometheus_client
+import twisted.internet.reactor
 import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor
 from twisted.internet.defer import ensureDeferred
 
-asyncioreactor.install() # TODO why is this required?
-
 from sygnal.http import PushGatewayApiServer
 from sygnal.utils import collect_all_deferreds
 from .database import Database
+
+# we remove the global reactor to make it evident when it has accidentally
+# been used:
+twisted.internet.reactor = None
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +113,9 @@ class Sygnal(object):
                     import jaeger_client
 
                     jaeger_cfg = jaeger_client.Config(
-                        config=tracecfg["jaeger"], service_name=tracecfg["service_name"],
-                        scope_manager=AsyncioScopeManager()
+                        config=tracecfg["jaeger"],
+                        service_name=tracecfg["service_name"],
+                        scope_manager=AsyncioScopeManager(),
                     )
 
                     sygnal.tracer = jaeger_cfg.initialize_tracer()

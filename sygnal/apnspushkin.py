@@ -128,9 +128,7 @@ class ApnsPushkin(Pushkin):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
         # todo is it OK to keep the pushkey?
-        span_tags = {
-            "pushkey": device.pushkey,
-        }
+        span_tags = {"pushkey": device.pushkey}
 
         with self.sygnal.tracer.start_span(
             "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
@@ -177,7 +175,7 @@ class ApnsPushkin(Pushkin):
 
                 code = int(response.status)
 
-                span.log_kv({'status': code})
+                span.log_kv({"event": "apns_response", "status": code})
 
                 RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
 
@@ -204,12 +202,10 @@ class ApnsPushkin(Pushkin):
                 try:
                     log.debug("Trying")
 
-                    span_tags = {
-                        "retry_num": retry_number,
-                    }
+                    span_tags = {"retry_num": retry_number}
 
                     with self.sygnal.tracer.start_span(
-                            "apns_dispatch_try", tags=span_tags, child_of=span_parent
+                        "apns_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
                         return await dispatch_request(span)
                 except TemporaryNotificationDispatchException as exc:
@@ -219,6 +215,10 @@ class ApnsPushkin(Pushkin):
 
                     log.exception(
                         "Temporary failure, will retry in %d seconds", retry_delay
+                    )
+
+                    span_parent.log_kv(
+                        {"event": "temporary_fail", "retrying_in": retry_delay}
                     )
 
                     if retry_number == self.MAX_TRIES - 1:

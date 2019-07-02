@@ -152,7 +152,7 @@ class GcmPushkin(Pushkin):
 
         log.debug("GCM request took %f seconds", time.time() - poke_start_time)
 
-        span.log_kv({'status': response.code})
+        span.log_kv({"event": "gcm_response", "status": response.code})
 
         if 500 <= response.code < 600:
             log.debug("%d from server, waiting to try again", response.code)
@@ -163,7 +163,7 @@ class GcmPushkin(Pushkin):
                 b"retry-after", default=[]
             ):
                 retry_after = int(header_value)
-                span.log_kv({'gcm_retry_after': retry_after})
+                span.log_kv({"event": "gcm_retry_after", "retry_after": retry_after})
 
             raise TemporaryNotificationDispatchException(
                 "GCM server error, hopefully temporary.", custom_retry_delay=retry_after
@@ -183,7 +183,6 @@ class GcmPushkin(Pushkin):
             # permanent failure: give up
             raise NotificationDispatchException("Not authorised to push")
         elif 200 <= response.code < 300:
-            # todo OpenTracing -> do context, get it almost for free
             try:
                 resp_object = json.loads(response_text)
             except JSONDecodeError:
@@ -245,17 +244,16 @@ class GcmPushkin(Pushkin):
         if pushkeys[0] != device.pushkey:
             # Only send notifications once, to all devices at once.
             # TODO(rei) check this carefully, including tests
-            log.info("!")
             return []
 
-        span_tags = {
-            "pushkeys": pushkeys,
-        }
+        span_tags = {"pushkeys": pushkeys}
 
         with self.sygnal.tracer.start_span(
-                "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
+            "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
-            reg_id_mappings = await self.canonical_reg_id_store.get_canonical_ids(pushkeys)
+            reg_id_mappings = await self.canonical_reg_id_store.get_canonical_ids(
+                pushkeys
+            )
 
             reg_id_mappings = {
                 reg_id: canonical_reg_id or reg_id
@@ -285,23 +283,25 @@ class GcmPushkin(Pushkin):
                     body["registration_ids"] = mapped_pushkeys
 
                 log.info(
-                    "Sending (attempt %i): %r => %r", retry_number, data, mapped_pushkeys
+                    "Sending (attempt %i): %r => %r",
+                    retry_number,
+                    data,
+                    mapped_pushkeys,
                 )
 
                 try:
-                    span_tags = {
-                        "retry_num": retry_number,
-                    }
+                    span_tags = {"retry_num": retry_number}
 
                     with self.sygnal.tracer.start_span(
-                            "gcm_dispatch_try", tags=span_tags, child_of=span_parent
+                        "gcm_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
                         new_failed, new_pushkeys = await self._request_dispatch(
                             n, log, body, headers, mapped_pushkeys, span
                         )
                     pushkeys = new_pushkeys
                     failed += [
-                        inverse_reg_id_mappings[canonical_pk] for canonical_pk in new_failed
+                        inverse_reg_id_mappings[canonical_pk]
+                        for canonical_pk in new_failed
                     ]
                     if len(pushkeys) == 0:
                         break
@@ -314,7 +314,13 @@ class GcmPushkin(Pushkin):
                         "Temporary failure, will retry in %d seconds", retry_delay
                     )
 
-                    await twisted_sleep(retry_delay, twisted_reactor=self.sygnal.reactor)
+                    span_parent.log_kv(
+                        {"event": "temporary_fail", "retrying_in": retry_delay}
+                    )
+
+                    await twisted_sleep(
+                        retry_delay, twisted_reactor=self.sygnal.reactor
+                    )
 
             if len(pushkeys) > 0:
                 log.info("Gave up retrying reg IDs: %r", pushkeys)

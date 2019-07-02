@@ -16,6 +16,7 @@
 # limitations under the License.
 import json
 import logging
+from uuid import uuid4
 
 from opentracing import Format, tags
 from prometheus_client import Counter
@@ -46,6 +47,12 @@ NOTIFS_BY_PUSHKIN = Counter(
     labelnames=["pushkin"],
 )
 
+PUSHGATEWAY_HTTP_RESPONSES_COUNTER = Counter(
+    "sygnal_pushgateway_status_codes",
+    "HTTP Response Codes given on the Push Gateway API",
+    labelnames=["code"],
+)
+
 
 class V1NotifyHandler(Resource):
     def __init__(self, sygnal):
@@ -57,17 +64,34 @@ class V1NotifyHandler(Resource):
     def _make_request_id(self):
         """
         Generates a request ID, intended to be unique, for a request so it can
-        be traced through logging.
+        be followed through logging.
         Returns: a request ID for the request.
         """
-        return "42"  # TODO actually generate IDs
+        return str(uuid4())  # TODO Is this a sane way to generate request IDs?
 
     def render_POST(self, request):
+        response = self._handle_request(request)
+        if response != NOT_DONE_YET:
+            PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
+        return response
+
+    def _handle_request(self, request):
+        """
+        Actually handle the request.
+        Args:
+            request (Request): The request, corresponding to a POST request.
+
+        Returns:
+            Either a str instance or NOT_DONE_YET.
+
+        """
         request_id = self._make_request_id()
         header_dict = {
-            k.decode(): v[0].decode() for k, v in request.requestHeaders.getAllRawHeaders()
+            k.decode(): v[0].decode()
+            for k, v in request.requestHeaders.getAllRawHeaders()
         }
 
+        # extract OpenTracing scope from the HTTP headers
         span_ctx = self.sygnal.tracer.extract(Format.HTTP_HEADERS, header_dict)
         span_tags = {
             tags.SPAN_KIND: tags.SPAN_KIND_RPC_SERVER,
@@ -84,9 +108,10 @@ class V1NotifyHandler(Resource):
 
             try:
                 body = json.loads(request.content.read())
-            except Exception:
-                msg = "Expected JSON request body"
-                log.warning(msg)
+            except Exception as exc:
+                msg = "Expected JSON request body:\n%s"
+                log.warning(msg, exc)
+                # TODO root_span.log_kv({'event': 'error', 'error.kind': })
                 request.setResponseCode(400)
                 return msg.encode()
 
@@ -103,6 +128,12 @@ class V1NotifyHandler(Resource):
                 request.setResponseCode(400)
                 # return e.message.encode()
                 return str(e).encode()
+
+            if notif.event_id is not None:
+                root_span.set_tag("event_id", notif.event_id)
+
+            # track whether the notification was passed with content
+            root_span.set_tag("has_content", notif.content is not None)
 
             NOTIFS_RECEIVED_COUNTER.inc()
 
@@ -134,6 +165,12 @@ class V1NotifyHandler(Resource):
                 NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
 
                 async def dispatch_checked():
+                    """
+                    Dispatches a notification and checks the Pushkin
+                    returns a list.
+                    Returns (list):
+                        The result
+                    """
                     result = await pushkin.dispatch_notification(notif, d, context)
                     if not isinstance(result, list):
                         raise TypeError("Pushkin should return list.")
@@ -161,7 +198,6 @@ class V1NotifyHandler(Resource):
                         )
                     else:
                         request.setResponseCode(500)
-                        # TODO is this a decent way to handle Failure?
                         logging.error(
                             "Exception whilst dispatching notification.\n%s", subfailure
                         )
@@ -177,6 +213,11 @@ class V1NotifyHandler(Resource):
             aggregate.addCallback(callback)
             aggregate.addErrback(errback)
 
+            def count_deferred_code(_):
+                PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
+
+            aggregate.addCallback(count_deferred_code)
+
             # we have to try and send the notifications first,
             # so we can find out which ones to reject
             return NOT_DONE_YET
@@ -184,6 +225,11 @@ class V1NotifyHandler(Resource):
 
 class PushGatewayApiServer(object):
     def __init__(self, sygnal):
+        """
+        Initialises the /_matrix/push/* (Push Gateway API) server.
+        Args:
+            sygnal (Sygnal): the Sygnal object
+        """
         root = Resource()
         matrix = Resource()
         push = Resource()
@@ -195,4 +241,4 @@ class PushGatewayApiServer(object):
         push.putChild(b"v1", v1)
         v1.putChild(b"notify", V1NotifyHandler(sygnal))
 
-        self.site = server.Site(root)
+        self.site = server.Site(root, reactor=sygnal.reactor)
