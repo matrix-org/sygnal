@@ -47,6 +47,7 @@ CONFIG_DEFAULTS = {
             "jaeger": {},
             "service_name": "sygnal",
         },
+        "sentry": {"enabled": False},
     },
     "apps": {},
 }
@@ -83,14 +84,12 @@ class Sygnal(object):
         else:
             logging.basicConfig()
 
-        # TODO if cfg.has_option("metrics", "sentry_dsn"):
-        #     # Only import sentry if enabled
-        #     import sentry_sdk
-        #     from sentry_sdk.integrations.flask import FlaskIntegration
-        #     sentry_sdk.init(
-        #         dsn=cfg.get("metrics", "sentry_dsn"),
-        #         integrations=[FlaskIntegration()],
-        #     )
+        sentrycfg = cfg["metrics"]["sentry"]
+        if sentrycfg["enabled"] is True:
+            import sentry_sdk
+
+            logging.info("Initialising Sentry")
+            sentry_sdk.init(sentrycfg["dsn"])
 
         promcfg = cfg["metrics"]["prometheus"]
         if promcfg["enabled"] is True:

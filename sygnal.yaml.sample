@@ -52,7 +52,7 @@ metrics:
   opentracing:
     # Specify whether or not to enable OpenTracing.
     #
-    enabled: true
+    enabled: false
 
     # Specify an implementation of OpenTracing to use. Currently only 'jaeger'
     # is supported.
@@ -69,6 +69,17 @@ metrics:
 #          reporting_host: '127.0.0.1'
 #          reporting_port:
       logging: true
+
+  ## Sentry #
+  #
+  sentry:
+    # Specify whether or not to enable Sentry.
+    #
+    enabled: false
+
+    # Specify your Sentry DSN if you enable Sentry
+    #
+    #dsn: "https://<key>@sentry.example.org/<project>"
 
 ## Pushkins/Apps #
 #
