@@ -126,11 +126,9 @@ class GcmPushkin(Pushkin):
         """
         body_producer = FileBodyProducer(BytesIO(json.dumps(body).encode()))
         try:
-            logger.debug("entering")
             response = await self.http_agent.request(
                 b"POST", GCM_URL, headers=Headers(headers), bodyProducer=body_producer
             )
-            logger.debug("returned")
         except Exception as exception:
             raise TemporaryNotificationDispatchException(
                 "GCM request failure"
@@ -244,7 +242,6 @@ class GcmPushkin(Pushkin):
 
         if pushkeys[0] != device.pushkey:
             # Only send notifications once, to all devices at once.
-            # TODO(rei) check this carefully, including tests
             return []
 
         span_tags = {"pushkeys": pushkeys}
@@ -311,8 +308,10 @@ class GcmPushkin(Pushkin):
                     if exc.custom_retry_delay is not None:
                         retry_delay = exc.custom_retry_delay
 
-                    log.exception(
-                        "Temporary failure, will retry in %d seconds", retry_delay
+                    log.warning(
+                        "Temporary failure, will retry in %d seconds",
+                        retry_delay,
+                        exc_info=True,
                     )
 
                     span_parent.log_kv(

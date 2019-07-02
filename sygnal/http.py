@@ -109,8 +109,8 @@ class V1NotifyHandler(Resource):
             try:
                 body = json.loads(request.content.read())
             except Exception as exc:
-                msg = "Expected JSON request body:\n%s"
-                log.warning(msg, exc)
+                msg = "Expected JSON request body"
+                log.warning(msg, exc_info=exc)
                 # TODO root_span.log_kv({'event': 'error', 'error.kind': })
                 request.setResponseCode(400)
                 return msg.encode()
@@ -194,17 +194,20 @@ class V1NotifyHandler(Resource):
                     if issubclass(subfailure.type, NotificationDispatchException):
                         request.setResponseCode(502)
                         logging.warning(
-                            "Failed to dispatch notification.\n%s", subfailure
+                            "Failed to dispatch notification.",
+                            exc_info=subfailure.value,
                         )
                     else:
                         request.setResponseCode(500)
                         logging.error(
-                            "Exception whilst dispatching notification.\n%s", subfailure
+                            "Exception whilst dispatching notification.",
+                            exc_info=subfailure.value,
                         )
                 else:
                     request.setResponseCode(500)
                     logging.error(
-                        "Exception whilst dispatching notification.\n%s", failure
+                        "Exception whilst dispatching notification.",
+                        exc_info=failure.value,
                     )
 
                 request.finish()

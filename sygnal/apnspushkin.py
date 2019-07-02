@@ -207,8 +207,10 @@ class ApnsPushkin(Pushkin):
                     if exc.custom_retry_delay is not None:
                         retry_delay = exc.custom_retry_delay
 
-                    log.exception(
-                        "Temporary failure, will retry in %d seconds", retry_delay
+                    log.warning(
+                        "Temporary failure, will retry in %d seconds",
+                        retry_delay,
+                        exc_info=True,
                     )
 
                     span_parent.log_kv(
