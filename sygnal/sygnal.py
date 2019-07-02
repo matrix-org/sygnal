@@ -240,7 +240,8 @@ def check_config(config):
         nonunderstood = set(config[section_name].keys()).difference(known_keys)
         if len(nonunderstood) > 0:
             logger.warning(
-                f"The following configuration fields in '{section_name}' are not understood: %s",
+                f"The following configuration fields in '{section_name}' "
+                f"are not understood: %s",
                 nonunderstood,
             )
 

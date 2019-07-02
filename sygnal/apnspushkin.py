@@ -281,7 +281,8 @@ class ApnsPushkin(Pushkin):
                     elif n.content["msgtype"] == "m.emote":
                         action_display = n.content["body"]
                     else:
-                        # fallback: 'body' should always be user-visible text in an m.room.message
+                        # fallback: 'body' should always be user-visible text
+                        # in an m.room.message
                         content_display = n.content["body"]
                 if n.content["msgtype"] == "m.image":
                     is_image = True

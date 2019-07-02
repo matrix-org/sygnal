@@ -213,7 +213,8 @@ class GcmPushkin(Pushkin):
                     )
                     if result["error"] in BAD_PUSHKEY_FAILURE_CODES:
                         log.info(
-                            "Reg ID %r has permanently failed with code %r: rejecting upstream",
+                            "Reg ID %r has permanently failed with code %r: "
+                            "rejecting upstream",
                             pushkeys[i],
                             result["error"],
                         )
@@ -379,8 +380,8 @@ class CanonicalRegIdStore(object):
         """
         Prepares, if necessary, the database for storing canonical registration IDs.
 
-        Separate method from the constructor because we wait for an async request to complete,
-        so it must be an `async def` method.
+        Separate method from the constructor because we wait for an async request
+        to complete, so it must be an `async def` method.
 
         Args:
             db (Database): database to prepare

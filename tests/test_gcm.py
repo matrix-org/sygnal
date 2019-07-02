@@ -208,7 +208,7 @@ class GcmTestCase(testutils.TestCase):
 
         self.assertEquals(gcm.last_request_body["to"], "spqr_new")
 
-        # the ID translation needs to be transparent as the homeserver will not make sense of it
-        # otherwise.
+        # the ID translation needs to be transparent as the homeserver will not
+        # make sense of it otherwise.
         self.assertEquals(resp, {"rejected": ["spqr"]})
         self.assertEquals(gcm.num_requests, 2)

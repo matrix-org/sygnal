@@ -128,8 +128,10 @@ class NotificationContext(object):
     def __init__(self, request_id, opentracing_span):
         """
         Args:
-            request_id (str): An ID for the request, or None to have it generated automatically.
-            opentracing_span (Span): The span for the API request triggering the notification.
+            request_id (str): An ID for the request, or None to have it
+                generated automatically.
+            opentracing_span (Span): The span for the API request triggering
+                the notification.
         """
         self.request_id = request_id
         self.opentracing_span = opentracing_span

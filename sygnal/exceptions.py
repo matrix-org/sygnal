@@ -27,8 +27,8 @@ class NotificationDispatchException(Exception):
 
 class TemporaryNotificationDispatchException(Exception):
     """
-    To be used by pushkins for errors that are not our fault and are hopefully temporary,
-    so the request should possibly be retried soon.
+    To be used by pushkins for errors that are not our fault and are
+    hopefully temporary, so the request should possibly be retried soon.
     """
 
     def __init__(self, *args: object, custom_retry_delay=None) -> None:

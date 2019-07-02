@@ -58,7 +58,7 @@ class ApnsTestCase(testutils.TestCase):
         self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 200
 
         # Act
-        _resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+        self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         # Assert
         self.assertEquals(1, method.call_count)
@@ -81,7 +81,7 @@ class ApnsTestCase(testutils.TestCase):
         self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 4096
 
         # Act
-        _resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+        self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         # Assert
         self.assertEquals(1, method.call_count)
