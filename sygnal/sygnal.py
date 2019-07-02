@@ -33,10 +33,6 @@ from sygnal.http import PushGatewayApiServer
 from sygnal.utils import collect_all_deferreds
 from .database import Database
 
-# we remove the global reactor to make it evident when it has accidentally
-# been used:
-twisted.internet.reactor = None
-
 logger = logging.getLogger(__name__)
 
 CONFIG_DEFAULTS = {
@@ -96,7 +92,7 @@ class Sygnal(object):
         #         integrations=[FlaskIntegration()],
         #     )
 
-        promcfg = config["metrics"]["prometheus"]
+        promcfg = cfg["metrics"]["prometheus"]
         if promcfg["enabled"] is True:
             prom_addr = promcfg["address"]
             prom_port = int(promcfg["port"])
@@ -106,7 +102,7 @@ class Sygnal(object):
 
             prometheus_client.start_http_server(port=prom_port, addr=prom_addr or "")
 
-        tracecfg = config["metrics"]["opentracing"]
+        tracecfg = cfg["metrics"]["opentracing"]
         if tracecfg["enabled"] is True:
             if tracecfg["implementation"] == "jaeger":
                 try:
@@ -225,9 +221,11 @@ def parse_config():
         with open(config_path) as file_handle:
             return yaml.safe_load(file_handle)
     except FileNotFoundError:
-        logger.critical('Could not find configuration file!\n'
-                        'Path: %s\n'
-                        'Absolute Path: %s', config_path, os.path.realpath(config_path))
+        logger.critical(
+            "Could not find configuration file!\n" "Path: %s\n" "Absolute Path: %s",
+            config_path,
+            os.path.realpath(config_path),
+        )
         raise
 
 
@@ -289,6 +287,10 @@ def merge_left_with_defaults(defaults, loaded_config):
 
 
 if __name__ == "__main__":
+    # we remove the global reactor to make it evident when it has accidentally
+    # been used:
+    twisted.internet.reactor = None
+
     config = parse_config()
     config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
     check_config(config)

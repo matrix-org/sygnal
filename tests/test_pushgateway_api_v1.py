@@ -56,6 +56,7 @@ class TestPushkin(Pushkin):
     """
     A synthetic Pushkin with simple rules.
     """
+
     async def dispatch_notification(self, n, device, context):
         if device.pushkey == "raise_exception":
             raise Exception("Bad things have occurred!")

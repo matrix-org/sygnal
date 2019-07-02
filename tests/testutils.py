@@ -21,10 +21,10 @@ from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial import unittest
 from twisted.web.http_headers import Headers
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.test.requesthelper import DummyRequest
+from twisted.web.test.requesthelper import DummyRequest as UnaugmentedDummyRequest
 
 from sygnal.http import PushGatewayApiServer
-from sygnal.sygnal import Sygnal
+from sygnal.sygnal import Sygnal, merge_left_with_defaults, CONFIG_DEFAULTS
 
 REQ_PATH = b"/_matrix/push/v1/notify"
 
@@ -37,6 +37,7 @@ class TestCase(unittest.TestCase):
         reactor = ExtendedMemoryReactorClock()
 
         config = {"apps": {}, "db": {}, "log": {}}
+        config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
 
         self.config_setup(config)
 
@@ -190,6 +191,20 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
                 self.work_notifier.wait()
         finally:
             self.work_notifier.release()
+
+
+class DummyRequest(UnaugmentedDummyRequest):
+    """
+    Tracks the response code in the 'code' field, like a normal Request.
+    """
+
+    def __init__(self, postpath, session=None, client=None):
+        super().__init__(postpath, session, client)
+        self.code = 200
+
+    def setResponseCode(self, code, message=None):
+        super().setResponseCode(code, message)
+        self.code = code
 
 
 class DummyResponse(object):

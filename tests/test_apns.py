@@ -38,6 +38,9 @@ class ApnsTestCase(testutils.TestCase):
 
         super(ApnsTestCase, self).setUp()
 
+        self.apns_pushkin_snotif = MagicMock()
+        self.sygnal.pushkins[PUSHKIN_ID]._send_notification = self.apns_pushkin_snotif
+
     def config_setup(self, config):
         super(ApnsTestCase, self).config_setup(config)
         config["apps"][PUSHKIN_ID] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
@@ -48,7 +51,7 @@ class ApnsTestCase(testutils.TestCase):
         APNS.
         """
         # Arrange
-        method = self.apns_mock.send_notification
+        method = self.apns_pushkin_snotif
         method.return_value = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
@@ -71,7 +74,7 @@ class ApnsTestCase(testutils.TestCase):
         longer message.
         """
         # Arrange
-        method = self.apns_mock.send_notification
+        method = self.apns_pushkin_snotif
         method.return_value = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
@@ -93,7 +96,7 @@ class ApnsTestCase(testutils.TestCase):
         a good response to the homeserver.
         """
         # Arrange
-        method = self.apns_mock.send_notification
+        method = self.apns_pushkin_snotif
         method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
@@ -132,7 +135,7 @@ class ApnsTestCase(testutils.TestCase):
         passing on a rejection to the homeserver.
         """
         # Arrange
-        method = self.apns_mock.send_notification
+        method = self.apns_pushkin_snotif
         method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "410", description="Unregistered")
         )
@@ -150,7 +153,7 @@ class ApnsTestCase(testutils.TestCase):
         rejected.
         """
         # Arrange
-        method = self.apns_mock.send_notification
+        method = self.apns_pushkin_snotif
         method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "429", description="TooManyRequests")
         )
@@ -168,8 +171,7 @@ class ApnsTestCase(testutils.TestCase):
         rejected.
         """
         # Arrange
-        method = self.apns_mock.send_notification
-
+        method = self.apns_pushkin_snotif
         method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "503", description="ServiceUnavailable")
         )

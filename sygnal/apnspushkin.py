@@ -161,13 +161,7 @@ class ApnsPushkin(Pushkin):
 
                 try:
                     with SEND_TIME_HISTOGRAM.time():
-                        # we must use this 2-step conversion process because:
-                        # - as we use Twisted, we can only await on a coroutine or Deferred
-                        # - aioapns awaits on a Future internally
-                        sn_coro = self.apns_client.send_notification(request)
-                        sn_future = asyncio.ensure_future(sn_coro)
-                        sn_deferred = Deferred.fromFuture(sn_future)
-                        response = await sn_deferred
+                        response = await self._send_notification(request)
                 except aioapns.ConnectionError:
                     raise TemporaryNotificationDispatchException(
                         "aioapns Connection Failure"
@@ -394,3 +388,8 @@ class ApnsPushkin(Pushkin):
 
     async def shutdown(self):  # TODO
         return await super().shutdown()
+
+    async def _send_notification(self, request):
+        return await Deferred.fromFuture(
+            asyncio.ensure_future(self.apns_client.send_notification(request))
+        )

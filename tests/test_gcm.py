@@ -27,6 +27,7 @@ class TestGcmPushkin(GcmPushkin):
     A GCM pushkin with the ability to make HTTP requests removed and instead
     can be preloaded with virtual requests.
     """
+
     def __init__(self, name, sygnal, config):
         super().__init__(name, sygnal, config)
         self.preloaded_response = None

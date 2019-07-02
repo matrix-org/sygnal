@@ -95,10 +95,11 @@ class TruncateTestCase(unittest.TestCase):
             truncate(payload_for_aps(aps), overhead + 5)["aps"]["alert"]["body"],
         )
 
-    def test_truncate_loc_arg(self): # TODO ? this test seems to disagree with the title
+    def test_truncate_loc_arg(self):
         """
         Tests that the 'alert' 'loc-args' field will be truncated when needed.
         """
+        # TODO ? this test seems to disagree with the title
         overhead = len(json_encode(payload_for_aps({"alert": {"loc-args": [""]}})))
         txt = simplestring(10)
         aps = {"alert": {"loc-args": [txt]}}
