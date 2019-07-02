@@ -236,8 +236,8 @@ def check_config(config):
     """
     UNDERSTOOD_CONFIG_FIELDS = CONFIG_DEFAULTS.keys()
 
-    def check_section(section_name, known_keys):
-        nonunderstood = set(config[section_name].keys()).difference(known_keys)
+    def check_section(section_name, known_keys, cfgpart=config):
+        nonunderstood = set(cfgpart[section_name].keys()).difference(known_keys)
         if len(nonunderstood) > 0:
             logger.warning(
                 f"The following configuration fields in '{section_name}' "
@@ -254,6 +254,13 @@ def check_config(config):
     check_section("http", {"port", "bind_addresses"})
     check_section("log", {"file", "level"})
     check_section("db", {"dbfile"})
+    check_section("metrics", {"opentracing", "sentry", "prometheus"})
+    check_section("opentracing", {"enabled", "implementation", "jaeger"},
+                  cfgpart=config["metrics"])
+    check_section("prometheus", {"enabled", "address", "port"},
+                  cfgpart=config["metrics"])
+    check_section("sentry", {"enabled", "dsn"},
+                  cfgpart=config["metrics"])
 
 
 def merge_left_with_defaults(defaults, loaded_config):
