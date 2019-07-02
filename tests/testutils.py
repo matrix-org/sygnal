@@ -78,6 +78,17 @@ class TestCase(unittest.TestCase):
         }
 
     def _make_request(self, payload, headers=None):
+        """
+        Make a dummy request to the notify endpoint with the specified
+        Args:
+            payload: payload to be JSON encoded
+            headers (dict, optional): A L{dict} mapping header names as L{bytes}
+            to L{list}s of header values as L{bytes}
+
+        Returns (DummyRequest):
+            A dummy request corresponding to the request arguments supplied.
+
+        """
         pathparts = REQ_PATH.split(b"/")
         if pathparts[0] == b"":
             pathparts = pathparts[1:]
@@ -94,6 +105,16 @@ class TestCase(unittest.TestCase):
         return dreq
 
     def _collect_request(self, request):
+        """
+        Collects (waits until done and then returns the result of) the request.
+        Args:
+            request (Request): a request to collect
+
+        Returns (dict or int):
+            If successful (200 response received), the response is JSON decoded
+            and the resultant dict is returned.
+            If the response code is not 200, returns the response code.
+        """
         resource = self.v1api.site.getResourceFor(request)
         rendered = resource.render(request)
 
@@ -120,6 +141,10 @@ class TestCase(unittest.TestCase):
             raise RuntimeError(f"Can't collect: {rendered}")
 
     def _request(self, *args, **kwargs):
+        """
+        Makes and collects a request.
+        See L{_make_request} and L{_collect_request}.
+        """
         request = self._make_request(*args, **kwargs)
 
         return self._collect_request(request)
@@ -173,7 +198,7 @@ class DummyResponse(object):
 
 
 def make_async_magic_mock(ret_val):
-    async def dummy(*args, **kwargs):
+    async def dummy(*_args, **_kwargs):
         return ret_val
 
     return dummy

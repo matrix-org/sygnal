@@ -43,6 +43,10 @@ class ApnsTestCase(testutils.TestCase):
         config["apps"][PUSHKIN_ID] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
 
     def test_payload_truncation(self):
+        """
+        Tests that APNS message bodies will be truncated to fit the limits of
+        APNS.
+        """
         # Arrange
         method = self.apns_mock.send_notification
         method.return_value = testutils.make_async_magic_mock(
@@ -84,6 +88,10 @@ class ApnsTestCase(testutils.TestCase):
         self.assertGreater(len(apnstruncate.json_encode(payload)), 200)
 
     def test_expected(self):
+        """
+        Tests the expected case: a good response from APNS means we pass on
+        a good response to the homeserver.
+        """
         # Arrange
         method = self.apns_mock.send_notification
         method.side_effect = testutils.make_async_magic_mock(
@@ -119,6 +127,10 @@ class ApnsTestCase(testutils.TestCase):
         self.assertEquals({"rejected": []}, resp)
 
     def test_rejection(self):
+        """
+        Tests the rejection case: a rejection response from APNS leads to us
+        passing on a rejection to the homeserver.
+        """
         # Arrange
         method = self.apns_mock.send_notification
         method.side_effect = testutils.make_async_magic_mock(

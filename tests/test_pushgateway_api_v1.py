@@ -53,6 +53,9 @@ DEVICE_ACCEPTED = {
 
 
 class TestPushkin(Pushkin):
+    """
+    A synthetic Pushkin with simple rules.
+    """
     async def dispatch_notification(self, n, device, context):
         if device.pushkey == "raise_exception":
             raise Exception("Bad things have occurred!")
@@ -69,12 +72,18 @@ class TestPushkin(Pushkin):
 
 class PushGatewayApiV1TestCase(testutils.TestCase):
     def config_setup(self, config):
+        """
+        Set up a TestPushkin for the test.
+        """
         super(PushGatewayApiV1TestCase, self).config_setup(config)
         config["apps"]["com.example.spqr"] = {
             "type": "tests.test_pushgateway_api_v1.TestPushkin"
         }
 
     def test_good_requests_give_200(self):
+        """
+        Test that good requests give a 200 response code.
+        """
         # 200 codes cause the result to be parsed instead of returning the code
         self.assertNot(
             isinstance(
@@ -86,18 +95,31 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         )
 
     def test_accepted_devices_are_not_rejected(self):
+        """
+        Test that devices which are accepted by the Pushkin
+        do not lead to a rejection being returned to the homeserver.
+        """
         self.assertEquals(
             self._request(self._make_dummy_notification([DEVICE_ACCEPTED])),
             {"rejected": []},
         )
 
     def test_rejected_devices_are_rejected(self):
+        """
+        Test that devices which are rejected by the Pushkin
+        DO lead to a rejection being returned to the homeserver.
+        """
         self.assertEquals(
             self._request(self._make_dummy_notification([DEVICE_REJECTED])),
             {"rejected": [DEVICE_REJECTED["pushkey"]]},
         )
 
     def test_only_rejected_devices_are_rejected(self):
+        """
+        Test that devices which are rejected by the Pushkin
+        are the only ones to have a rejection returned to the homeserver,
+        even if other devices feature in the request.
+        """
         self.assertEquals(
             self._request(
                 self._make_dummy_notification([DEVICE_REJECTED, DEVICE_ACCEPTED])
@@ -106,10 +128,17 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         )
 
     def test_bad_requests_give_400(self):
+        """
+        Test that bad requests lead to a 400 Bad Request response.
+        """
         # TODO further needed
         self.assertEquals(self._request({}), 400)
 
     def test_exceptions_give_500(self):
+        """
+        Test that internal exceptions/errors lead to a 500 Internal Server Error
+        response.
+        """
         # TODO further needed
 
         self.assertEquals(
@@ -132,6 +161,10 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         )
 
     def test_remote_errors_give_502(self):
+        """
+        Test that errors caused by remote services such as GCM or APNS
+        lead to a 502 Bad Gateway response.
+        """
         # TODO further needed
 
         self.assertEquals(
@@ -152,25 +185,3 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             ),
             502,
         )
-
-
-# Not valid. Retrying is GCM-specific.
-# def test_temporary_remote_errors_cause_retries(self):
-#     request = self._make_request(self._make_dummy_notification([
-#         DEVICE_TEMPORARY_REMOTE_ERROR
-#     ]))
-#
-#     self.assertNot(request.finished > 0)
-#
-#     resource = self.v1api.site.getResourceFor(request)
-#     rendered = resource.render(request)
-#
-#     self.assertEquals(rendered, NOT_DONE_YET)
-#
-#     self.assertNot(request.finished > 0)
-#     self.sygnal.reactor.advanceClock(10)
-#     self.assertNot(request.finished > 0)
-#     self.sygnal.reactor.advanceClock(1000)
-#     self.assertTrue(request.finished > 0)
-#
-#     self.assertEquals(self._collect_request(request, rendered), 502)

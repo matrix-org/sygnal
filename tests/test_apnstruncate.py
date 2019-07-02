@@ -24,6 +24,15 @@ from sygnal.apnstruncate import truncate, json_encode
 
 
 def simplestring(length, offset=0):
+    """
+    Deterministically generates a string.
+    Args:
+        length: Length of the string
+        offset: Offset of the string
+
+    Returns:
+        A string formed of lowercase ASCII characters.
+    """
     return "".join(
         [
             string.ascii_lowercase[(i + offset) % len(string.ascii_lowercase)]
@@ -33,22 +42,40 @@ def simplestring(length, offset=0):
 
 
 def sillystring(length, offset=0):
+    """
+    Deterministically generates a string
+    Args:
+        length: Length of the string
+        offset: Offset of the string
+
+    Returns:
+        A string formed of weird and wonderful UTF-8 emoji characters.
+    """
     chars = ["\U0001F430", "\U0001F431", "\U0001F432", "\U0001F433"]
     return "".join([chars[(i + offset) % len(chars)] for i in range(length)])
 
 
 def payload_for_aps(aps):
+    """
+    Returns the APNS payload for an 'aps' dictionary.
+    """
     return {"aps": aps}
 
 
 class TruncateTestCase(unittest.TestCase):
     def test_dont_truncate(self):
+        """
+        Tests that truncation is not performed if unnecessary.
+        """
         # This shouldn't need to be truncated
         txt = simplestring(20)
         aps = {"alert": txt}
         self.assertEquals(txt, truncate(payload_for_aps(aps), 256)["aps"]["alert"])
 
     def test_truncate_alert(self):
+        """
+        Tests that the 'alert' string field will be truncated when needed.
+        """
         overhead = len(json_encode(payload_for_aps({"alert": ""})))
         txt = simplestring(10)
         aps = {"alert": txt}
@@ -57,6 +84,9 @@ class TruncateTestCase(unittest.TestCase):
         )
 
     def test_truncate_alert_body(self):
+        """
+        Tests that the 'alert' 'body' field will be truncated when needed.
+        """
         overhead = len(json_encode(payload_for_aps({"alert": {"body": ""}})))
         txt = simplestring(10)
         aps = {"alert": {"body": txt}}
@@ -65,7 +95,10 @@ class TruncateTestCase(unittest.TestCase):
             truncate(payload_for_aps(aps), overhead + 5)["aps"]["alert"]["body"],
         )
 
-    def test_truncate_loc_arg(self):
+    def test_truncate_loc_arg(self): # TODO ? this test seems to disagree with the title
+        """
+        Tests that the 'alert' 'loc-args' field will be truncated when needed.
+        """
         overhead = len(json_encode(payload_for_aps({"alert": {"loc-args": [""]}})))
         txt = simplestring(10)
         aps = {"alert": {"loc-args": [txt]}}
@@ -75,6 +108,9 @@ class TruncateTestCase(unittest.TestCase):
         )
 
     def test_truncate_loc_args(self):
+        """
+        Tests that the 'alert' 'loc-args' field will be truncated when needed.
+        """
         overhead = len(json_encode(payload_for_aps({"alert": {"loc-args": ["", ""]}})))
         txt = simplestring(10)
         txt2 = simplestring(10, 3)
@@ -93,11 +129,14 @@ class TruncateTestCase(unittest.TestCase):
         )
 
     def test_python_unicode_support(self):
-        # a one character unicode string should have a length of one, even if it's one
-        # multibyte character.
-        # OS X, for example, is broken, and counts the number of surrogate pairs.
-        # I have no great desire to manually parse UTF-8 to work around this since
-        # it works fine on Linux.
+        """
+        Tests Python's unicode support :-
+            a one character unicode string should have a length of one, even if it's one
+            multibyte character.
+            OS X, for example, is broken, and counts the number of surrogate pairs.
+            I have no great desire to manually parse UTF-8 to work around this since
+            it works fine on Linux.
+        """
         if len(u"\U0001F430") != 1:
             msg = (
                 "Unicode support is broken in your Python binary. "
@@ -106,6 +145,10 @@ class TruncateTestCase(unittest.TestCase):
             self.fail(msg)
 
     def test_truncate_string_with_multibyte(self):
+        """
+        Tests that truncation works as expected on strings containing one
+        multibyte character.
+        """
         overhead = len(json_encode(payload_for_aps({"alert": ""})))
         txt = u"\U0001F430" + simplestring(30)
         aps = {"alert": txt}
@@ -116,6 +159,10 @@ class TruncateTestCase(unittest.TestCase):
         )
 
     def test_truncate_multibyte(self):
+        """
+        Tests that truncation works as expected on strings containing only
+        multibyte characters.
+        """
         overhead = len(json_encode(payload_for_aps({"alert": ""})))
         txt = sillystring(30)
         aps = {"alert": txt}
