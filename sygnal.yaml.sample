@@ -65,9 +65,9 @@ metrics:
       sampler:
         type: 'const'
         param: 1
-      #      local_agent:
-      #        reporting_host: '127.0.0.1'
-      #        reporting_port:
+#        local_agent:
+#          reporting_host: '127.0.0.1'
+#          reporting_port:
       logging: true
 
 ## Pushkins/Apps #
@@ -77,23 +77,24 @@ metrics:
 # For the type, you may specify a fully-qualified Python classname if desired.
 #
 apps:
-# This is an example APNs push configuration using certificate authentication.
-#
-#com.example.myapp.ios:
-#  type: apns
-#  certfile: com.example.myApp_prod_APNS.pem
+  # This is an example APNs push configuration using certificate authentication.
+  #
+  #com.example.myapp.ios:
+  #  type: apns
+  #  certfile: com.example.myApp_prod_APNS.pem
 
-# This is an example APNs push configuration using key authentication.
-#
-#com.example.myapp2.ios:
-#  type: apns
-#  keyfile: my_key.p8
-#  key_id: MY_KEY_ID
-#  team_id: MY_TEAM_ID
-#  topic: MY_TOPIC
+  # This is an example APNs push configuration using key authentication.
+  #
+  #com.example.myapp2.ios:
+  #  type: apns
+  #  keyfile: my_key.p8
+  #  key_id: MY_KEY_ID
+  #  team_id: MY_TEAM_ID
+  #  topic: MY_TOPIC
 
-# This is an example GCM/FCM push configuration.
-#
-#com.example.myapp.android:
-#  type: gcm
-#  api_key: your_api_key_for_gcm
+  # This is an example GCM/FCM push configuration.
+  #
+  #com.example.myapp.android:
+  #  type: gcm
+  #  api_key: your_api_key_for_gcm
+
