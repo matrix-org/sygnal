@@ -73,16 +73,16 @@ class Sygnal(object):
         logging.getLogger().setLevel(getattr(logging, cfg["log"]["level"].upper()))
         logfile = cfg["log"]["file"]
 
+        format_string = (
+            "%(asctime)s [%(process)d] %(levelname)-5s " "%(name)s %(message)s"
+        )
         if logfile != "":
             handler = WatchedFileHandler(logfile)
-            formatter = logging.Formatter(
-                "%(asctime)s [%(process)d] %(levelname)-5s "
-                "%%(request_id)s %(name)s %(message)s"
-            )
+            formatter = logging.Formatter(format_string)
             handler.setFormatter(formatter)
             logging.getLogger().addHandler(handler)
         else:
-            logging.basicConfig()
+            logging.basicConfig(format=format_string)
 
         sentrycfg = cfg["metrics"]["sentry"]
         if sentrycfg["enabled"] is True:
@@ -255,12 +255,15 @@ def check_config(config):
     check_section("log", {"file", "level"})
     check_section("db", {"dbfile"})
     check_section("metrics", {"opentracing", "sentry", "prometheus"})
-    check_section("opentracing", {"enabled", "implementation", "jaeger"},
-                  cfgpart=config["metrics"])
-    check_section("prometheus", {"enabled", "address", "port"},
-                  cfgpart=config["metrics"])
-    check_section("sentry", {"enabled", "dsn"},
-                  cfgpart=config["metrics"])
+    check_section(
+        "opentracing",
+        {"enabled", "implementation", "jaeger", "service_name"},
+        cfgpart=config["metrics"],
+    )
+    check_section(
+        "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
+    )
+    check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
 
 
 def merge_left_with_defaults(defaults, loaded_config):

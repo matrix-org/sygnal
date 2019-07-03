@@ -16,9 +16,11 @@
 # limitations under the License.
 import json
 import logging
+import traceback
 from uuid import uuid4
 
-from opentracing import Format, tags
+from opentracing import Format, tags, logs
+from opentracing.ext import tags
 from prometheus_client import Counter
 from twisted.internet import defer
 from twisted.internet.defer import gatherResults, ensureDeferred
@@ -98,10 +100,15 @@ class V1NotifyHandler(Resource):
             "request_id": request_id,
         }
 
-        with self.sygnal.tracer.start_span(
+        root_span = self.sygnal.tracer.start_span(
             "pushgateway_v1_notify", child_of=span_ctx, tags=span_tags
-        ) as root_span:
+        )
 
+        # if this is True, we will not close the root_span at the end of this
+        # function.
+        root_span_accounted_for = False
+
+        try:
             context = NotificationContext(request_id, root_span)
 
             log = NotificationLoggerAdapter(logger, {"request_id": request_id})
@@ -111,13 +118,14 @@ class V1NotifyHandler(Resource):
             except Exception as exc:
                 msg = "Expected JSON request body"
                 log.warning(msg, exc_info=exc)
-                # TODO root_span.log_kv({'event': 'error', 'error.kind': })
+                root_span.log_kv({"event": tags.ERROR, "error.object": exc})
                 request.setResponseCode(400)
                 return msg.encode()
 
             if "notification" not in body or not isinstance(body["notification"], dict):
                 msg = "Invalid notification: expecting object in 'notification' key"
                 log.warning(msg)
+                root_span.log_kv({"event": tags.ERROR, "message": msg})
                 request.setResponseCode(400)
                 return msg.encode()
 
@@ -193,21 +201,19 @@ class V1NotifyHandler(Resource):
                     subfailure = failure.value.subFailure
                     if issubclass(subfailure.type, NotificationDispatchException):
                         request.setResponseCode(502)
-                        logging.warning(
-                            "Failed to dispatch notification.",
-                            exc_info=subfailure.value,
+                        log.warning(
+                            "Failed to dispatch notification.", exc_info=subfailure
                         )
                     else:
                         request.setResponseCode(500)
-                        logging.error(
+                        log.error(
                             "Exception whilst dispatching notification.",
-                            exc_info=subfailure.value,
+                            exc_info=subfailure,
                         )
                 else:
                     request.setResponseCode(500)
-                    logging.error(
-                        "Exception whilst dispatching notification.",
-                        exc_info=failure.value,
+                    log.error(
+                        "Exception whilst dispatching notification.", exc_info=failure
                     )
 
                 request.finish()
@@ -218,12 +224,32 @@ class V1NotifyHandler(Resource):
 
             def count_deferred_code(_):
                 PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
+                root_span.set_tag(tags.HTTP_STATUS_CODE, request.code)
+                if not 200 <= request.code < 300:
+                    root_span.set_tag(tags.ERROR, True)
+                root_span.finish()
 
             aggregate.addCallback(count_deferred_code)
+            root_span_accounted_for = True
 
             # we have to try and send the notifications first,
             # so we can find out which ones to reject
             return NOT_DONE_YET
+        except Exception as exc_val:
+            root_span.set_tag(tags.ERROR, True)
+            root_span.log_kv(
+                {
+                    logs.EVENT: tags.ERROR,
+                    logs.MESSAGE: str(exc_val),
+                    logs.ERROR_OBJECT: exc_val,
+                    logs.ERROR_KIND: type(exc_val),
+                    logs.STACK: traceback.extract_tb(),
+                }
+            )
+            raise
+        finally:
+            if not root_span_accounted_for:
+                root_span.finish()
 
 
 class PushGatewayApiServer(object):
