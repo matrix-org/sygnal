@@ -59,6 +59,10 @@ metrics:
     #
     implementation: jaeger
 
+    # Specify the service name to be reported to the tracer.
+    #
+    service_name: sygnal
+
     # Specify configuration values to pass to jaeger_client.
     #
     jaeger:
