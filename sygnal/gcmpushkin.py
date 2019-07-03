@@ -99,12 +99,12 @@ class GcmPushkin(Pushkin):
             raise PushkinSetupException("No API key set in config")
 
     async def start(self, sygnal):
-        self.http_pool = HTTPConnectionPool(sygnal.reactor)
+        self.http_pool = HTTPConnectionPool(reactor=sygnal.reactor)
         self.http_pool.maxPersistentPerHost = self.get_config(
             "max_connections", DEFAULT_MAX_CONNECTIONS
         )
 
-        self.http_agent = Agent(sygnal.reactor, pool=self.http_pool)
+        self.http_agent = Agent(reactor=sygnal.reactor, pool=self.http_pool)
 
         self.db = sygnal.database
 
