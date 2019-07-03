@@ -29,8 +29,7 @@ from sygnal.exceptions import (
     TemporaryNotificationDispatchException,
     NotificationDispatchException,
 )
-from sygnal.notifications import NotificationLoggerAdapter
-from sygnal.utils import twisted_sleep
+from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
 from .exceptions import PushkinSetupException
 from .notifications import Pushkin
 

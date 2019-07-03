@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from logging import LoggerAdapter
 
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -50,3 +51,8 @@ def collect_all_deferreds(deferreds):
     dlist.addErrback(deferred.errback)
 
     return deferred
+
+
+class NotificationLoggerAdapter(LoggerAdapter):  # todo move to utils?
+    def process(self, msg, kwargs):
+        return f"[{self.extra['request_id']}] {msg}", kwargs

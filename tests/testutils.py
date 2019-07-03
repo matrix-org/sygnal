@@ -157,7 +157,6 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
         self.work_notifier = Condition()
 
     def callFromThread(self, function, *args):
-        # TODO: check this is a safe implementation
         self.callLater(0, function, *args)
 
     def callLater(self, when, what, *a, **kw):

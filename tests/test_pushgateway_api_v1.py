@@ -140,7 +140,6 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         Test that internal exceptions/errors lead to a 500 Internal Server Error
         response.
         """
-        # TODO further needed
 
         self.assertEquals(
             self._request(self._make_dummy_notification([DEVICE_RAISE_EXCEPTION])), 500
@@ -166,7 +165,6 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         Test that errors caused by remote services such as GCM or APNS
         lead to a 502 Bad Gateway response.
         """
-        # TODO further needed
 
         self.assertEquals(
             self._request(self._make_dummy_notification([DEVICE_REMOTE_ERROR])), 502

@@ -29,7 +29,8 @@ from twisted.web import server
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from sygnal.notifications import NotificationContext, NotificationLoggerAdapter
+from sygnal.notifications import NotificationContext
+from sygnal.utils import NotificationLoggerAdapter
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
 
@@ -69,7 +70,7 @@ class V1NotifyHandler(Resource):
         be followed through logging.
         Returns: a request ID for the request.
         """
-        return str(uuid4())  # TODO Is this a sane way to generate request IDs?
+        return str(uuid4())
 
     def render_POST(self, request):
         response = self._handle_request(request)
