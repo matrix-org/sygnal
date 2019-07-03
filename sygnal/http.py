@@ -16,11 +16,11 @@
 # limitations under the License.
 import json
 import logging
+import sys
 import traceback
 from uuid import uuid4
 
 from opentracing import Format, tags, logs
-from opentracing.ext import tags
 from prometheus_client import Counter
 from twisted.internet import defer
 from twisted.internet.defer import gatherResults, ensureDeferred
@@ -118,14 +118,14 @@ class V1NotifyHandler(Resource):
             except Exception as exc:
                 msg = "Expected JSON request body"
                 log.warning(msg, exc_info=exc)
-                root_span.log_kv({"event": tags.ERROR, "error.object": exc})
+                root_span.log_kv({logs.EVENT: "error", "error.object": exc})
                 request.setResponseCode(400)
                 return msg.encode()
 
             if "notification" not in body or not isinstance(body["notification"], dict):
                 msg = "Invalid notification: expecting object in 'notification' key"
                 log.warning(msg)
-                root_span.log_kv({"event": tags.ERROR, "message": msg})
+                root_span.log_kv({logs.EVENT: "error", "message": msg})
                 request.setResponseCode(400)
                 return msg.encode()
 
@@ -134,7 +134,7 @@ class V1NotifyHandler(Resource):
             except InvalidNotificationException as e:
                 log.exception("Invalid notification")
                 request.setResponseCode(400)
-                # return e.message.encode()
+                root_span.log_kv({logs.EVENT: "error", "error.object": e})
                 return str(e).encode()
 
             if notif.event_id is not None:
@@ -237,13 +237,16 @@ class V1NotifyHandler(Resource):
             return NOT_DONE_YET
         except Exception as exc_val:
             root_span.set_tag(tags.ERROR, True)
+
+            # [2] corresponds to the traceback
+            trace = traceback.format_tb(sys.exc_info()[2])
             root_span.log_kv(
                 {
                     logs.EVENT: tags.ERROR,
                     logs.MESSAGE: str(exc_val),
                     logs.ERROR_OBJECT: exc_val,
                     logs.ERROR_KIND: type(exc_val),
-                    logs.STACK: traceback.extract_tb(),
+                    logs.STACK: trace,
                 }
             )
             raise

@@ -20,6 +20,7 @@ import time
 from io import BytesIO
 from json import JSONDecodeError
 
+from opentracing import logs, tags
 from prometheus_client import Histogram, Counter
 from twisted.web.client import HTTPConnectionPool, Agent, FileBodyProducer, readBody
 from twisted.web.http_headers import Headers
@@ -149,7 +150,7 @@ class GcmPushkin(Pushkin):
 
         log.debug("GCM request took %f seconds", time.time() - poke_start_time)
 
-        span.log_kv({"event": "gcm_response", "status": response.code})
+        span.set_tag(tags.HTTP_STATUS_CODE, response.code)
 
         if 500 <= response.code < 600:
             log.debug("%d from server, waiting to try again", response.code)
@@ -196,10 +197,18 @@ class GcmPushkin(Pushkin):
                     len(n.devices),
                     len(resp_object["results"]),
                 )
+                span.log_kv(
+                    {
+                        logs.EVENT: "gcm_response_mismatch",
+                        "num_devices": len(n.devices),
+                        "num_results": len(resp_object["results"]),
+                    }
+                )
 
             # determine which pushkeys to retry or forget about
             new_pushkeys = []
             for i, result in enumerate(resp_object["results"]):
+                span.set_tag("gcm_regid_updated", "registration_id" in result)
                 if "registration_id" in result:
                     await self.canonical_reg_id_store.set_canonical_id(
                         pushkeys[i], result["registration_id"]
@@ -208,6 +217,7 @@ class GcmPushkin(Pushkin):
                     log.warning(
                         "Error for pushkey %s: %s", pushkeys[i], result["error"]
                     )
+                    span.set_tag("gcm_error", result["error"])
                     if result["error"] in BAD_PUSHKEY_FAILURE_CODES:
                         log.info(
                             "Reg ID %r has permanently failed with code %r: "
@@ -246,7 +256,7 @@ class GcmPushkin(Pushkin):
         # The pushkey is kind of secret because you can use it to send push
         # to someone.
         # span_tags = {"pushkeys": pushkeys}
-        span_tags = {}
+        span_tags = {"gcm_num_devices": len(pushkeys)}
 
         with self.sygnal.tracer.start_span(
             "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
@@ -269,6 +279,12 @@ class GcmPushkin(Pushkin):
                 b"Authorization": ["key=%s" % (self.api_key,)],
             }
 
+            # count the number of remapped registration IDs in the request
+            span_parent.set_tag(
+                "gcm_num_remapped_reg_ids_used",
+                [k != v for (k, v) in reg_id_mappings.items()].count(True),
+            )
+
             # TODO: Implement collapse_key to queue only one message per room.
             failed = []
 
@@ -282,12 +298,7 @@ class GcmPushkin(Pushkin):
                 else:
                     body["registration_ids"] = mapped_pushkeys
 
-                log.info(
-                    "Sending (attempt %i): %r => %r",
-                    retry_number,
-                    data,
-                    mapped_pushkeys,
-                )
+                log.info("Sending (attempt %i) => %r", retry_number, mapped_pushkeys)
 
                 try:
                     span_tags = {"retry_num": retry_number}
@@ -326,6 +337,8 @@ class GcmPushkin(Pushkin):
 
             if len(pushkeys) > 0:
                 log.info("Gave up retrying reg IDs: %r", pushkeys)
+            # Count the number of failed devices.
+            span_parent.set_tag("gcm_num_failed", len(failed))
             return failed
 
     @staticmethod

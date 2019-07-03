@@ -20,6 +20,7 @@ import os
 
 import aioapns
 from aioapns import APNs, NotificationRequest
+from opentracing import logs, tags
 from prometheus_client import Histogram, Counter
 from twisted.internet.defer import Deferred
 
@@ -141,6 +142,10 @@ class ApnsPushkin(Pushkin):
             else:
                 payload = self._get_payload_full(n, log)
 
+            if payload is None:
+                # Nothing to do
+                span_parent.log_kv({logs.EVENT: "apns_no_payload"})
+                return
             prio = 10
             if n.prio == "low":
                 prio = 5
@@ -171,7 +176,7 @@ class ApnsPushkin(Pushkin):
 
                 code = int(response.status)
 
-                span.log_kv({"event": "apns_response", "status": code})
+                span.set_tag(tags.HTTP_STATUS_CODE, code)
 
                 RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
 
@@ -179,6 +184,7 @@ class ApnsPushkin(Pushkin):
                     return []
                 else:
                     # .description corresponds to the 'reason' response field
+                    span.set_tag("apns_reason", response.description)
                     if (
                         code == self.TOKEN_ERROR_CODE
                         or response.description == self.TOKEN_ERROR_REASON
