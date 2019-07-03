@@ -34,10 +34,6 @@ from sygnal.http import PushGatewayApiServer
 from sygnal.utils import collect_all_deferreds
 from .database import Database
 
-# TODO we don't want to have to install the reactor, when we can get away with
-#   it (see the TO DO in the __main__ section)
-asyncioreactor.install()
-
 logger = logging.getLogger(__name__)
 
 CONFIG_DEFAULTS = {
@@ -302,6 +298,10 @@ def merge_left_with_defaults(defaults, loaded_config):
 
 
 if __name__ == "__main__":
+    # TODO we don't want to have to install the reactor, when we can get away with
+    #   it
+    asyncioreactor.install()
+
     # we remove the global reactor to make it evident when it has accidentally
     # been used:
     # ! twisted.internet.reactor = None
