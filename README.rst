@@ -1,47 +1,28 @@
 Introduction
 ============
 
-Sygnal is a reference Push Gateway for Matrix (http://matrix.org/).
+Sygnal is a reference Push Gateway for `Matrix <https://matrix.org/>`_.
 
-See
-https://matrix.org/docs/spec/client_server/r0.5.0#id510 for a high level overview of how notifications work in Matrix.
+See https://matrix.org/docs/spec/client_server/r0.5.0#id134
+for a high level overview of how notifications work in Matrix.
 
 https://matrix.org/docs/spec/push_gateway/r0.1.0
-describes the protocol that Matrix Home Servers use to send notifications to
-Push Gateways such as Sygnal.
+describes the protocol that Matrix Home Servers use to send notifications to Push Gateways such as Sygnal.
 
 Setup
 =====
-sygnal is a plain WSGI app, although these instructions use gunicorn which
-will create a complete, standalone webserver.  When used with gunicorn,
-sygnal can use gunicorn's extra hook to perform a clean shutdown which tries as
-hard as possible to ensure no messages are lost.
+Sygnal is configured through a YAML configuration file.
+By default, this configuration file is assumed to be named ``sygnal.yaml`` and to be in the working directory.
+To change this, set the ``SYGNAL_CONF`` environment variable to the path to your configuration file.
+A sample configuration file is provided in this repository;
+see ``sygnal.yaml.sample``.
 
-There are two config files: # TODO
- * sygnal.conf (The app-specific config file)
- * gunicorn_config.py (gunicorn's config file)
+The `apps:` section is where you set up different apps that are to be handled.
+Each app should be given its own subsection, with the key of that subsection being the app's ``app_id``.
+Keys in this section take the form of the ``app_id``, as specified when setting up a Matrix pusher
+(see https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-pushers-set).
 
-sygnal.conf contains configuration for sygnal itself. This includes the location
-and level of sygnal's log file. The [apps] section is where you set up different
-apps that are to be handled. Keys in this section take the form of the app_id
-and the name of the configuration key, joined by a single dot ('.'). The app_id
-is as specified when setting up a Matrix pusher (see
-http://matrix.org/docs/spec/client_server/r0.2.0.html#post-matrix-client-r0-pushers-set). So for example, the `type` for
-the App ID of `com.example.myapp.ios.prod` would be specified as follows::
-
-  com.example.myapp.ios.prod.type = foobar
-
-By default sygnal.conf is assumed to be in the working directory, but the path
-can be overriden by setting the `sygnal.conf` environment variable.
-
-The gunicorn sample config contains everything necessary to run sygnal from
-gunicorn. The shutdown hook handles clean shutdown. You can customise other
-aspects of this file as you wish to change, for example, the log location or the
-bind port.
-
-Note that sygnal uses gevent. You should therefore not change the worker class
-or the number of workers (which should be 1: in gevent, a single worker uses
-multiple greenlets to handle all the requests).
+See the sample configuration for examples.
 
 App Types
 ---------
@@ -49,44 +30,45 @@ There are two supported App Types:
 
 apns
   This sends push notifications to iOS apps via the Apple Push Notification
-  Service (APNS). It expects either:
-  
-  - the 'certfile' parameter to be a path relative to
-  sygnal's working directory of a PEM file containing the APNS certificate and
-  unencrypted private key.
-  - OR:
-	- the 'keyfile' parameter to be a path relative to Sygnal's working directory of a p8 file
-	- # TODO
+  Service (APNS).
+
+  Expected configuration depends on which kind of authentication you wish to use:
+
+  |
+
+  For certificate-based authentication:
+    It expects:
+
+    * the ``certfile`` parameter to be a path relative to
+      sygnal's working directory of a PEM file containing the APNS certificate and
+      unencrypted private key.
+
+  For token-based authentication:
+    It expects:
+
+    * the 'keyfile' parameter to be a path relative to Sygnal's working directory of a p8 file
+    * the 'key_id' parameter
+    * the 'team_id' parameter
+    * the 'topic' parameter
 
 gcm
-  This sends messages via Google Cloud Messaging (GCM) and hence can be used
-  to deliver notifications to Android apps. It expects the 'apiKey' parameter
-  to contain the secret GCM key.
+  This sends messages via Google/Firebase Cloud Messaging (GCM/FCM) and hence can be used
+  to deliver notifications to Android apps. It expects the 'api_key' parameter
+  to contain the 'Server key', which can be acquired from Firebase Console at:
+  \https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/
 
 Running
 =======
 
-`python -m sygnal.sygnal`
+```
+python -m sygnal.sygnal
+```
 
-Python 3.6 or higher is required. You may therefore need to use e.g. `python3.6` on your system. # TODO suggest venv?
-
-Clean shutdown
-==============
-# TODO this is obsolete
-The code for APNS uses a grace period where it waits for errors to come down the
-socket before declaring it safe for the app to shut down (due to the design of
-APNS). Terminating using SIGTERM performs a clean shutdown::
-
-    kill -TERM `cat sygnal.pid`
-
-Restarting sygnal using SIGHUP will handle this gracefully::
-
-    kill -HUP `cat sygnal.pid`
+Python 3.7 or higher is required.
 
 Log Rotation
 ============
-# obsolete-ish
-Gunicorn appends to files but does not use a rotating logger.
-Sygnal's app logging does the same. Gunicorn will re-open all log files
-(including the app's) when sent SIGUSR1.  The recommended configuration is
-therefore to use logrotate.
+Sygnal's logging appends to files but does not use a rotating logger.
+The recommended configuration is therefore to use ``logrotate``.
+The log file will be automatically reopened if the log file changes, for example
+due to ``logrotate``.
