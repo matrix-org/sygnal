@@ -55,14 +55,12 @@ gcm
   This sends messages via Google/Firebase Cloud Messaging (GCM/FCM) and hence can be used
   to deliver notifications to Android apps. It expects the 'api_key' parameter
   to contain the 'Server key', which can be acquired from Firebase Console at:
-  \https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/
+  ``https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/``
 
 Running
 =======
 
-```
-python -m sygnal.sygnal
-```
+``python -m sygnal.sygnal``
 
 Python 3.7 or higher is required.
 
@@ -72,3 +70,4 @@ Sygnal's logging appends to files but does not use a rotating logger.
 The recommended configuration is therefore to use ``logrotate``.
 The log file will be automatically reopened if the log file changes, for example
 due to ``logrotate``.
+
