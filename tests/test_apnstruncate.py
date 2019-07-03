@@ -98,8 +98,8 @@ class TruncateTestCase(unittest.TestCase):
     def test_truncate_loc_arg(self):
         """
         Tests that the 'alert' 'loc-args' field will be truncated when needed.
+        (Tests with one loc arg)
         """
-        # TODO ? this test seems to disagree with the title
         overhead = len(json_encode(payload_for_aps({"alert": {"loc-args": [""]}})))
         txt = simplestring(10)
         aps = {"alert": {"loc-args": [txt]}}
@@ -111,6 +111,7 @@ class TruncateTestCase(unittest.TestCase):
     def test_truncate_loc_args(self):
         """
         Tests that the 'alert' 'loc-args' field will be truncated when needed.
+        (Tests with two loc args)
         """
         overhead = len(json_encode(payload_for_aps({"alert": {"loc-args": ["", ""]}})))
         txt = simplestring(10)
