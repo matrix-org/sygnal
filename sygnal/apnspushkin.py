@@ -153,12 +153,12 @@ class ApnsPushkin(Pushkin):
                 """
                 Actually attempts to dispatch the notification once.
                 """
+                notif_id = context.request_id + f"-{n.devices.index(device)}"
                 request = NotificationRequest(
                     device_token=device.pushkey,
                     message=shaved_payload,
-                    priority=prio
-                    # todo notification_id=str(uuid4()) ?
-                    # todo time_to_live=3 ?
+                    priority=prio,
+                    notification_id=notif_id,
                 )
 
                 try:
