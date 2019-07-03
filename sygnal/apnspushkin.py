@@ -127,8 +127,10 @@ class ApnsPushkin(Pushkin):
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
-        # todo is it OK to keep the pushkey?
-        span_tags = {"pushkey": device.pushkey}
+        # The pushkey is kind of secret because you can use it to send push
+        # to someone.
+        # span_tags = {"pushkey": device.pushkey}
+        span_tags = {}
 
         with self.sygnal.tracer.start_span(
             "apns_dispatch", tags=span_tags, child_of=context.opentracing_span

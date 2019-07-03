@@ -43,7 +43,6 @@ RESPONSE_STATUS_CODES_COUNTER = Counter(
     labelnames=["pushkin", "code"],
 )
 
-
 logger = logging.getLogger(__name__)
 
 GCM_URL = b"https://fcm.googleapis.com/fcm/send"
@@ -244,7 +243,10 @@ class GcmPushkin(Pushkin):
             # Only send notifications once, to all devices at once.
             return []
 
-        span_tags = {"pushkeys": pushkeys}
+        # The pushkey is kind of secret because you can use it to send push
+        # to someone.
+        # span_tags = {"pushkeys": pushkeys}
+        span_tags = {}
 
         with self.sygnal.tracer.start_span(
             "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
