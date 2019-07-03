@@ -5,3 +5,5 @@ gunicorn_config.py
 var/
 sygnal.pid
 sygnal.db
+/_trial_temp*
+/.idea
