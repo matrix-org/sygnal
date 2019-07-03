@@ -23,7 +23,7 @@ from logging.handlers import WatchedFileHandler
 
 import opentracing
 import prometheus_client
-import twisted.internet.reactor
+# import twisted.internet.reactor
 import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor
@@ -32,6 +32,10 @@ from twisted.internet.defer import ensureDeferred
 from sygnal.http import PushGatewayApiServer
 from sygnal.utils import collect_all_deferreds
 from .database import Database
+
+# TODO we don't want to have to install the reactor, when we can get away with
+#   it (see the TO DO in the __main__ section)
+asyncioreactor.install()
 
 logger = logging.getLogger(__name__)
 
@@ -299,7 +303,11 @@ def merge_left_with_defaults(defaults, loaded_config):
 if __name__ == "__main__":
     # we remove the global reactor to make it evident when it has accidentally
     # been used:
-    twisted.internet.reactor = None
+    # ! twisted.internet.reactor = None
+    # TODO can't do this ^ yet, since twisted.internet.task.{coiterate,cooperate}
+    #   (indirectly) depend on the globally-installed reactor and there's no way
+    #   to pass in a custom one.
+    #   and twisted.web.client uses twisted.internet.task.cooperate
 
     config = parse_config()
     config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
