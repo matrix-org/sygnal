@@ -92,7 +92,7 @@ class Sygnal(object):
             logging.basicConfig(format=format_string)
 
         access_logger = logging.getLogger("twisted")
-        access_log_enabled = sygnal.config["log"]["access"]["enabled"]
+        access_log_enabled = cfg["log"]["access"]["enabled"]
         if access_log_enabled:
             access_file = cfg["log"]["access"]["file"]
             if access_file:
