@@ -19,6 +19,7 @@ import importlib
 import logging
 import os
 import sys
+from logging import StreamHandler
 from logging.handlers import WatchedFileHandler
 
 import opentracing
@@ -29,6 +30,7 @@ import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor
 from twisted.internet.defer import ensureDeferred
+from twisted.python import log as twisted_log
 
 from sygnal.http import PushGatewayApiServer
 from sygnal.utils import collect_all_deferreds
@@ -38,7 +40,11 @@ logger = logging.getLogger(__name__)
 
 CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
-    "log": {"level": "info", "file": ""},
+    "log": {
+        "level": "info",
+        "file": "",
+        "access": {"enabled": False, "file": None, "x_forwarded_for": False},
+    },
     "db": {"dbfile": "sygnal.db"},
     "metrics": {
         "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
@@ -85,18 +91,37 @@ class Sygnal(object):
         else:
             logging.basicConfig(format=format_string)
 
+        access_logger = logging.getLogger("twisted")
+        access_log_enabled = sygnal.config["log"]["access"]["enabled"]
+        if access_log_enabled:
+            access_file = cfg["log"]["access"]["file"]
+            if access_file:
+                access_handler = WatchedFileHandler(access_file)
+            else:
+                access_handler = StreamHandler(sys.stdout)
+
+            access_handler.setFormatter(logging.Formatter(format_string))
+            access_logger.addHandler(access_handler)
+            access_logger.propagate = False
+
+            observer = twisted_log.PythonLoggingObserver()
+            observer.start()
+        else:
+            # disable access logging
+            access_logger.disabled = True
+
         sentrycfg = cfg["metrics"]["sentry"]
         if sentrycfg["enabled"] is True:
             import sentry_sdk
 
-            logging.info("Initialising Sentry")
+            logger.info("Initialising Sentry")
             sentry_sdk.init(sentrycfg["dsn"])
 
         promcfg = cfg["metrics"]["prometheus"]
         if promcfg["enabled"] is True:
             prom_addr = promcfg["address"]
             prom_port = int(promcfg["port"])
-            logging.info(
+            logger.info(
                 "Starting Prometheus Server on %s port %d", prom_addr, prom_port
             )
 
@@ -116,7 +141,7 @@ class Sygnal(object):
 
                     sygnal.tracer = jaeger_cfg.initialize_tracer()
 
-                    logging.info("Enabled OpenTracing support with Jaeger")
+                    logger.info("Enabled OpenTracing support with Jaeger")
                 except ModuleNotFoundError:
                     logger.critical(
                         "You have asked for OpenTracing with Jaeger but do not have"
@@ -253,7 +278,10 @@ def check_config(config):
         )
 
     check_section("http", {"port", "bind_addresses"})
-    check_section("log", {"file", "level"})
+    check_section("log", {"file", "level", "access"})
+    check_section(
+        "access", {"file", "enabled", "x_forwarded_for"}, cfgpart=config["log"]
+    )
     check_section("db", {"dbfile"})
     check_section("metrics", {"opentracing", "sentry", "prometheus"})
     check_section(

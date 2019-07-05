@@ -11,7 +11,24 @@ log:
   level: debug
   # Specify a file to log to, or omit this option to log to stderr.
   #
-  file: var/sygnal.log
+  file: sygnal.log
+
+
+  access:
+    # Specify whether or not you wish to have access logging for the HTTP server.
+    #
+    enabled: false
+
+    # Specify a log file to emit access logging to, or omit this option to log
+    # to stdout.
+    #
+    file: sygnal_access.log
+
+    # Specify whether or not to trust the IP address in the `X-Forwarded-For`
+    # header. In general, you want to enable this if and only if you are using a
+    # reverse proxy which is configured to emit it.
+    #
+    x_forwarded_for: false
 
 ## HTTP Server (Matrix Push Gateway API) #
 #

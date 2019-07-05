@@ -26,6 +26,7 @@ from twisted.internet import defer
 from twisted.internet.defer import gatherResults, ensureDeferred
 from twisted.python.failure import Failure
 from twisted.web import server
+from twisted.web.http import proxiedLogFormatter
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
@@ -274,4 +275,10 @@ class PushGatewayApiServer(object):
         push.putChild(b"v1", v1)
         v1.putChild(b"notify", V1NotifyHandler(sygnal))
 
-        self.site = server.Site(root, reactor=sygnal.reactor)
+        use_x_forwarded_for = sygnal.config["log"]["access"]["x_forwarded_for"]
+
+        log_formatter = proxiedLogFormatter if use_x_forwarded_for else None
+
+        self.site = server.Site(
+            root, reactor=sygnal.reactor, logFormatter=log_formatter
+        )
