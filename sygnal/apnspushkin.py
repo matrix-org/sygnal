@@ -17,6 +17,7 @@
 import asyncio
 import logging
 import os
+from uuid import uuid4
 
 import aioapns
 from aioapns import APNs, NotificationRequest
@@ -158,7 +159,16 @@ class ApnsPushkin(Pushkin):
                 """
                 Actually attempts to dispatch the notification once.
                 """
-                notif_id = context.request_id + f"-{n.devices.index(device)}"
+
+                # this is no good: APNs expects ID to be in their format
+                # so we can't just derive a
+                # notif_id = context.request_id + f"-{n.devices.index(device)}"
+
+                notif_id = str(uuid4())
+
+                log.info(f"Sending as APNs-ID {notif_id}")
+                span.set_tag("apns_id", notif_id)
+
                 request = NotificationRequest(
                     device_token=device.pushkey,
                     message=shaved_payload,
