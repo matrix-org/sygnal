@@ -17,10 +17,9 @@
 import copy
 import importlib
 import logging
+import logging.config
 import os
 import sys
-from logging import StreamHandler
-from logging.handlers import WatchedFileHandler
 
 import opentracing
 import prometheus_client
@@ -40,11 +39,7 @@ logger = logging.getLogger(__name__)
 
 CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
-    "log": {
-        "level": "info",
-        "file": "",
-        "access": {"enabled": False, "file": None, "x_forwarded_for": False},
-    },
+    "log": {"setup": {}, "access": {"x_forwarded_for": False}},
     "db": {"dbfile": "sygnal.db"},
     "metrics": {
         "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
@@ -77,38 +72,13 @@ class Sygnal(object):
     def _setup(self):
         cfg = self.config
 
-        logging.getLogger().setLevel(getattr(logging, cfg["log"]["level"].upper()))
-        logfile = cfg["log"]["file"]
+        logging_dict_config = cfg["log"]["setup"]
+        logging.config.dictConfig(logging_dict_config)
 
-        format_string = (
-            "%(asctime)s [%(process)d] %(levelname)-5s " "%(name)s %(message)s"
-        )
-        if logfile != "":
-            handler = WatchedFileHandler(logfile)
-            formatter = logging.Formatter(format_string)
-            handler.setFormatter(formatter)
-            logging.getLogger().addHandler(handler)
-        else:
-            logging.basicConfig(format=format_string)
+        logger.debug("Started logging")
 
-        access_logger = logging.getLogger("twisted")
-        access_log_enabled = cfg["log"]["access"]["enabled"]
-        if access_log_enabled:
-            access_file = cfg["log"]["access"]["file"]
-            if access_file:
-                access_handler = WatchedFileHandler(access_file)
-            else:
-                access_handler = StreamHandler(sys.stdout)
-
-            access_handler.setFormatter(logging.Formatter(format_string))
-            access_logger.addHandler(access_handler)
-            access_logger.propagate = False
-
-            observer = twisted_log.PythonLoggingObserver()
-            observer.start()
-        else:
-            # disable access logging
-            access_logger.disabled = True
+        observer = twisted_log.PythonLoggingObserver(loggerName="sygnal.access")
+        observer.start()
 
         sentrycfg = cfg["metrics"]["sentry"]
         if sentrycfg["enabled"] is True:
@@ -278,7 +248,7 @@ def check_config(config):
         )
 
     check_section("http", {"port", "bind_addresses"})
-    check_section("log", {"file", "level", "access"})
+    check_section("log", {"setup", "access"})
     check_section(
         "access", {"file", "enabled", "x_forwarded_for"}, cfgpart=config["log"]
     )
@@ -306,6 +276,9 @@ def merge_left_with_defaults(defaults, loaded_config):
         A merged configuration, with loaded_config preferred over defaults.
     """
     result = defaults.copy()
+
+    if loaded_config is None:
+        return result
 
     # copy defaults or override them
     for k, v in result.items():

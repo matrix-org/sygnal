@@ -195,8 +195,10 @@ class V1NotifyHandler(Resource):
 
                 request.write(json.dumps({"rejected": rejected}).encode())
 
-                log.info("Successfully delivered notifications"
-                         " with %d rejected pushkeys", len(rejected))
+                log.info(
+                    "Successfully delivered notifications" " with %d rejected pushkeys",
+                    len(rejected),
+                )
 
                 request.finish()
 

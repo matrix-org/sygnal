@@ -36,7 +36,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         reactor = ExtendedMemoryReactorClock()
 
-        config = {"apps": {}, "db": {}, "log": {}}
+        config = {"apps": {}, "db": {}, "log": {"setup": {"version": 1}}}
         config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
 
         self.config_setup(config)

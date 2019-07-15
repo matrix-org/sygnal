@@ -6,24 +6,60 @@
 ## Logging #
 #
 log:
-  # Specify a log level to report. Choose from error, warn, info, debug.
+  # Specify a Python logging 'dictConfig', as described at:
+  #   https://docs.python.org/3.7/library/logging.config.html#logging.config.dictConfig
   #
-  level: debug
-  # Specify a file to log to, or omit this option to log to stderr.
-  #
-  file: sygnal.log
+  setup:
+    version: 1
+    formatters:
+      normal:
+        format: "%(asctime)s [%(process)d] %(levelname)-5s %(name)s %(message)s"
+    handlers:
+      # This handler prints to Standard Error
+      #
+      stderr:
+        class: "logging.StreamHandler"
+        formatter: "normal"
+        stream: "ext://sys.stderr"
+
+      # This handler prints to Standard Output.
+      #
+      stdout:
+        class: "logging.StreamHandler"
+        formatter: "normal"
+        stream: "ext://sys.stdout"
+
+      # This handler demonstrates logging to a text file on the filesystem.
+      # You can use logrotate(8) to perform log rotation.
+      #
+      file:
+        class: "logging.handlers.WatchedFileHandler"
+        formatter: "normal"
+        filename: "./sygnal.log"
+    loggers:
+      # sygnal.access contains the access logging lines.
+      # Comment out this section if you don't want to give access logging
+      # any special treatment.
+      #
+      sygnal.access:
+        propagate: false
+        handlers: ["stdout"]
+        level: "INFO"
+
+      # sygnal contains log lines from Sygnal itself.
+      # You can comment out this section to fall back to the root logger.
+      #
+      sygnal:
+        propagate: false
+        handlers: ["stderr", "file"]
+
+    root:
+      # Specify the handler(s) to send log messages to.
+      handlers: ["stderr"]
+      level: "INFO"
 
 
   access:
-    # Specify whether or not you wish to have access logging for the HTTP server.
-    #
-    enabled: false
-
-    # Specify a log file to emit access logging to, or omit this option to log
-    # to stdout.
-    #
-    file: sygnal_access.log
-
     # Specify whether or not to trust the IP address in the `X-Forwarded-For`
     # header. In general, you want to enable this if and only if you are using a
     # reverse proxy which is configured to emit it.
