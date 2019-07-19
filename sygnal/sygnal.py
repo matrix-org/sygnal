@@ -32,7 +32,6 @@ from twisted.internet.defer import ensureDeferred
 from twisted.python import log as twisted_log
 
 from sygnal.http import PushGatewayApiServer
-from sygnal.utils import collect_all_deferreds
 from .database import Database
 
 logger = logging.getLogger(__name__)
@@ -123,23 +122,7 @@ class Sygnal(object):
 
         self.database = Database(config["db"]["dbfile"], self.reactor)
 
-        for app_id, app_cfg in config["apps"].items():
-            try:
-                self.pushkins[app_id] = self._make_pushkin(app_id, app_cfg)
-            except Exception:
-                logger.exception(
-                    "Failed to load and create pushkin for kind %s", app_cfg["type"]
-                )
-                raise
-
-        if len(self.pushkins) == 0:
-            logger.error("No app IDs are configured. Edit sygnal.yaml to define some.")
-            sys.exit(1)
-
-        logger.info("Configured with app IDs: %r", self.pushkins.keys())
-        logger.info("Setup completed")
-
-    def _make_pushkin(self, app_name, app_config):
+    async def _make_pushkin(self, app_name, app_config):
         """
         Load and instantiate a pushkin.
         Args:
@@ -162,7 +145,27 @@ class Sygnal(object):
         pushkin_module = importlib.import_module(to_import)
         logger.info("Creating pushkin: %s", to_construct)
         clarse = getattr(pushkin_module, to_construct)
-        return clarse(app_name, self, app_config)
+        return await clarse.create(app_name, self, app_config)
+
+    async def _make_pushkins_then_start(self, port, bind_addresses, pushgateway_api):
+        for app_id, app_cfg in self.config["apps"].items():
+            try:
+                self.pushkins[app_id] = await self._make_pushkin(app_id, app_cfg)
+            except Exception:
+                logger.exception(
+                    "Failed to load and create pushkin for kind %s", app_cfg["type"]
+                )
+                sys.exit(1)
+
+        if len(self.pushkins) == 0:
+            logger.error("No app IDs are configured. Edit sygnal.yaml to define some.")
+            sys.exit(1)
+
+        logger.info("Configured with app IDs: %r", self.pushkins.keys())
+
+        for interface in bind_addresses:
+            logger.info("Starting listening on %s port %d", interface, port)
+            self.reactor.listenTCP(port, pushgateway_api.site, interface=interface)
 
     def run(self):
         """
@@ -172,30 +175,8 @@ class Sygnal(object):
         bind_addresses = self.config["http"]["bind_addresses"]
         pushgateway_api = PushGatewayApiServer(self)
 
-        start_deferred = collect_all_deferreds(
-            [ensureDeferred(pushkin.start(self)) for pushkin in self.pushkins.values()]
-        )
-
-        exit_code = 0
-
-        def on_started(_):
-            for interface in bind_addresses:
-                logger.info("Starting listening on %s port %d", interface, port)
-                self.reactor.listenTCP(port, pushgateway_api.site, interface=interface)
-
-        def on_failed_to_start(failure):
-            nonlocal exit_code
-            exit_code = 1
-            logger.error("Failed to start due to exception: %s", failure)
-            self.reactor.callLater(0, self.reactor.stop)
-
-        start_deferred.addCallback(on_started)
-        start_deferred.addErrback(on_failed_to_start)
-
-        logger.info("Starting pushkins")
+        ensureDeferred(self._make_pushkins_then_start(port, bind_addresses, pushgateway_api))
         self.reactor.run()
-
-        sys.exit(exit_code)
 
 
 def parse_config():

@@ -99,9 +99,6 @@ class Pushkin(object):
         self.cfg = config
         self.sygnal = sygnal
 
-    async def start(self, sygnal):
-        pass
-
     def get_config(self, key, default=None):
         if key not in self.cfg:
             return default
@@ -118,6 +115,18 @@ class Pushkin(object):
             A list of rejected pushkeys, to be reported back to the homeserver
         """
         pass
+
+    @classmethod
+    async def create(cls, name, sygnal, config):
+        """
+        Override this if your pushkin needs to call async code in order to
+        be constructed. Otherwise, it defaults to just invoking the Python-standard
+        __init__ constructor.
+
+        Returns:
+            an instance of this Pushkin
+        """
+        return cls(name, sygnal, config)
 
 
 class NotificationContext(object):

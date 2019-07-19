@@ -34,25 +34,6 @@ async def twisted_sleep(delay, twisted_reactor):
     await deferred
 
 
-def collect_all_deferreds(deferreds):
-    deferred = Deferred()
-    dlist = DeferredList(deferreds, consumeErrors=True, fireOnOneErrback=True)
-
-    def on_success(results):
-        ret_val = []
-
-        for (was_successful, result) in results:
-            assert was_successful
-            ret_val.append(result)
-
-        deferred.callback(ret_val)
-
-    dlist.addCallback(on_success)
-    dlist.addErrback(deferred.errback)
-
-    return deferred
-
-
 class NotificationLoggerAdapter(LoggerAdapter):  # todo move to utils?
     def process(self, msg, kwargs):
         return f"[{self.extra['request_id']}] {msg}", kwargs

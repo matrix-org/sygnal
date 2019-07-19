@@ -44,12 +44,8 @@ class TestCase(unittest.TestCase):
         self.sygnal = Sygnal(config, reactor)
         self.v1api = PushGatewayApiServer(self.sygnal)
 
-        start_deferred = gatherResults(
-            [
-                ensureDeferred(pushkin.start(self.sygnal))
-                for pushkin in self.sygnal.pushkins.values()
-            ],
-            consumeErrors=True,
+        start_deferred = ensureDeferred(
+            self.sygnal._make_pushkins_then_start(0, [], None)
         )
 
         while not start_deferred.called:

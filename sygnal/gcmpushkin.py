@@ -78,7 +78,7 @@ class GcmPushkin(Pushkin):
 
     UNDERSTOOD_CONFIG_FIELDS = {"type", "api_key"}
 
-    def __init__(self, name, sygnal, config):
+    def __init__(self, name, sygnal, config, canonical_reg_id_store):
         super(GcmPushkin, self).__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
@@ -88,16 +88,6 @@ class GcmPushkin(Pushkin):
                 nonunderstood,
             )
 
-        self.http_agent = None
-        self.http_pool = None
-        self.db = None
-        self.canonical_reg_id_store = None
-
-        self.api_key = self.get_config("api_key")
-        if not self.api_key:
-            raise PushkinSetupException("No API key set in config")
-
-    async def start(self, sygnal):
         self.http_pool = HTTPConnectionPool(reactor=sygnal.reactor)
         self.http_pool.maxPersistentPerHost = self.get_config(
             "max_connections", DEFAULT_MAX_CONNECTIONS
@@ -106,11 +96,28 @@ class GcmPushkin(Pushkin):
         self.http_agent = Agent(reactor=sygnal.reactor, pool=self.http_pool)
 
         self.db = sygnal.database
+        self.canonical_reg_id_store = canonical_reg_id_store
 
+        self.api_key = self.get_config("api_key")
+        if not self.api_key:
+            raise PushkinSetupException("No API key set in config")
+
+    @classmethod
+    async def create(cls, name, sygnal, config):
+        """
+        Override this if your pushkin needs to call async code in order to
+        be constructed. Otherwise, it defaults to just invoking the Python-standard
+        __init__ constructor.
+
+        Returns:
+            an instance of this Pushkin
+        """
         logger.debug("About to set up CanonicalRegId Store")
-        self.canonical_reg_id_store = CanonicalRegIdStore()
-        await self.canonical_reg_id_store.setup(self.db)
+        canonical_reg_id_store = CanonicalRegIdStore()
+        await canonical_reg_id_store.setup(sygnal.database)
         logger.debug("Finished setting up CanonicalRegId Store")
+
+        return cls(name, sygnal, config, canonical_reg_id_store)
 
     async def _perform_http_request(self, body, headers):
         """

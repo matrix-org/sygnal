@@ -108,9 +108,6 @@ class ApnsPushkin(Pushkin):
             if not self.get_config("topic"):
                 raise PushkinSetupException("You must supply topic.")
 
-        self.apns_client = None
-
-    async def start(self, sygnal):
         if self.get_config("certfile") is not None:
             self.apns_client = APNs(
                 client_cert=self.get_config("certfile"), use_sandbox=self.use_sandbox

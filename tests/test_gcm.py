@@ -28,8 +28,8 @@ class TestGcmPushkin(GcmPushkin):
     can be preloaded with virtual requests.
     """
 
-    def __init__(self, name, sygnal, config):
-        super().__init__(name, sygnal, config)
+    def __init__(self, name, sygnal, config, canonical_reg_id_store):
+        super().__init__(name, sygnal, config, canonical_reg_id_store)
         self.preloaded_response = None
         self.preloaded_response_payload = None
         self.last_request_body = None
