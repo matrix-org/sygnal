@@ -410,9 +410,6 @@ class ApnsPushkin(Pushkin):
 
         return payload
 
-    async def shutdown(self):  # TODO
-        return await super().shutdown()
-
     async def _send_notification(self, request):
         return await Deferred.fromFuture(
             asyncio.ensure_future(self.apns_client.send_notification(request))

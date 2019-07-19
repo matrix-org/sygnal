@@ -201,9 +201,6 @@ class Sygnal(object):
 
         sys.exit(exit_code)
 
-    def shutdown(self):
-        pass  # TODO
-
 
 def parse_config():
     """

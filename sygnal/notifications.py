@@ -119,9 +119,6 @@ class Pushkin(object):
         """
         pass
 
-    async def shutdown(self):
-        pass
-
 
 class NotificationContext(object):
     def __init__(self, request_id, opentracing_span):
