@@ -23,7 +23,7 @@ from twisted.internet.defer import Deferred
 logger = logging.getLogger(__name__)
 
 
-class Database:
+class Database(object):
     def __init__(self, dbfile, twisted_reactor):
         self.twisted_reactor = twisted_reactor
         self.dbfile = dbfile
