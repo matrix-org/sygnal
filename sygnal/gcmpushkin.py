@@ -421,7 +421,7 @@ class CanonicalRegIdStore(object):
 
     async def get_canonical_id(self, reg_id):
         rows = await self.db.query(
-            "SELECT canonical_reg_id" " FROM gcm_canonical_reg_id" " WHERE reg_id = ?;",
+            "SELECT canonical_reg_id FROM gcm_canonical_reg_id WHERE reg_id = ?",
             (reg_id,),
             fetch="all",
         )

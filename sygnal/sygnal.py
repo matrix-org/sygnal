@@ -175,7 +175,9 @@ class Sygnal(object):
         bind_addresses = self.config["http"]["bind_addresses"]
         pushgateway_api = PushGatewayApiServer(self)
 
-        ensureDeferred(self._make_pushkins_then_start(port, bind_addresses, pushgateway_api))
+        ensureDeferred(
+            self._make_pushkins_then_start(port, bind_addresses, pushgateway_api)
+        )
         self.reactor.run()
 
 

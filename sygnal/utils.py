@@ -14,7 +14,7 @@
 # limitations under the License.
 from logging import LoggerAdapter
 
-from twisted.internet.defer import Deferred, DeferredList
+from twisted.internet.defer import Deferred
 
 
 async def twisted_sleep(delay, twisted_reactor):

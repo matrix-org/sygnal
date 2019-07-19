@@ -16,7 +16,7 @@ import json
 from io import BytesIO
 from threading import Condition
 
-from twisted.internet.defer import gatherResults, ensureDeferred
+from twisted.internet.defer import ensureDeferred
 from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial import unittest
 from twisted.web.http_headers import Headers
