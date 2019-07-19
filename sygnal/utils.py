@@ -34,6 +34,6 @@ async def twisted_sleep(delay, twisted_reactor):
     await deferred
 
 
-class NotificationLoggerAdapter(LoggerAdapter):  # todo move to utils?
+class NotificationLoggerAdapter(LoggerAdapter):
     def process(self, msg, kwargs):
         return f"[{self.extra['request_id']}] {msg}", kwargs

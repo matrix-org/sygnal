@@ -132,7 +132,6 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         """
         Test that bad requests lead to a 400 Bad Request response.
         """
-        # TODO further needed
         self.assertEquals(self._request({}), 400)
 
     def test_exceptions_give_500(self):

@@ -417,7 +417,6 @@ class CanonicalRegIdStore(object):
         )
 
     async def get_canonical_ids(self, reg_ids):
-        # TODO: Use one DB query
         return {reg_id: await self.get_canonical_id(reg_id) for reg_id in reg_ids}
 
     async def get_canonical_id(self, reg_id):
