@@ -42,7 +42,6 @@ class TestCase(unittest.TestCase):
         self.config_setup(config)
 
         self.sygnal = Sygnal(config, reactor)
-        self.sygnal._setup()
         self.v1api = PushGatewayApiServer(self.sygnal)
 
         start_deferred = gatherResults(

@@ -69,10 +69,7 @@ class Sygnal(object):
         self.pushkins = {}
         self.tracer = tracer
 
-    def _setup(self):
-        cfg = self.config
-
-        logging_dict_config = cfg["log"]["setup"]
+        logging_dict_config = config["log"]["setup"]
         logging.config.dictConfig(logging_dict_config)
 
         logger.debug("Started logging")
@@ -80,14 +77,14 @@ class Sygnal(object):
         observer = twisted_log.PythonLoggingObserver(loggerName="sygnal.access")
         observer.start()
 
-        sentrycfg = cfg["metrics"]["sentry"]
+        sentrycfg = config["metrics"]["sentry"]
         if sentrycfg["enabled"] is True:
             import sentry_sdk
 
             logger.info("Initialising Sentry")
             sentry_sdk.init(sentrycfg["dsn"])
 
-        promcfg = cfg["metrics"]["prometheus"]
+        promcfg = config["metrics"]["prometheus"]
         if promcfg["enabled"] is True:
             prom_addr = promcfg["address"]
             prom_port = int(promcfg["port"])
@@ -97,7 +94,7 @@ class Sygnal(object):
 
             prometheus_client.start_http_server(port=prom_port, addr=prom_addr or "")
 
-        tracecfg = cfg["metrics"]["opentracing"]
+        tracecfg = config["metrics"]["opentracing"]
         if tracecfg["enabled"] is True:
             if tracecfg["implementation"] == "jaeger":
                 try:
@@ -109,7 +106,7 @@ class Sygnal(object):
                         scope_manager=AsyncioScopeManager(),
                     )
 
-                    sygnal.tracer = jaeger_cfg.initialize_tracer()
+                    self.tracer = jaeger_cfg.initialize_tracer()
 
                     logger.info("Enabled OpenTracing support with Jaeger")
                 except ModuleNotFoundError:
@@ -124,9 +121,9 @@ class Sygnal(object):
                 )
                 sys.exit(1)
 
-        self.database = Database(cfg["db"]["dbfile"], self.reactor)
+        self.database = Database(config["db"]["dbfile"], self.reactor)
 
-        for app_id, app_cfg in cfg["apps"].items():
+        for app_id, app_cfg in config["apps"].items():
             try:
                 self.pushkins[app_id] = self._make_pushkin(app_id, app_cfg)
             except Exception:
@@ -171,7 +168,6 @@ class Sygnal(object):
         """
         Attempt to run Sygnal and then exit the application.
         """
-        self._setup()
         port = int(self.config["http"]["port"])
         bind_addresses = self.config["http"]["bind_addresses"]
         pushgateway_api = PushGatewayApiServer(self)
