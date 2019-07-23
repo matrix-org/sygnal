@@ -124,6 +124,61 @@ class ApnsPushkin(Pushkin):
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
 
+    async def _dispatch_request(self, log, span, device, shaved_payload, prio):
+        """
+        Actually attempts to dispatch the notification once.
+        """
+
+        # this is no good: APNs expects ID to be in their format
+        # so we can't just derive a
+        # notif_id = context.request_id + f"-{n.devices.index(device)}"
+
+        notif_id = str(uuid4())
+
+        log.info(f"Sending as APNs-ID {notif_id}")
+        span.set_tag("apns_id", notif_id)
+
+        device_token = base64.b64decode(device.pushkey).hex()
+
+        request = NotificationRequest(
+            device_token=device_token,
+            message=shaved_payload,
+            priority=prio,
+            notification_id=notif_id,
+        )
+
+        try:
+            with SEND_TIME_HISTOGRAM.time():
+                response = await self._send_notification(request)
+        except aioapns.ConnectionError:
+            raise TemporaryNotificationDispatchException("aioapns Connection Failure")
+
+        code = int(response.status)
+
+        span.set_tag(tags.HTTP_STATUS_CODE, code)
+
+        RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
+
+        if response.is_successful:
+            return []
+        else:
+            # .description corresponds to the 'reason' response field
+            span.set_tag("apns_reason", response.description)
+            if (
+                code == self.TOKEN_ERROR_CODE
+                or response.description == self.TOKEN_ERROR_REASON
+            ):
+                return [device.pushkey]
+            else:
+                if 500 <= code < 600:
+                    raise TemporaryNotificationDispatchException(
+                        f"{response.status} {response.description}"
+                    )
+                else:
+                    raise NotificationDispatchException(
+                        f"{response.status} {response.description}"
+                    )
+
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
@@ -153,63 +208,6 @@ class ApnsPushkin(Pushkin):
                 payload, max_length=self.MAX_JSON_BODY_SIZE
             )
 
-            async def dispatch_request(span):
-                """
-                Actually attempts to dispatch the notification once.
-                """
-
-                # this is no good: APNs expects ID to be in their format
-                # so we can't just derive a
-                # notif_id = context.request_id + f"-{n.devices.index(device)}"
-
-                notif_id = str(uuid4())
-
-                log.info(f"Sending as APNs-ID {notif_id}")
-                span.set_tag("apns_id", notif_id)
-
-                device_token = base64.b64decode(device.pushkey).hex()
-
-                request = NotificationRequest(
-                    device_token=device_token,
-                    message=shaved_payload,
-                    priority=prio,
-                    notification_id=notif_id,
-                )
-
-                try:
-                    with SEND_TIME_HISTOGRAM.time():
-                        response = await self._send_notification(request)
-                except aioapns.ConnectionError:
-                    raise TemporaryNotificationDispatchException(
-                        "aioapns Connection Failure"
-                    )
-
-                code = int(response.status)
-
-                span.set_tag(tags.HTTP_STATUS_CODE, code)
-
-                RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
-
-                if response.is_successful:
-                    return []
-                else:
-                    # .description corresponds to the 'reason' response field
-                    span.set_tag("apns_reason", response.description)
-                    if (
-                        code == self.TOKEN_ERROR_CODE
-                        or response.description == self.TOKEN_ERROR_REASON
-                    ):
-                        return [device.pushkey]
-                    else:
-                        if 500 <= code < 600:
-                            raise TemporaryNotificationDispatchException(
-                                f"{response.status} {response.description}"
-                            )
-                        else:
-                            raise NotificationDispatchException(
-                                f"{response.status} {response.description}"
-                            )
-
             for retry_number in range(self.MAX_TRIES):
                 try:
                     log.debug("Trying")
@@ -219,7 +217,9 @@ class ApnsPushkin(Pushkin):
                     with self.sygnal.tracer.start_span(
                         "apns_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
-                        return await dispatch_request(span)
+                        return await self._dispatch_request(
+                            log, span, device, shaved_payload, prio
+                        )
                 except TemporaryNotificationDispatchException as exc:
                     retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
                     if exc.custom_retry_delay is not None:
