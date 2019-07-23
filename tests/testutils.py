@@ -42,6 +42,7 @@ class TestCase(unittest.TestCase):
         self.config_setup(config)
 
         self.sygnal = Sygnal(config, reactor)
+        self.sygnal.database.start()
         self.v1api = PushGatewayApiServer(self.sygnal)
 
         start_deferred = ensureDeferred(
@@ -52,6 +53,10 @@ class TestCase(unittest.TestCase):
             # we need to advance until the pushkins have started up
             self.sygnal.reactor.advance(1)
             self.sygnal.reactor.wait_for_work(lambda: start_deferred.called)
+
+    def tearDown(self):
+        super().tearDown()
+        self.sygnal.database.close()
 
     def _make_dummy_notification(self, devices):
         return {

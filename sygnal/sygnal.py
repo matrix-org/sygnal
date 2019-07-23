@@ -27,12 +27,12 @@ import prometheus_client
 # import twisted.internet.reactor
 import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
+from twisted.enterprise.adbapi import ConnectionPool
 from twisted.internet import asyncioreactor
 from twisted.internet.defer import ensureDeferred
 from twisted.python import log as twisted_log
 
 from sygnal.http import PushGatewayApiServer
-from .database import Database
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,14 @@ class Sygnal(object):
                 )
                 sys.exit(1)
 
-        self.database = Database(config["db"]["dbfile"], self.reactor)
+        self.database = ConnectionPool(
+            "sqlite3",
+            config["db"]["dbfile"],
+            cp_reactor=self.reactor,
+            cp_min=1,
+            cp_max=1,
+            check_same_thread=False,
+        )
 
     async def _make_pushkin(self, app_name, app_config):
         """

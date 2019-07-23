@@ -391,7 +391,9 @@ class CanonicalRegIdStore(object):
     TABLE_CREATE_QUERY = """
         CREATE TABLE IF NOT EXISTS gcm_canonical_reg_id (
             reg_id TEXT PRIMARY KEY,
-            canonical_reg_id TEXT NOT NULL);"""
+            canonical_reg_id TEXT NOT NULL
+        );
+        """
 
     def __init__(self):
         self.db = None
@@ -404,14 +406,15 @@ class CanonicalRegIdStore(object):
         to complete, so it must be an `async def` method.
 
         Args:
-            db (Database): database to prepare
+            db (adbapi.ConnectionPool): database to prepare
 
         """
         self.db = db
-        await self.db.query(self.TABLE_CREATE_QUERY)
+
+        await self.db.runQuery(self.TABLE_CREATE_QUERY)
 
     async def set_canonical_id(self, reg_id, canonical_reg_id):
-        await self.db.query(
+        await self.db.runQuery(
             "INSERT OR REPLACE INTO gcm_canonical_reg_id VALUES (?, ?);",
             (reg_id, canonical_reg_id),
         )
@@ -420,10 +423,9 @@ class CanonicalRegIdStore(object):
         return {reg_id: await self.get_canonical_id(reg_id) for reg_id in reg_ids}
 
     async def get_canonical_id(self, reg_id):
-        rows = await self.db.query(
+        rows = await self.db.runQuery(
             "SELECT canonical_reg_id FROM gcm_canonical_reg_id WHERE reg_id = ?",
             (reg_id,),
-            fetch="all",
         )
 
         if rows:
