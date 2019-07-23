@@ -414,15 +414,42 @@ class CanonicalRegIdStore(object):
         await self.db.runQuery(self.TABLE_CREATE_QUERY)
 
     async def set_canonical_id(self, reg_id, canonical_reg_id):
+        """
+        Associates a GCM registration ID with a canonical registration ID.
+        Args:
+            reg_id (str): a registration ID
+            canonical_reg_id (str): the canonical registration ID for `reg_id`
+        """
         await self.db.runQuery(
             "INSERT OR REPLACE INTO gcm_canonical_reg_id VALUES (?, ?);",
             (reg_id, canonical_reg_id),
         )
 
     async def get_canonical_ids(self, reg_ids):
+        """
+        Retrieves the canonical registration ID for multiple registration IDs.
+
+        Args:
+            reg_ids (iterable): registration IDs to retrieve canonical registration
+                IDs for.
+
+        Returns (dict):
+            mapping of registration ID to either its canonical registration ID,
+            or `None` if there is no entry.
+        """
         return {reg_id: await self.get_canonical_id(reg_id) for reg_id in reg_ids}
 
     async def get_canonical_id(self, reg_id):
+        """
+        Retrieves the canonical registration ID for one registration ID.
+
+        Args:
+            reg_id (str): registration ID to retrieve the canonical registration
+                ID for.
+
+        Returns (dict):
+            its canonical registration ID, or `None` if there is no entry.
+        """
         rows = await self.db.runQuery(
             "SELECT canonical_reg_id FROM gcm_canonical_reg_id WHERE reg_id = ?",
             (reg_id,),
