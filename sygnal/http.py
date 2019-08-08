@@ -26,7 +26,11 @@ from twisted.internet import defer
 from twisted.internet.defer import gatherResults, ensureDeferred
 from twisted.python.failure import Failure
 from twisted.web import server
-from twisted.web.http import proxiedLogFormatter, datetimeToLogString, combinedLogFormatter
+from twisted.web.http import (
+    proxiedLogFormatter,
+    datetimeToLogString,
+    combinedLogFormatter,
+)
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
@@ -300,7 +304,9 @@ class PushGatewayApiServer(object):
 
         use_x_forwarded_for = sygnal.config["log"]["access"]["x_forwarded_for"]
 
-        log_formatter = proxiedLogFormatter if use_x_forwarded_for else combinedLogFormatter
+        log_formatter = (
+            proxiedLogFormatter if use_x_forwarded_for else combinedLogFormatter
+        )
 
         self.site = SygnalLoggedSite(
             root, reactor=sygnal.reactor, log_formatter=log_formatter
