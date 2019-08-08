@@ -22,6 +22,7 @@ from json import JSONDecodeError
 
 from opentracing import logs, tags
 from prometheus_client import Histogram, Counter
+from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import HTTPConnectionPool, Agent, FileBodyProducer, readBody
 from twisted.web.http_headers import Headers
 
@@ -89,9 +90,11 @@ class GcmPushkin(Pushkin):
             )
 
         self.http_pool = HTTPConnectionPool(reactor=sygnal.reactor)
-        self.http_pool.maxPersistentPerHost = self.get_config(
+        self.max_connections = self.get_config(
             "max_connections", DEFAULT_MAX_CONNECTIONS
         )
+        self.connection_semaphore = DeferredSemaphore(self.max_connections)
+        self.http_pool.maxPersistentPerHost = self.max_connections
 
         self.http_agent = Agent(reactor=sygnal.reactor, pool=self.http_pool)
 
@@ -131,6 +134,11 @@ class GcmPushkin(Pushkin):
 
         """
         body_producer = FileBodyProducer(BytesIO(json.dumps(body).encode()))
+
+        # we use the semaphore to actually limit the number of concurrent
+        # requests, since the HTTPConnectionPool will actually just lead to more
+        # requests being created but not pooled – it does not perform limiting.
+        await self.connection_semaphore.acquire()
         try:
             response = await self.http_agent.request(
                 b"POST", GCM_URL, headers=Headers(headers), bodyProducer=body_producer
@@ -139,6 +147,8 @@ class GcmPushkin(Pushkin):
             raise TemporaryNotificationDispatchException(
                 "GCM request failure"
             ) from exception
+        finally:
+            await self.connection_semaphore.release()
         response_text = (await readBody(response)).decode()
         return response, response_text
 
