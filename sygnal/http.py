@@ -22,9 +22,7 @@ from uuid import uuid4
 
 from opentracing import Format, tags, logs
 from prometheus_client import Counter
-from twisted.internet import defer
-from twisted.internet.defer import gatherResults, ensureDeferred
-from twisted.python.failure import Failure
+from twisted.internet.defer import ensureDeferred
 from twisted.web import server
 from twisted.web.http import (
     proxiedLogFormatter,
@@ -157,91 +155,11 @@ class V1NotifyHandler(Resource):
                 request.setResponseCode(400)
                 return msg.encode()
 
-            rej = []
-            deferreds = []
-
-            pushkins = self.sygnal.pushkins
-
-            for d in notif.devices:
-                NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
-
-                appid = d.app_id
-                if appid not in pushkins:
-                    log.warning("Got notification for unknown app ID %s", appid)
-                    rej.append(d.pushkey)
-                    continue
-
-                pushkin = pushkins[appid]
-                log.debug(
-                    "Sending push to pushkin %s for app ID %s", pushkin.name, appid
-                )
-
-                NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
-
-                async def dispatch_checked():
-                    """
-                    Dispatches a notification and checks the Pushkin
-                    returns a list.
-                    Returns (list):
-                        The result
-                    """
-                    result = await pushkin.dispatch_notification(notif, d, context)
-                    if not isinstance(result, list):
-                        raise TypeError("Pushkin should return list.")
-                    return result
-
-                deferreds.append(ensureDeferred(dispatch_checked()))
-
-            def callback(rejected_lists):
-                # combine all rejected pushkeys into one list
-
-                rejected = sum(rejected_lists, rej)
-
-                request.write(json.dumps({"rejected": rejected}).encode())
-
-                log.info(
-                    "Successfully delivered notifications" " with %d rejected pushkeys",
-                    len(rejected),
-                )
-
-                request.finish()
-
-            def errback(failure: Failure):
-                # due to gatherResults, errors will be wrapped in FirstError.
-                if issubclass(failure.type, defer.FirstError):
-                    subfailure = failure.value.subFailure
-                    if issubclass(subfailure.type, NotificationDispatchException):
-                        request.setResponseCode(502)
-                        log.warning(
-                            "Failed to dispatch notification.", exc_info=subfailure
-                        )
-                    else:
-                        request.setResponseCode(500)
-                        log.error(
-                            "Exception whilst dispatching notification.",
-                            exc_info=subfailure,
-                        )
-                else:
-                    request.setResponseCode(500)
-                    log.error(
-                        "Exception whilst dispatching notification.", exc_info=failure
-                    )
-
-                request.finish()
-
-            aggregate = gatherResults(deferreds, consumeErrors=True)
-            aggregate.addCallback(callback)
-            aggregate.addErrback(errback)
-
-            def count_deferred_code(_):
-                PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
-                root_span.set_tag(tags.HTTP_STATUS_CODE, request.code)
-                if not 200 <= request.code < 300:
-                    root_span.set_tag(tags.ERROR, True)
-                root_span.finish()
-
-            aggregate.addCallback(count_deferred_code)
             root_span_accounted_for = True
+
+            ensureDeferred(
+                self._handle_dispatch(root_span, request, log, notif, context)
+            )
 
             # we have to try and send the notifications first,
             # so we can find out which ones to reject
@@ -264,6 +182,52 @@ class V1NotifyHandler(Resource):
         finally:
             if not root_span_accounted_for:
                 root_span.finish()
+
+    async def _handle_dispatch(self, root_span, request, log, notif, context):
+        try:
+            rejected = []
+
+            for d in notif.devices:
+                NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
+
+                appid = d.app_id
+                if appid not in self.sygnal.pushkins:
+                    log.warning("Got notification for unknown app ID %s", appid)
+                    rejected.append(d.pushkey)
+                    continue
+
+                pushkin = self.sygnal.pushkins[appid]
+                log.debug(
+                    "Sending push to pushkin %s for app ID %s", pushkin.name, appid
+                )
+
+                NOTIFS_BY_PUSHKIN.labels(pushkin.name).inc()
+
+                result = await pushkin.dispatch_notification(notif, d, context)
+                if not isinstance(result, list):
+                    raise TypeError("Pushkin should return list.")
+
+                rejected += result
+
+            request.write(json.dumps({"rejected": rejected}).encode())
+
+            log.info(
+                "Successfully delivered notifications" " with %d rejected pushkeys",
+                len(rejected),
+            )
+        except NotificationDispatchException:
+            request.setResponseCode(502)
+            log.warning("Failed to dispatch notification.", exc_info=True)
+        except Exception:
+            request.setResponseCode(500)
+            log.error("Exception whilst dispatching notification.", exc_info=True)
+        finally:
+            request.finish()
+            PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
+            root_span.set_tag(tags.HTTP_STATUS_CODE, request.code)
+            if not 200 <= request.code < 300:
+                root_span.set_tag(tags.ERROR, True)
+            root_span.finish()
 
 
 class SygnalLoggedSite(server.Site):
