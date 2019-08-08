@@ -90,7 +90,9 @@ class GcmPushkin(Pushkin):
             )
 
         self.http_pool = HTTPConnectionPool(reactor=sygnal.reactor)
-        self.max_connections = self.get_config("max_connections", DEFAULT_MAX_CONNECTIONS)
+        self.max_connections = self.get_config(
+            "max_connections", DEFAULT_MAX_CONNECTIONS
+        )
         self.connection_semaphore = DeferredSemaphore(self.max_connections)
         self.http_pool.maxPersistentPerHost = self.max_connections
 
