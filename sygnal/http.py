@@ -262,6 +262,21 @@ class V1NotifyHandler(Resource):
                 root_span.finish()
 
 
+class SygnalLoggedSite(server.Site):
+    """
+    A subclass of Site to perform access logging in a way that makes sense for
+    Sygnal.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger = logging.getLogger("sygnal.access")
+
+    def log(self, request):
+        line = self._logFormatter(self._logDateTime, request) + u"\n"
+        self.logger.info("%s", line)
+
+
 class PushGatewayApiServer(object):
     def __init__(self, sygnal):
         """
@@ -284,6 +299,6 @@ class PushGatewayApiServer(object):
 
         log_formatter = proxiedLogFormatter if use_x_forwarded_for else None
 
-        self.site = server.Site(
+        self.site = SygnalLoggedSite(
             root, reactor=sygnal.reactor, logFormatter=log_formatter
         )
