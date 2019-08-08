@@ -73,7 +73,7 @@ class Sygnal(object):
 
         logger.debug("Started logging")
 
-        observer = twisted_log.PythonLoggingObserver(loggerName="sygnal.access")
+        observer = twisted_log.PythonLoggingObserver()
         observer.start()
 
         sentrycfg = config["metrics"]["sentry"]

@@ -26,7 +26,11 @@ from twisted.internet import defer
 from twisted.internet.defer import gatherResults, ensureDeferred
 from twisted.python.failure import Failure
 from twisted.web import server
-from twisted.web.http import proxiedLogFormatter
+from twisted.web.http import (
+    proxiedLogFormatter,
+    datetimeToLogString,
+    combinedLogFormatter,
+)
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
@@ -262,6 +266,24 @@ class V1NotifyHandler(Resource):
                 root_span.finish()
 
 
+class SygnalLoggedSite(server.Site):
+    """
+    A subclass of Site to perform access logging in a way that makes sense for
+    Sygnal.
+    """
+
+    def __init__(self, *args, reactor, log_formatter, **kwargs):
+        super().__init__(*args, reactor=reactor, **kwargs)
+        self.log_formatter = log_formatter
+        self.reactor = reactor
+        self.logger = logging.getLogger("sygnal.access")
+
+    def log(self, request):
+        log_date_time = datetimeToLogString(self.reactor.seconds())
+        line = self.log_formatter(log_date_time, request)
+        self.logger.info("%s", line)
+
+
 class PushGatewayApiServer(object):
     def __init__(self, sygnal):
         """
@@ -282,8 +304,10 @@ class PushGatewayApiServer(object):
 
         use_x_forwarded_for = sygnal.config["log"]["access"]["x_forwarded_for"]
 
-        log_formatter = proxiedLogFormatter if use_x_forwarded_for else None
+        log_formatter = (
+            proxiedLogFormatter if use_x_forwarded_for else combinedLogFormatter
+        )
 
-        self.site = server.Site(
-            root, reactor=sygnal.reactor, logFormatter=log_formatter
+        self.site = SygnalLoggedSite(
+            root, reactor=sygnal.reactor, log_formatter=log_formatter
         )
