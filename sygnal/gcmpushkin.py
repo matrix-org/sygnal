@@ -148,7 +148,7 @@ class GcmPushkin(Pushkin):
                 "GCM request failure"
             ) from exception
         finally:
-            await self.connection_semaphore.release()
+            self.connection_semaphore.release()
         response_text = (await readBody(response)).decode()
         return response, response_text
 
