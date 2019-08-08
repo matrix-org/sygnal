@@ -42,6 +42,7 @@ setup(
         "service_identity>=18.1.0",
         "jaeger-client>=4.0.0",
         "opentracing>=2.2.0",
+        "sentry-sdk>=0.10.2",
     ],
     long_description=read("README.rst"),
 )
