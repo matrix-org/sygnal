@@ -184,6 +184,16 @@ class V1NotifyHandler(Resource):
                 root_span.finish()
 
     async def _handle_dispatch(self, root_span, request, log, notif, context):
+        """
+        Actually handle the dispatch of notifications to devices, sequentially
+        for simplicity.
+
+        root_span: the OpenTracing span
+        request: the Twisted Web Request
+        log: the logger to use
+        notif (Notification): the notification to dispatch
+        context (NotificationContext): the context of the notification
+        """
         try:
             rejected = []
 
