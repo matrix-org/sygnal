@@ -1,4 +1,9 @@
 
+### Sygnal 0.2.2 (2019-08-12)
+
+- Fix GCM connection limiting.
+- Clean up exception handling code.
+
 ### Sygnal 0.2.1 (2019-08-08)
 
 - Declare sentry-sdk as a dependency.
