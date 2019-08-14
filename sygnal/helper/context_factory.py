@@ -61,19 +61,10 @@ class ClientTLSOptionsFactory(object):
         self._verify_ssl_context = self._verify_ssl.getContext()
         self._verify_ssl_context.set_info_callback(self._context_info_cb)
 
-        self._no_verify_ssl = CertificateOptions(insecurelyLowerMinimumTo=minTLS)
-        self._no_verify_ssl_context = self._no_verify_ssl.getContext()
-        self._no_verify_ssl_context.set_info_callback(self._context_info_cb)
-
     def get_options(self, host):
-        # Check if certificate verification has been enabled
-        should_verify = True
+        ssl_context = self._verify_ssl_context
 
-        ssl_context = (
-            self._verify_ssl_context if should_verify else self._no_verify_ssl_context
-        )
-
-        return SSLClientConnectionCreator(host, ssl_context, should_verify)
+        return SSLClientConnectionCreator(host, ssl_context)
 
     @staticmethod
     def _context_info_cb(ssl_connection, where, ret):
@@ -106,9 +97,9 @@ class SSLClientConnectionCreator(object):
     Replaces twisted.internet.ssl.ClientTLSOptions
     """
 
-    def __init__(self, hostname, ctx, verify_certs):
+    def __init__(self, hostname, ctx):
         self._ctx = ctx
-        self._verifier = ConnectionVerifier(hostname, verify_certs)
+        self._verifier = ConnectionVerifier(hostname)
 
     def clientConnectionForTLS(self, tls_protocol):
         context = self._ctx
@@ -134,9 +125,7 @@ class ConnectionVerifier(object):
 
     # This code is based on twisted.internet.ssl.ClientTLSOptions.
 
-    def __init__(self, hostname, verify_certs):
-        self._verify_certs = verify_certs
-
+    def __init__(self, hostname):
         if isIPAddress(hostname) or isIPv6Address(hostname):
             self._hostnameBytes = hostname.encode("ascii")
             self._is_ip_address = True
@@ -155,7 +144,7 @@ class ConnectionVerifier(object):
         if where & SSL.SSL_CB_HANDSHAKE_START and not self._is_ip_address:
             ssl_connection.set_tlsext_host_name(self._hostnameBytes)
 
-        if where & SSL.SSL_CB_HANDSHAKE_DONE and self._verify_certs:
+        if where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
                 if self._is_ip_address:
                     verify_ip_address(ssl_connection, self._hostnameASCII)
