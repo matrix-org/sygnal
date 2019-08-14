@@ -1,4 +1,13 @@
 
+### Sygnal 0.2.3 (2019-08-14)
+
+- Actually fix GCM connection limiting, and exception handling of exceptions
+  that occur whilst reading the response body.
+- Reduce logging for successful requests.
+- Improve TLS performance to reduce CPU usage.
+- Add a Prometheus metric that tracks the time taken to handle a `/notify` request.
+- Add a `/health` endpoint for checking whether Sygnal is up.
+
 ### Sygnal 0.2.2 (2019-08-12)
 
 - Fix GCM connection limiting.
