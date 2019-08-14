@@ -130,13 +130,15 @@ class Pushkin(object):
 
 
 class NotificationContext(object):
-    def __init__(self, request_id, opentracing_span):
+    def __init__(self, request_id, opentracing_span, start_time):
         """
         Args:
             request_id (str): An ID for the request, or None to have it
                 generated automatically.
             opentracing_span (Span): The span for the API request triggering
                 the notification.
+            start_time (float): Start timer value, `time.perf_counter()`
         """
         self.request_id = request_id
         self.opentracing_span = opentracing_span
+        self.start_time = start_time

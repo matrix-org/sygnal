@@ -17,11 +17,12 @@
 import json
 import logging
 import sys
+import time
 import traceback
 from uuid import uuid4
 
 from opentracing import Format, tags, logs
-from prometheus_client import Counter
+from prometheus_client import Counter, Histogram
 from twisted.internet.defer import ensureDeferred
 from twisted.web import server
 from twisted.web.http import (
@@ -56,6 +57,12 @@ NOTIFS_BY_PUSHKIN = Counter(
 PUSHGATEWAY_HTTP_RESPONSES_COUNTER = Counter(
     "sygnal_pushgateway_status_codes",
     "HTTP Response Codes given on the Push Gateway API",
+    labelnames=["code"],
+)
+
+NOTIFY_HANDLE_HISTOGRAM = Histogram(
+    "sygnal_notify_time",
+    "Time taken to handle /notify push gateway request",
     labelnames=["code"],
 )
 
@@ -113,7 +120,7 @@ class V1NotifyHandler(Resource):
         root_span_accounted_for = False
 
         try:
-            context = NotificationContext(request_id, root_span)
+            context = NotificationContext(request_id, root_span, time.perf_counter())
 
             log = NotificationLoggerAdapter(logger, {"request_id": request_id})
 
@@ -236,6 +243,11 @@ class V1NotifyHandler(Resource):
             request.finish()
             PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
             root_span.set_tag(tags.HTTP_STATUS_CODE, request.code)
+
+            req_time = time.perf_counter() - context.start_time
+            if req_time > 0:
+                # can be negative as perf_counter() may not be monotonic
+                NOTIFY_HANDLE_HISTOGRAM.labels(code=request.code).observe(req_time)
             if not 200 <= request.code < 300:
                 root_span.set_tag(tags.ERROR, True)
             root_span.finish()
