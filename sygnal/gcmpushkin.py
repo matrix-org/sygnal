@@ -143,13 +143,13 @@ class GcmPushkin(Pushkin):
             response = await self.http_agent.request(
                 b"POST", GCM_URL, headers=Headers(headers), bodyProducer=body_producer
             )
+            response_text = (await readBody(response)).decode()
         except Exception as exception:
             raise TemporaryNotificationDispatchException(
                 "GCM request failure"
             ) from exception
         finally:
             self.connection_semaphore.release()
-        response_text = (await readBody(response)).decode()
         return response, response_text
 
     async def _request_dispatch(self, n, log, body, headers, pushkeys, span):
