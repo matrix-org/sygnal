@@ -240,6 +240,15 @@ class V1NotifyHandler(Resource):
             root_span.finish()
 
 
+class HealthHandler(Resource):
+    def render_GET(self, request):
+        """
+        `/health` is used for automatic checking of whether the service is up.
+        It should just return a blank 200 OK response.
+        """
+        return b""
+
+
 class SygnalLoggedSite(server.Site):
     """
     A subclass of Site to perform access logging in a way that makes sense for
@@ -275,6 +284,9 @@ class PushGatewayApiServer(object):
         matrix.putChild(b"push", push)
         push.putChild(b"v1", v1)
         v1.putChild(b"notify", V1NotifyHandler(sygnal))
+
+        # add health
+        root.putChild(b"health", HealthHandler())
 
         use_x_forwarded_for = sygnal.config["log"]["access"]["x_forwarded_for"]
 
