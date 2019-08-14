@@ -31,6 +31,7 @@ from sygnal.exceptions import (
     NotificationDispatchException,
 )
 from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
+from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from .exceptions import PushkinSetupException
 from .notifications import Pushkin
 
@@ -96,7 +97,13 @@ class GcmPushkin(Pushkin):
         self.connection_semaphore = DeferredSemaphore(self.max_connections)
         self.http_pool.maxPersistentPerHost = self.max_connections
 
-        self.http_agent = Agent(reactor=sygnal.reactor, pool=self.http_pool)
+        tls_client_options_factory = ClientTLSOptionsFactory()
+
+        self.http_agent = Agent(
+            reactor=sygnal.reactor,
+            pool=self.http_pool,
+            contextFactory=tls_client_options_factory,
+        )
 
         self.db = sygnal.database
         self.canonical_reg_id_store = canonical_reg_id_store

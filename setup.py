@@ -43,6 +43,8 @@ setup(
         "jaeger-client>=4.0.0",
         "opentracing>=2.2.0",
         "sentry-sdk>=0.10.2",
+        "zope.interface>=4.6.0",
+        "idna>=2.8",
     ],
     long_description=read("README.rst"),
 )
