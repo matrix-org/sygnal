@@ -203,7 +203,7 @@ class GcmPushkin(Pushkin):
             )
             # permanent failure: give up
             raise NotificationDispatchException("Not authorised to push")
-        elif 200 <= response.code < 300:
+        elif 200 <= response.code < 300 or response.code == 404:
             try:
                 resp_object = json.loads(response_text)
             except JSONDecodeError:
