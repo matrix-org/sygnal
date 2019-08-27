@@ -180,7 +180,7 @@ class GcmPushkin(Pushkin):
 
             retry_after = None
 
-            for header_value in response.headers.getRawHeader(
+            for header_value in response.headers.getRawHeaders(
                 b"retry-after", default=[]
             ):
                 retry_after = int(header_value)
