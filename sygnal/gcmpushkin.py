@@ -264,7 +264,9 @@ class GcmPushkin(Pushkin):
                         new_pushkeys.append(pushkeys[i])
             return failed, new_pushkeys
         else:
-            raise NotificationDispatchException(f"Unknown GCM response code {response.code}")
+            raise NotificationDispatchException(
+                f"Unknown GCM response code {response.code}"
+            )
 
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
