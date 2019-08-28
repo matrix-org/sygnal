@@ -203,6 +203,10 @@ class GcmPushkin(Pushkin):
             )
             # permanent failure: give up
             raise NotificationDispatchException("Not authorised to push")
+        elif response.code == 404:
+            # assume they're all failed
+            log.info("Reg IDs %r get 404 response; assuming unregistered", pushkeys)
+            return pushkeys, []
         elif 200 <= response.code < 300:
             try:
                 resp_object = json.loads(response_text)
@@ -263,6 +267,10 @@ class GcmPushkin(Pushkin):
                         )
                         new_pushkeys.append(pushkeys[i])
             return failed, new_pushkeys
+        else:
+            raise NotificationDispatchException(
+                f"Unknown GCM response code {response.code}"
+            )
 
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
