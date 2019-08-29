@@ -1,4 +1,9 @@
 
+### Sygnal 0.2.4 (2019-08-29)
+
+- Fix typo leading to poor handling of 5xx GCM response codes.
+- Handle 404 GCM response codes.
+
 ### Sygnal 0.2.3 (2019-08-14)
 
 - Actually fix GCM connection limiting, and exception handling of exceptions
