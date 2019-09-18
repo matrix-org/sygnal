@@ -7,3 +7,4 @@ sygnal.pid
 sygnal.db
 /_trial_temp*
 /.idea
+*.egg-info

@@ -1,0 +1,9 @@
+include *.md
+include *.rst
+include sygnal.yaml.sample
+include LICENSE
+include VERSION
+recursive-include tests *.py
+
+prune .buildkite
+prune docker
