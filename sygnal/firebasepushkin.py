@@ -18,7 +18,6 @@ import logging
 from typing import Dict, Optional
 
 import attr
-from cattr import structure
 from firebase_admin import credentials, initialize_app, messaging
 from prometheus_client import Histogram
 from twisted.internet.defer import Deferred
@@ -41,8 +40,9 @@ logger = logging.getLogger(__name__)
 
 @attr.s
 class FirebaseConfig(object):
+    credentials = attr.ib()
     max_connections = attr.ib(default=20)
-    message_types = attr.ib(type=Dict[str, str])
+    message_types = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
 
 
 class FirebasePushkin(Pushkin):
@@ -51,17 +51,15 @@ class FirebasePushkin(Pushkin):
 
         self.db = sygnal.database
         self.reactor = sygnal.reactor
+        self.config = FirebaseConfig(**{x:y for x,y in self.cfg.items() if x != "type"})
 
-        self.config = structure(self.cfg, FirebaseConfig)
-
-        credential_path = self.getConfig("credentials")
+        credential_path = self.config.credentials
         if not credential_path:
             raise PushkinSetupException("No Credential path set in config")
 
         cred = credentials.Certificate(credential_path)
 
-        max_connections = self.get_config("max_connections", DEFAULT_MAX_CONNECTIONS)
-        self._pool = ThreadPool(maxthreads=max_connections)
+        self._pool = ThreadPool(maxthreads=self.config.max_connections)
         self._pool.start()
 
         self._app = initialize_app(cred, name="app")
@@ -90,7 +88,7 @@ class FirebasePushkin(Pushkin):
             else data["room_name"]
         )
 
-        if data["content"]["msgtype"] == "m.message":
+        if data["content"]["msgtype"] == "m.text":
             message = self.text_message_notification(
                 data, notification_title, unread_count, pushkeys
             )
@@ -103,7 +101,7 @@ class FirebasePushkin(Pushkin):
                 self.config.message_types[data["content"]["msgtype"]],
             )
 
-        await self.send(message)
+        failed.extend(await self.send(message))
 
         return failed
 
@@ -115,7 +113,7 @@ class FirebasePushkin(Pushkin):
             self.reactor.callFromThread(d.callback, result)
 
         with SEND_TIME_HISTOGRAM.time():
-            self.pool.callInThreadWithCallback(
+            self._pool.callInThreadWithCallback(
                 done, messaging.send_multicast, message, app=self._app
             )
             response = await d
@@ -126,7 +124,9 @@ class FirebasePushkin(Pushkin):
             response.success_count + response.failure_count,
         )
 
-        return response
+        failed = []
+
+        return failed
 
     @staticmethod
     def build_message(n):

@@ -37,13 +37,11 @@ DEPENDENCIES = [
     "service_identity>=18.1.0",
     "zope.interface>=4.6.0",
     "idna>=2.8",
+    "jaeger-client>=4.0.0",
+    "opentracing>=2.2.0",
 ]
 
-EXTRAS = {
-    "opentracing": ["jaeger-client>=4.0.0", "opentracing>=2.2.0"],
-    "sentry": ["sentry-sdk>=0.10.2"],
-    "firebase": ["firebase-admin>=3.0.0"],
-}
+EXTRAS = {"sentry": ["sentry-sdk>=0.10.2"], "firebase": ["firebase-admin>=3.0.0"]}
 
 EXTRAS_ALL = []
 for val in EXTRAS.values():

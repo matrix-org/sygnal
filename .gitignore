@@ -8,3 +8,6 @@ sygnal.db
 /_trial_temp*
 /.idea
 /data
+google-services.json
+*.egg-info
+*.log

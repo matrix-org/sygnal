@@ -159,14 +159,15 @@ class Sygnal(object):
             try:
                 self.pushkins[app_id] = await self._make_pushkin(app_id, app_cfg)
             except Exception:
-                logger.exception(
-                    "Failed to load and create pushkin for kind %s", app_cfg["type"]
+                raise Exception(
+                    "Failed to load and create pushkin for kind %s" % app_cfg["type"]
                 )
                 sys.exit(1)
 
         if len(self.pushkins) == 0:
-            logger.error("No app IDs are configured. Edit sygnal.yaml to define some.")
-            sys.exit(1)
+            raise Exception(
+                "No app IDs are configured. Edit sygnal.yaml to define some."
+            )
 
         logger.info("Configured with app IDs: %r", self.pushkins.keys())
 
@@ -182,10 +183,10 @@ class Sygnal(object):
         bind_addresses = self.config["http"]["bind_addresses"]
         pushgateway_api = PushGatewayApiServer(self)
 
-        ensureDeferred(
+        d = ensureDeferred(
             self._make_pushkins_then_start(port, bind_addresses, pushgateway_api)
         )
-        self.reactor.run()
+        d.addCallback(self.reactor.run)
 
 
 def parse_config():
