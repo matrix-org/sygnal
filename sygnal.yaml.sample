@@ -168,4 +168,3 @@ apps:
   #  # This is the maximum number of connections to GCM servers at any one time
   #  # the default is 20.
   #  #max_connections: 20
-

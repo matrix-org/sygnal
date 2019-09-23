@@ -26,7 +26,6 @@ See the sample configuration for examples.
 
 App Types
 ---------
-There are two supported App Types:
 
 apns
   This sends push notifications to iOS apps via the Apple Push Notification
@@ -57,6 +56,9 @@ gcm
   to contain the 'Server key', which can be acquired from Firebase Console at:
   ``https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/``
 
+firebase
+  This sends push notifications to iOS and Android using Firebase.
+
 Running
 =======
 
@@ -70,4 +72,3 @@ Sygnal's logging appends to files but does not use a rotating logger.
 The recommended configuration is therefore to use ``logrotate``.
 The log file will be automatically reopened if the log file changes, for example
 due to ``logrotate``.
-

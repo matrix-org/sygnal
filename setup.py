@@ -29,22 +29,40 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
+DEPENDENCIES = [
+    "Twisted>=19.2.1",
+    "prometheus_client>=0.7.0,<0.8",
+    "aioapns>=1.7",
+    "pyyaml>=5.1.1",
+    "service_identity>=18.1.0",
+    "zope.interface>=4.6.0",
+    "idna>=2.8",
+]
+
+EXTRAS = {
+    "opentracing": [
+        "jaeger-client>=4.0.0",
+        "opentracing>=2.2.0",
+    ],
+    "sentry": [
+        "sentry-sdk>=0.10.2",
+    ],
+    "firebase": [
+        "firebase-admin>=3.0.0"
+    ]
+}
+
+EXTRAS_ALL = []
+for val in EXTRAS.values():
+    EXTRAS_ALL.extend(val)
+
+EXTRAS["all"] = list(set(EXTRAS_ALL))
+
 setup(
     name="matrix-sygnal",
     version=read("VERSION").strip(),
     packages=find_packages(exclude=["tests", "tests.*"]),
     description="Reference Push Gateway for Matrix Notifications",
-    install_requires=[
-        "Twisted>=19.2.1",
-        "prometheus_client>=0.7.0,<0.8",
-        "aioapns>=1.7",
-        "pyyaml>=5.1.1",
-        "service_identity>=18.1.0",
-        "jaeger-client>=4.0.0",
-        "opentracing>=2.2.0",
-        "sentry-sdk>=0.10.2",
-        "zope.interface>=4.6.0",
-        "idna>=2.8",
-    ],
-    long_description=read("README.rst"),
+    install_requires=DEPENDENCIES,
+    extras_require=EXTRAS,
 )
