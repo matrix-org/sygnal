@@ -40,16 +40,9 @@ DEPENDENCIES = [
 ]
 
 EXTRAS = {
-    "opentracing": [
-        "jaeger-client>=4.0.0",
-        "opentracing>=2.2.0",
-    ],
-    "sentry": [
-        "sentry-sdk>=0.10.2",
-    ],
-    "firebase": [
-        "firebase-admin>=3.0.0"
-    ]
+    "opentracing": ["jaeger-client>=4.0.0", "opentracing>=2.2.0"],
+    "sentry": ["sentry-sdk>=0.10.2"],
+    "firebase": ["firebase-admin>=3.0.0"],
 }
 
 EXTRAS_ALL = []
