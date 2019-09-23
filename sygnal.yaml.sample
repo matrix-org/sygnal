@@ -168,3 +168,16 @@ apps:
   #  # This is the maximum number of connections to GCM servers at any one time
   #  # the default is 20.
   #  #max_connections: 20
+
+  # This is an example Firebase Cloud Messaging v1 push configuration.
+  #
+  #com.example.myapp.firebase:
+  #  type: firebase
+  #  credentials: path_to_service_account_json_file
+  #  # This is a map of message types to bodies for notifications.
+  #  message_types:
+  #    'm.image': 📷
+  #    'm.audio': 🎵
+  #    'm.video': 🎬
+  #  # This is the maximum number of connections to Firebase servers at any one time.
+  #  #max_connections: 20
