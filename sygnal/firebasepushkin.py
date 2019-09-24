@@ -51,7 +51,9 @@ class FirebasePushkin(Pushkin):
 
         self.db = sygnal.database
         self.reactor = sygnal.reactor
-        self.config = FirebaseConfig(**{x:y for x,y in self.cfg.items() if x != "type"})
+        self.config = FirebaseConfig(
+            **{x: y for x, y in self.cfg.items() if x != "type"}
+        )
 
         credential_path = self.config.credentials
         if not credential_path:
