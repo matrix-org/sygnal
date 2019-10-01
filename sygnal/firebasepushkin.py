@@ -76,6 +76,7 @@ class FirebasePushkin(Pushkin):
         data = self.build_message(n)
 
         logger.debug("Type: %s", data["type"])
+        logger.debug("Data: %s", data)
 
         if (
             data["type"] != "m.room.message"
@@ -153,6 +154,8 @@ class FirebasePushkin(Pushkin):
                     and len(data[attribute]) > MAX_BYTES_PER_FIELD
                 ):
                     data[attribute] = data[attribute][0:MAX_BYTES_PER_FIELD]
+            else:
+                logger.debug("n has no %s", attribute)
 
         data["prio"] = "high"
         if n.prio == "low":
