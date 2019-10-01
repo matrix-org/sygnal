@@ -24,7 +24,7 @@ RUN pip install --prefix="/install" --no-warn-script-location cryptography
 COPY sygnal /sygnal/sygnal/
 COPY MANIFEST.in README.rst VERSION setup.py /sygnal/
 
-RUN pip install --prefix="/install" --no-warn-script-location /sygnal
+RUN pip install --prefix="/install" --no-warn-script-location /sygnal[firebase]
 
 ###
 ### Stage 1: runtime
