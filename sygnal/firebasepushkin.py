@@ -54,27 +54,23 @@ class FirebasePushkin(Pushkin):
         self.config = FirebaseConfig(
             **{x: y for x, y in self.cfg.items() if x != "type"}
         )
-        logger.debug("self.config %s", self.config)
 
         credential_path = self.config.credentials
         if not credential_path:
             raise PushkinSetupException("No Credential path set in config")
 
         cred = credentials.Certificate(credential_path)
-        logger.debug("cred %s", cred)
 
         self._pool = ThreadPool(maxthreads=self.config.max_connections)
         self._pool.start()
 
         self._app = initialize_app(cred, name="app")
-        logger.debug("self._app %s", self._app)
 
     async def dispatch_notification(self, n, device, context):
 
         pushkeys = [
             device.pushkey for device in n.devices if device.app_id == self.name
         ]
-        logger.debug("pushkeys %s", pushkeys)
 
         failed = []
         data = self.build_message(n)
@@ -86,32 +82,24 @@ class FirebasePushkin(Pushkin):
             data["type"] not in self.config.event_types
             or data["content"]["msgtype"] not in self.config.message_types
         ):
-            logger.debug("RETURNED FAILED %s", data)
             return failed
 
         unread_count = data["unread"] if data["unread"] is not None else 0
-        logger.debug("unread_count %s", unread_count)
         notification_title = (
             data["sender_display_name"]
             if data["room_name"] is None
             else data["room_name"]
         )
-        logger.debug("notification_title %s", notification_title)
 
         if data["type"] == "m.room.message.private":
-            logger.debug("using 'text_message_notification' with m.room.message.private")
             message = self.text_message_notification(
                 data, notification_title, unread_count, pushkeys, self.config.event_types.get('m.room.message.private'),
             )
-            logger.debug("message %s", message)
         elif data["content"]["msgtype"] == "m.text":
-            logger.debug("using 'text_message_notification'")
             message = self.text_message_notification(
                 data, notification_title, unread_count, pushkeys
             )
-            logger.debug("message %s", message)
         else:
-            logger.debug("using 'default_notification'")
             message = self.default_notification(
                 data,
                 notification_title,
@@ -119,12 +107,8 @@ class FirebasePushkin(Pushkin):
                 pushkeys,
                 self.config.message_types[data["content"]["msgtype"]],
             )
-            logger.debug("message %s", message)
 
-        sent = await self.send(message)
-        logger.debug("sent %s", sent)
-        failed.extend(sent)
-        logger.debug("failed is now %s", failed)
+        failed.extend(await self.send(message))
 
         return failed
 
@@ -190,12 +174,9 @@ class FirebasePushkin(Pushkin):
     def text_message_notification(
         self, data, notification_title, unread_count, pushkeys, body_prefix: str = "",
     ):
-        logger.debug("%s, %s, %s, %s, %s", data, notification_title, unread_count, pushkeys, body_prefix)
         decoded_message = decode_complex_message(data["content"]["body"])
-        logger.debug("decoded_message %s", decoded_message)
         # Check if data contains a json-decodable and valid MatrixComplexMessage
         if decoded_message:
-            logger.debug("complex message")
             return self.complex_message_notification(
                 data, decoded_message, notification_title, unread_count, pushkeys, body_prefix,
             )
@@ -208,9 +189,7 @@ class FirebasePushkin(Pushkin):
             )
         if body_prefix:
             notification_body = f"{body_prefix} {notification_body}"
-        logger.debug("notification_body %s", notification_body)
 
-        logger.debug("default message")
         return self.default_notification(
             data, notification_title, unread_count, pushkeys, notification_body.strip()
         )
@@ -221,16 +200,12 @@ class FirebasePushkin(Pushkin):
         notification_body = message.get("title", "").strip() + " "
         if body_prefix:
             notification_body = f"{body_prefix} {notification_body}"
-        logger.debug("notification_body now %s", notification_body)
         if "images" in message:
             notification_body += self.config.message_types.get("m.image")
-            logger.debug("notification_body now %s", notification_body)
         elif "videos" in message:
             notification_body += self.config.message_types.get("m.video")
-            logger.debug("notification_body now %s", notification_body)
         elif "title" not in message and "message" in message:
             notification_body += message["message"].strip()
-            logger.debug("notification_body now %s", notification_body)
 
         return self.default_notification(
             data, notification_title, unread_count, pushkeys, notification_body
@@ -239,20 +214,21 @@ class FirebasePushkin(Pushkin):
     def default_notification(
         self, data, notification_title, unread_count, pushkeys, notification_body
     ):
-        logger.debug("at default_notification %s, %s, %s, %s, %s", data, notification_title, unread_count, pushkeys, notification_body)
-        notification = messaging.Notification(title=notification_title, body=notification_body)
-        logger.debug("notification %s", notification)
-        config = messaging.AndroidConfig(priority=data["prio"], notification=messaging.AndroidNotification(
-            click_action="FLUTTER_NOTIFICATION_CLICK", tag=data["room_id"]), )
-        logger.debug("config %s", config)
-        msg = messaging.MulticastMessage(
-            notification=notification,
+        return messaging.MulticastMessage(
+            notification=messaging.Notification(
+                title=notification_title, body=notification_body
+            ),
             data={
                 "title": notification_title,
                 "body": notification_body,
                 "room_id": data["room_id"],
             },
-            android=config,
+            android=messaging.AndroidConfig(
+                priority=data["prio"],
+                notification=messaging.AndroidNotification(
+                    click_action="FLUTTER_NOTIFICATION_CLICK", tag=data["room_id"]
+                ),
+            ),
             apns=messaging.APNSConfig(
                 headers={"apns-priority": "10" if data["prio"] == 10 else "5"},
                 payload=messaging.APNSPayload(
@@ -261,7 +237,6 @@ class FirebasePushkin(Pushkin):
             ),
             tokens=pushkeys,
         )
-        return msg
 
 
 def decode_complex_message(message: str) -> Optional[Dict]:
