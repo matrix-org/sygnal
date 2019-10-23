@@ -179,5 +179,7 @@ apps:
   #    'm.image': 📷
   #    'm.audio': 🎵
   #    'm.video': 🎬
+  #  event_types:
+  #    'm.room.message': ""
   #  # This is the maximum number of connections to Firebase servers at any one time.
   #  #max_connections: 20

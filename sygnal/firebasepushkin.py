@@ -83,7 +83,7 @@ class FirebasePushkin(Pushkin):
         logger.debug("Data: %s", data)
 
         if (
-            data["type"] != "m.room.message"
+            data["type"] not in self.config.event_types
             or data["content"]["msgtype"] not in self.config.message_types
         ):
             logger.debug("RETURNED FAILED %s", data)
@@ -98,8 +98,14 @@ class FirebasePushkin(Pushkin):
         )
         logger.debug("notification_title %s", notification_title)
 
-        if data["content"]["msgtype"] == "m.text":
-            logger.debug("using 'test_message_notification'")
+        if data["type"] == "m.room.message.private":
+            logger.debug("using 'text_message_notification' with m.room.message.private")
+            message = self.text_message_notification(
+                data, notification_title, unread_count, pushkeys, self.config.event_types.get('m.room.message.private'),
+            )
+            logger.debug("message %s", message)
+        elif data["content"]["msgtype"] == "m.text":
+            logger.debug("using 'text_message_notification'")
             message = self.text_message_notification(
                 data, notification_title, unread_count, pushkeys
             )
@@ -182,16 +188,16 @@ class FirebasePushkin(Pushkin):
         return data
 
     def text_message_notification(
-        self, data, notification_title, unread_count, pushkeys
+        self, data, notification_title, unread_count, pushkeys, body_prefix: str = "",
     ):
-        logger.debug("%s, %s, %s, %s", data, notification_title, unread_count, pushkeys)
+        logger.debug("%s, %s, %s, %s, %s", data, notification_title, unread_count, pushkeys, body_prefix)
         decoded_message = decode_complex_message(data["content"]["body"])
         logger.debug("decoded_message %s", decoded_message)
         # Check if data contains a json-decodable and valid MatrixComplexMessage
         if decoded_message:
             logger.debug("complex message")
             return self.complex_message_notification(
-                data, decoded_message, notification_title, unread_count, pushkeys
+                data, decoded_message, notification_title, unread_count, pushkeys, body_prefix,
             )
 
         if data["room_name"] is None:
@@ -200,6 +206,8 @@ class FirebasePushkin(Pushkin):
             notification_body = (
                 data["sender_display_name"] + ": " + data["content"]["body"]
             )
+        if body_prefix:
+            notification_body = f"{body_prefix} {notification_body}"
         logger.debug("notification_body %s", notification_body)
 
         logger.debug("default message")
@@ -208,9 +216,11 @@ class FirebasePushkin(Pushkin):
         )
 
     def complex_message_notification(
-        self, data, message, notification_title, unread_count, pushkeys
+        self, data, message, notification_title, unread_count, pushkeys, body_prefix: str = "",
     ):
         notification_body = message.get("title", "").strip() + " "
+        if body_prefix:
+            notification_body = f"{body_prefix} {notification_body}"
         logger.debug("notification_body now %s", notification_body)
         if "images" in message:
             notification_body += self.config.message_types.get("m.image")
