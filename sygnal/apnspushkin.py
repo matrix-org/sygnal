@@ -21,7 +21,7 @@ import os
 from uuid import uuid4
 
 import aioapns
-from aioapns import APNs, NotificationRequest
+from aioapns import APNs, NotificationRequest, PushType
 from opentracing import logs, tags
 from prometheus_client import Histogram, Counter
 from twisted.internet.defer import Deferred
@@ -63,7 +63,7 @@ class ApnsPushkin(Pushkin):
     MAX_FIELD_LENGTH = 1024
     MAX_JSON_BODY_SIZE = 4096
 
-    UNDERSTOOD_CONFIG_FIELDS = {"type", "platform", "certfile"}
+    UNDERSTOOD_CONFIG_FIELDS = {"type", "platform", "certfile", "event_handlers"}
 
     def __init__(self, name, sygnal, config):
         super().__init__(name, sygnal, config)
@@ -74,6 +74,9 @@ class ApnsPushkin(Pushkin):
                 "The following configuration fields are not understood: %s",
                 nonunderstood,
             )
+
+        self.template = self.get_config("template")
+        self.event_handlers = self.get_config("event_handlers")
 
         platform = self.get_config("platform")
         if not platform or platform == "production" or platform == "prod":
@@ -124,6 +127,102 @@ class ApnsPushkin(Pushkin):
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
 
+    @staticmethod
+    def _map_device_token(device):
+        return device.pushkey
+
+    def _map_event_dispatch_handler(self, n):
+        if n.event_id and not n.type:
+            return self._dispatch_event
+
+        if not self.event_handlers:
+            return self._dispatch_message
+
+        handler = self.event_handlers.get(n.type, None)
+        if handler == "message":
+            return self._dispatch_message
+        elif handler == "voip":
+            return self._dispatch_voip
+        elif handler == "event":
+            return self._dispatch_event
+        else:
+            return None
+
+    @staticmethod
+    def _map_priority(priority):
+        p = 10
+        if priority == "low":
+            p = 5
+        return p
+
+    async def _dispatch_event(self, log, span, n, device):
+        payload = apnstruncate.truncate(
+            self._get_payload_event_id_only(n),
+            max_length=self.MAX_JSON_BODY_SIZE)
+
+        request = NotificationRequest(
+            device_token=self._map_device_token(device),
+            message=payload,
+            priority=self._map_priority(n.prio)
+        )
+        return await self._dispatch(log, span, request)
+
+    async def _dispatch_voip(self, log, span, n, device):
+        payload = {}
+        if n.sender_display_name:
+            payload['sender_display_name'] = n.sender_display_name
+        request = NotificationRequest(
+            device_token=self._map_device_token(device),  # maybe convert
+            message=payload,
+            priority=self._map_priority(n.prio),
+            notification_id=str(uuid4()),
+            push_type=PushType.VOIP
+        )
+        return await self._dispatch(log, span, request)
+
+    async def _dispatch_message(self, log, span, n, device):
+        payload = apnstruncate.truncate(
+            self._get_payload_full(n, log),
+            max_length=self.MAX_JSON_BODY_SIZE)
+        request = NotificationRequest(
+            device_token=self._map_device_token(device),
+            message=payload,
+            priority=self._map_priority(n.prio),
+            notification_id=str(uuid4())
+        )
+        return await self._dispatch(log, span, request)
+
+    async def _dispatch(self, log, span, request):
+        if request.message is None:
+            # Nothing to do
+            span.log_kv({logs.EVENT: "apns_no_payload"})
+            return
+
+        log.info(f"Sending APN {request.notification_id}")
+        if request.notification_id:
+            span.set_tag("apns_id", request.notification_id)
+        try:
+            with SEND_TIME_HISTOGRAM.time():
+                response = await self._send_notification(request)
+        except aioapns.ConnectionError:
+            raise TemporaryNotificationDispatchException('aioapns: Connection Failure')
+        code = int(response.status)
+        span.set_tag(tags.HTTP_STATUS_CODE, code)
+        RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
+
+        if response.is_successful:
+            return []
+        else:
+            span.set_tag("apns_reason", response.description)
+            if code == self.TOKEN_ERROR_CODE or response.description == self.TOKEN_ERROR_REASON:
+                return [request.device_token]
+            elif 500 <= code < 600:
+                error = f"{response.status} {response.description}"
+                raise TemporaryNotificationDispatchException(error)
+            else:
+                error = f"{response.status} {response.description}"
+                raise NotificationDispatchException(error)
+
     async def _dispatch_request(self, log, span, device, shaved_payload, prio):
         """
         Actually attempts to dispatch the notification once.
@@ -165,8 +264,8 @@ class ApnsPushkin(Pushkin):
             # .description corresponds to the 'reason' response field
             span.set_tag("apns_reason", response.description)
             if (
-                code == self.TOKEN_ERROR_CODE
-                or response.description == self.TOKEN_ERROR_REASON
+                    code == self.TOKEN_ERROR_CODE
+                    or response.description == self.TOKEN_ERROR_REASON
             ):
                 return [device.pushkey]
             else:
@@ -188,38 +287,23 @@ class ApnsPushkin(Pushkin):
         span_tags = {}
 
         with self.sygnal.tracer.start_span(
-            "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
+                "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
-
-            if n.event_id and not n.type:
-                payload = self._get_payload_event_id_only(n)
-            else:
-                payload = self._get_payload_full(n, log)
-
-            if payload is None:
-                # Nothing to do
-                span_parent.log_kv({logs.EVENT: "apns_no_payload"})
-                return
-            prio = 10
-            if n.prio == "low":
-                prio = 5
-
-            shaved_payload = apnstruncate.truncate(
-                payload, max_length=self.MAX_JSON_BODY_SIZE
-            )
 
             for retry_number in range(self.MAX_TRIES):
                 try:
                     log.debug("Trying")
-
                     span_tags = {"retry_num": retry_number}
 
                     with self.sygnal.tracer.start_span(
-                        "apns_dispatch_try", tags=span_tags, child_of=span_parent
+                            "apns_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
-                        return await self._dispatch_request(
-                            log, span, device, shaved_payload, prio
-                        )
+
+                        dispatch_handler = self._map_event_dispatch_handler(n)
+                        if dispatch_handler is None:
+                            return  # skipped
+                        else:
+                            return await dispatch_handler(log, span, n, device)
                 except TemporaryNotificationDispatchException as exc:
                     retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
                     if exc.custom_retry_delay is not None:
@@ -280,16 +364,16 @@ class ApnsPushkin(Pushkin):
         from_display = n.sender
         if n.sender_display_name is not None:
             from_display = n.sender_display_name
-        from_display = from_display[0 : self.MAX_FIELD_LENGTH]
+        from_display = from_display[0: self.MAX_FIELD_LENGTH]
 
         loc_key = None
         loc_args = None
         if n.type == "m.room.message" or n.type == "m.room.encrypted":
             room_display = None
             if n.room_name:
-                room_display = n.room_name[0 : self.MAX_FIELD_LENGTH]
+                room_display = n.room_name[0: self.MAX_FIELD_LENGTH]
             elif n.room_alias:
-                room_display = n.room_alias[0 : self.MAX_FIELD_LENGTH]
+                room_display = n.room_alias[0: self.MAX_FIELD_LENGTH]
 
             content_display = None
             action_display = None
@@ -356,13 +440,13 @@ class ApnsPushkin(Pushkin):
                         loc_key = "USER_INVITE_TO_NAMED_ROOM"
                         loc_args = [
                             from_display,
-                            n.room_name[0 : self.MAX_FIELD_LENGTH],
+                            n.room_name[0: self.MAX_FIELD_LENGTH],
                         ]
                     elif n.room_alias:
                         loc_key = "USER_INVITE_TO_NAMED_ROOM"
                         loc_args = [
                             from_display,
-                            n.room_alias[0 : self.MAX_FIELD_LENGTH],
+                            n.room_alias[0: self.MAX_FIELD_LENGTH],
                         ]
                     else:
                         loc_key = "USER_INVITE_TO_CHAT"

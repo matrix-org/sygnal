@@ -43,6 +43,7 @@ class FirebaseConfig(object):
     credentials = attr.ib()
     max_connections = attr.ib(default=20)
     message_types = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
+    event_handlers = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
 
 
 class FirebasePushkin(Pushkin):
@@ -83,8 +84,8 @@ class FirebasePushkin(Pushkin):
         logger.debug("Data: %s", data)
 
         if (
-            data["type"] != "m.room.message"
-            or data["content"]["msgtype"] not in self.config.message_types
+                data["type"] != "m.room.message"
+                or data["content"]["msgtype"] not in self.config.message_types
         ):
             logger.debug("RETURNED FAILED %s", data)
             return failed
@@ -164,8 +165,8 @@ class FirebasePushkin(Pushkin):
                 # Truncate fields to a sensible maximum length. If the whole
                 # body is too long, GCM will reject it.
                 if (
-                    data[attribute] is not None
-                    and len(data[attribute]) > MAX_BYTES_PER_FIELD
+                        data[attribute] is not None
+                        and len(data[attribute]) > MAX_BYTES_PER_FIELD
                 ):
                     data[attribute] = data[attribute][0:MAX_BYTES_PER_FIELD]
             else:
@@ -182,7 +183,7 @@ class FirebasePushkin(Pushkin):
         return data
 
     def text_message_notification(
-        self, data, notification_title, unread_count, pushkeys
+            self, data, notification_title, unread_count, pushkeys
     ):
         logger.debug("%s, %s, %s, %s", data, notification_title, unread_count, pushkeys)
         decoded_message = decode_complex_message(data["content"]["body"])
@@ -198,7 +199,7 @@ class FirebasePushkin(Pushkin):
             notification_body = data["content"]["body"]
         else:
             notification_body = (
-                data["sender_display_name"] + ": " + data["content"]["body"]
+                    data["sender_display_name"] + ": " + data["content"]["body"]
             )
         logger.debug("notification_body %s", notification_body)
 
@@ -208,7 +209,7 @@ class FirebasePushkin(Pushkin):
         )
 
     def complex_message_notification(
-        self, data, message, notification_title, unread_count, pushkeys
+            self, data, message, notification_title, unread_count, pushkeys
     ):
         notification_body = message.get("title", "").strip() + " "
         logger.debug("notification_body now %s", notification_body)
@@ -227,9 +228,10 @@ class FirebasePushkin(Pushkin):
         )
 
     def default_notification(
-        self, data, notification_title, unread_count, pushkeys, notification_body
+            self, data, notification_title, unread_count, pushkeys, notification_body
     ):
-        logger.debug("at default_notification %s, %s, %s, %s, %s", data, notification_title, unread_count, pushkeys, notification_body)
+        logger.debug("at default_notification %s, %s, %s, %s, %s", data, notification_title, unread_count, pushkeys,
+                     notification_body)
         notification = messaging.Notification(title=notification_title, body=notification_body)
         logger.debug("notification %s", notification)
         config = messaging.AndroidConfig(priority=data["prio"], notification=messaging.AndroidNotification(
@@ -272,7 +274,7 @@ def decode_complex_message(message: str) -> Optional[Dict]:
 
 
 def is_valid_matrix_complex_message(
-    decoded_message: dict, message_keys=("title", "message", "images", "videos")
+        decoded_message: dict, message_keys=("title", "message", "images", "videos")
 ):
     """
     Checks if decoded message contains one of the predefined fields
