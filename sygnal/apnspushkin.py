@@ -157,7 +157,7 @@ class ApnsPushkin(Pushkin):
 
     async def _dispatch_event(self, log, span, n, device):
         payload = apnstruncate.truncate(
-            self._get_payload_event_id_only(n),
+            self._get_payload_event(n),
             max_length=self.MAX_JSON_BODY_SIZE)
 
         request = NotificationRequest(
@@ -182,7 +182,7 @@ class ApnsPushkin(Pushkin):
 
     async def _dispatch_message(self, log, span, n, device):
         payload = apnstruncate.truncate(
-            self._get_payload_full(n, log),
+            self._get_payload_message(n, log),
             max_length=self.MAX_JSON_BODY_SIZE)
         request = NotificationRequest(
             device_token=self._map_device_token(device),
@@ -223,61 +223,6 @@ class ApnsPushkin(Pushkin):
                 error = f"{response.status} {response.description}"
                 raise NotificationDispatchException(error)
 
-    async def _dispatch_request(self, log, span, device, shaved_payload, prio):
-        """
-        Actually attempts to dispatch the notification once.
-        """
-
-        # this is no good: APNs expects ID to be in their format
-        # so we can't just derive a
-        # notif_id = context.request_id + f"-{n.devices.index(device)}"
-
-        notif_id = str(uuid4())
-
-        log.info(f"Sending as APNs-ID {notif_id}")
-        span.set_tag("apns_id", notif_id)
-
-        device_token = base64.b64decode(device.pushkey).hex()
-
-        request = NotificationRequest(
-            device_token=device_token,
-            message=shaved_payload,
-            priority=prio,
-            notification_id=notif_id,
-        )
-
-        try:
-            with SEND_TIME_HISTOGRAM.time():
-                response = await self._send_notification(request)
-        except aioapns.ConnectionError:
-            raise TemporaryNotificationDispatchException("aioapns Connection Failure")
-
-        code = int(response.status)
-
-        span.set_tag(tags.HTTP_STATUS_CODE, code)
-
-        RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
-
-        if response.is_successful:
-            return []
-        else:
-            # .description corresponds to the 'reason' response field
-            span.set_tag("apns_reason", response.description)
-            if (
-                    code == self.TOKEN_ERROR_CODE
-                    or response.description == self.TOKEN_ERROR_REASON
-            ):
-                return [device.pushkey]
-            else:
-                if 500 <= code < 600:
-                    raise TemporaryNotificationDispatchException(
-                        f"{response.status} {response.description}"
-                    )
-                else:
-                    raise NotificationDispatchException(
-                        f"{response.status} {response.description}"
-                    )
-
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
@@ -289,8 +234,6 @@ class ApnsPushkin(Pushkin):
         # to someone.
         # span_tags = {"pushkey": device.pushkey}
         span_tags = {}
-
-
 
         with self.sygnal.tracer.start_span(
                 "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
@@ -329,7 +272,7 @@ class ApnsPushkin(Pushkin):
                             retry_delay, twisted_reactor=self.sygnal.reactor
                         )
 
-    def _get_payload_event_id_only(self, n):
+    def _get_payload_event(self, n):
         """
         Constructs a payload for a notification where we know only the event ID.
         Args:
@@ -352,7 +295,7 @@ class ApnsPushkin(Pushkin):
 
         return payload
 
-    def _get_payload_full(self, n, log):
+    def _get_payload_message(self, n, log):
         """
         Constructs a payload for a notification.
         Args:
