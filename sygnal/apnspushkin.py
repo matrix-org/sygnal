@@ -281,10 +281,16 @@ class ApnsPushkin(Pushkin):
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
+        dispatch_handler = self._map_event_dispatch_handler(n)
+        if dispatch_handler is None:
+            return  # skipped
+
         # The pushkey is kind of secret because you can use it to send push
         # to someone.
         # span_tags = {"pushkey": device.pushkey}
         span_tags = {}
+
+
 
         with self.sygnal.tracer.start_span(
                 "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
@@ -298,12 +304,7 @@ class ApnsPushkin(Pushkin):
                     with self.sygnal.tracer.start_span(
                             "apns_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
-
-                        dispatch_handler = self._map_event_dispatch_handler(n)
-                        if dispatch_handler is None:
-                            return  # skipped
-                        else:
-                            return await dispatch_handler(log, span, n, device)
+                        return await dispatch_handler(log, span, n, device)
                 except TemporaryNotificationDispatchException as exc:
                     retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
                     if exc.custom_retry_delay is not None:
