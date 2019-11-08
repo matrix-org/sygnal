@@ -175,7 +175,6 @@ class ApnsPushkin(Pushkin):
             device_token=self._map_device_token(device),  # maybe convert
             message=payload,
             priority=self._map_priority(n.prio),
-            notification_id=str(uuid4()),
             push_type=PushType.VOIP
         )
         return await self._dispatch(log, span, request)
@@ -188,7 +187,6 @@ class ApnsPushkin(Pushkin):
             device_token=self._map_device_token(device),
             message=payload,
             priority=self._map_priority(n.prio),
-            notification_id=str(uuid4())
         )
         return await self._dispatch(log, span, request)
 
@@ -228,7 +226,7 @@ class ApnsPushkin(Pushkin):
 
         dispatch_handler = self._map_event_dispatch_handler(n)
         if dispatch_handler is None:
-            return  # skipped
+            return []  # skipped
 
         # The pushkey is kind of secret because you can use it to send push
         # to someone.

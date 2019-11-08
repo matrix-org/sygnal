@@ -38,7 +38,7 @@ DEPENDENCIES = [
     "zope.interface>=4.6.0",
     "idna>=2.8",
     "jaeger-client>=4.0.0",
-    "opentracing>=2.2.0",
+    "opentracing>=2.2.0", 'attr'
 ]
 
 EXTRAS = {"sentry": ["sentry-sdk>=0.10.2"], "firebase": ["firebase-admin>=3.0.0"]}
