@@ -9,5 +9,6 @@ sygnal.db
 /.idea
 /data
 google-services.json
+docker-compose.yml
 *.egg-info
 *.log
