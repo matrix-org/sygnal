@@ -155,6 +155,8 @@ class FirebasePushkin(Pushkin):
         if not event_handlers:
             if n.type != "m.room.message" or n.content["msgtype"] not in self.config.message_types:
                 return None
+            else:
+                return self._dispatch_message
         else:
             handler = event_handlers.get(n.type, None)
             if handler == "message":
@@ -165,6 +167,9 @@ class FirebasePushkin(Pushkin):
                 return None
 
     async def dispatch_notification(self, n, device, context):
+
+        log.debug(n)
+
         dispatch_handler = self._map_event_dispatch_handler(n)
         if dispatch_handler is None:
             return []  # skipped
