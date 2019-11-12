@@ -168,9 +168,9 @@ class ApnsPushkin(Pushkin):
         return await self._dispatch(log, span, request)
 
     async def _dispatch_voip(self, log, span, n, device):
-        payload = {}
-        if n.sender_display_name:
-            payload['sender_display_name'] = n.sender_display_name
+        payload = apnstruncate.truncate(
+            self._get_payload_message(n, log),
+            max_length=self.MAX_JSON_BODY_SIZE)
         request = NotificationRequest(
             device_token=self._map_device_token(device),  # maybe convert
             message=payload,
