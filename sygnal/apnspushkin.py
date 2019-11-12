@@ -62,6 +62,7 @@ class ApnsPushkin(Pushkin):
 
     MAX_FIELD_LENGTH = 1024
     MAX_JSON_BODY_SIZE = 4096
+    VOIP_MAX_JSON_BODY_SIZE = 5120
 
     UNDERSTOOD_CONFIG_FIELDS = {"type", "platform", "certfile", "event_handlers"}
 
@@ -159,7 +160,6 @@ class ApnsPushkin(Pushkin):
         payload = apnstruncate.truncate(
             self._get_payload_event(n),
             max_length=self.MAX_JSON_BODY_SIZE)
-
         request = NotificationRequest(
             device_token=self._map_device_token(device),
             message=payload,
@@ -170,7 +170,7 @@ class ApnsPushkin(Pushkin):
     async def _dispatch_voip(self, log, span, n, device):
         payload = apnstruncate.truncate(
             self._get_payload_message(n, log),
-            max_length=self.MAX_JSON_BODY_SIZE)
+            max_length=self.VOIP_MAX_JSON_BODY_SIZE)
         request = NotificationRequest(
             device_token=self._map_device_token(device),  # maybe convert
             message=payload,
