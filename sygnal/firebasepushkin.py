@@ -18,12 +18,10 @@ import logging
 from typing import Dict, Optional
 
 import attr
-import asyncio
-from opentracing import logs, tags
+from opentracing import logs
 from firebase_admin import credentials, initialize_app, messaging
 from firebase_admin.exceptions import *
 from prometheus_client import Histogram
-from twisted.internet.defer import Deferred
 from twisted.python.threadpool import ThreadPool
 from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
 
@@ -204,14 +202,14 @@ class FirebasePushkin(Pushkin):
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
-        dispatch_handler = self._map_event_dispatch_handler(n, log)
-        if dispatch_handler is None:
-            return []  # skipped
-
         span_tags = {}
         with self.sygnal.tracer.start_span(
                 "firebase_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
+
+            dispatch_handler = self._map_event_dispatch_handler(n, log)
+            if dispatch_handler is None:
+                return []  # skipped
 
             for retry_number in range(self.MAX_TRIES):
                 try:

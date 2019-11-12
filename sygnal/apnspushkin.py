@@ -130,7 +130,7 @@ class ApnsPushkin(Pushkin):
 
     @staticmethod
     def _map_device_token(device):
-        return device.pushkey
+        return base64.b64decode(device.pushkey).hex()
 
     def _map_event_dispatch_handler(self, n):
         if n.event_id and not n.type:
@@ -149,61 +149,68 @@ class ApnsPushkin(Pushkin):
         else:
             return None
 
-    @staticmethod
-    def _map_priority(priority):
-        p = 10
-        if priority == "low":
-            p = 5
-        return p
-
     async def _dispatch_event(self, log, span, n, device):
+        """
+        Dispatch handler for a data only notification (no alert)
+        See `event_handlers` configuration option
+        """
         payload = apnstruncate.truncate(
             self._get_payload_event(n),
             max_length=self.MAX_JSON_BODY_SIZE)
-        request = NotificationRequest(
-            device_token=self._map_device_token(device),
-            message=payload,
-            priority=self._map_priority(n.prio)
-        )
-        return await self._dispatch(log, span, request)
+        return await self._dispatch(log, span, device, payload, n.prio)
 
     async def _dispatch_voip(self, log, span, n, device):
+        """
+        Dispatch handler for a voip notification
+        See `event_handlers` configuration option
+        """
         payload = apnstruncate.truncate(
-            self._get_payload_message(n, log),
+            self._get_payload_voip(n, log),
             max_length=self.VOIP_MAX_JSON_BODY_SIZE)
-        request = NotificationRequest(
-            device_token=self._map_device_token(device),  # maybe convert
-            message=payload,
-            priority=self._map_priority(n.prio),
-            push_type=PushType.VOIP
-        )
-        return await self._dispatch(log, span, request)
+        return await self._dispatch(log, span, device, payload, n.prio, push_type=PushType.VOIP)
 
     async def _dispatch_message(self, log, span, n, device):
+        """
+        Dispatch handler for a standard notification
+        See `event_handlers` configuration option
+        """
         payload = apnstruncate.truncate(
             self._get_payload_message(n, log),
             max_length=self.MAX_JSON_BODY_SIZE)
-        request = NotificationRequest(
-            device_token=self._map_device_token(device),
-            message=payload,
-            priority=self._map_priority(n.prio),
-        )
-        return await self._dispatch(log, span, request)
+        return await self._dispatch(log, span, device, payload, n.prio)
 
-    async def _dispatch(self, log, span, request):
-        if request.message is None:
-            # Nothing to do
+    async def _dispatch(self, log, span, device, shaved_payload, prio, push_type=None):
+        notification_id = str(uuid4())
+
+        log.info(f"Sending as APNs-ID {notification_id}")
+        span.set_tag("apns_id", notification_id)
+
+        if shaved_payload is None:
             span.log_kv({logs.EVENT: "apns_no_payload"})
             return
+
+        log.info(device.pushkey)
+        device_token = base64.b64decode(device.pushkey).hex()
+        log.info(device_token)
+
+        request = NotificationRequest(
+            device_token=device_token,
+            notification_id=notification_id,
+            message=shaved_payload,
+            priority=self._map_priority(prio),
+            push_type=push_type
+        )
 
         log.info(f"Sending APN {request.notification_id}")
         if request.notification_id:
             span.set_tag("apns_id", request.notification_id)
+
         try:
             with SEND_TIME_HISTOGRAM.time():
                 response = await self._send_notification(request)
         except aioapns.ConnectionError:
             raise TemporaryNotificationDispatchException('aioapns: Connection Failure')
+
         code = int(response.status)
         span.set_tag(tags.HTTP_STATUS_CODE, code)
         RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
@@ -224,18 +231,18 @@ class ApnsPushkin(Pushkin):
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
-        dispatch_handler = self._map_event_dispatch_handler(n)
-        if dispatch_handler is None:
-            return []  # skipped
-
         # The pushkey is kind of secret because you can use it to send push
         # to someone.
         # span_tags = {"pushkey": device.pushkey}
         span_tags = {}
 
         with self.sygnal.tracer.start_span(
-                "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
+            "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
+
+            dispatch_handler = self._map_event_dispatch_handler(n)
+            if dispatch_handler is None:
+                return []  # skipped
 
             for retry_number in range(self.MAX_TRIES):
                 try:
@@ -243,7 +250,7 @@ class ApnsPushkin(Pushkin):
                     span_tags = {"retry_num": retry_number}
 
                     with self.sygnal.tracer.start_span(
-                            "apns_dispatch_try", tags=span_tags, child_of=span_parent
+                        "apns_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
                         return await dispatch_handler(log, span, n, device)
                 except TemporaryNotificationDispatchException as exc:
@@ -290,6 +297,36 @@ class ApnsPushkin(Pushkin):
             payload["unread_count"] = n.counts.unread
         if n.counts.missed_calls is not None:
             payload["missed_calls"] = n.counts.missed_calls
+
+        return payload
+
+    def _get_payload_voip(self, n, log):
+        """
+        Constructs a payload for a voip notification (no alert needed)
+        Args:
+            n: The notification to construct a payload for
+            log: A logger
+
+        Returns:
+            The APNs payload as nested dicts.
+        """
+        payload = {}
+        if n.room_id:
+            payload["room_id"] = n.room_id
+        if n.event_id:
+            payload["event_id"] = n.event_id
+
+        if n.type is not None and "m.call" in n.type:
+            log.info("call event received")
+            payload["type"] = n.type
+            if n.sender_display_name is not None:
+                payload["sender_display_name"] = n.sender_display_name
+
+            payload["is_video_call"] = False
+            if n.content and "offer" in n.content and "sdp" in n.content["offer"]:
+                sdp = n.content["offer"]["sdp"]
+                if "m=video" in sdp:
+                    payload["is_video_call"] = True
 
         return payload
 
@@ -437,3 +474,10 @@ class ApnsPushkin(Pushkin):
         return await Deferred.fromFuture(
             asyncio.ensure_future(self.apns_client.send_notification(request))
         )
+
+    @staticmethod
+    def _map_priority(priority):
+        p = 10
+        if priority == "low":
+            p = 5
+        return p
