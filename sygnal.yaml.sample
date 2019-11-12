@@ -144,12 +144,22 @@ metrics:
 # Specify the pushkey for the application and also the type.
 # For the type, you may specify a fully-qualified Python classname if desired.
 #
+# event_handlers offer a possibility configure certain pushers to only consider certain events and treat them in a
+# specific way. If no event_handler is specified default behavior applies
+#
 apps:
   # This is an example APNs push configuration using certificate authentication.
   #
   #com.example.myapp.ios:
   #  type: apns
   #  certfile: com.example.myApp_prod_APNS.pem
+  # # Available handlers on apns are (voip | event | message)
+  # # - voip: sends a voip type notification containing no alert and only call specific information
+  # # - event: sends a notification containing no alert and a payload only containing event_id and room_id if available
+  # # - message: represents the default behavior including all event specific information in an alert
+  #  event_handlers:
+  #    'm.call.invite': voip
+  #    'm.room.message': message
 
   # This is an example APNs push configuration using key authentication.
   #
@@ -159,6 +169,14 @@ apps:
   #  key_id: MY_KEY_ID
   #  team_id: MY_TEAM_ID
   #  topic: MY_TOPIC
+  # # Configures which handler should be used to send notifications for a specific event
+  # # Available handlers on apns are (voip | event | message)
+  # # - voip: sends a voip type notification containing no alert and only call specific information
+  # # - event: sends a notification containing no alert and a payload only containing event_id and room_id if available
+  # # - message: represents the default behavior including all event specific information in an alert
+  #  event_handlers:
+  #    'm.call.invite': voip
+  #    'm.room.message': message
 
   # This is an example GCM/FCM push configuration.
   #
@@ -168,6 +186,7 @@ apps:
   #  # This is the maximum number of connections to GCM servers at any one time
   #  # the default is 20.
   #  #max_connections: 20
+  #  event_handlers are currently not implemented for the gcm pushkin
 
   # This is an example Firebase Cloud Messaging v1 push configuration.
   #
@@ -179,5 +198,12 @@ apps:
   #    'm.image': 📷
   #    'm.audio': 🎵
   #    'm.video': 🎬
+  # # Available handlers on firebase are (event | message)
+  # # - event: represents a data push containing no notification (used for background notifications on android)
+  # # - message: represents the default behavior including all event specific information as data and notification payload
+  #  event_handlers:
+  #    'm.room.message': message
+  #    'm.call.invite': event
   #  # This is the maximum number of connections to Firebase servers at any one time.
   #  #max_connections: 20
+
