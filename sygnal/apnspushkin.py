@@ -220,7 +220,7 @@ class ApnsPushkin(Pushkin):
         else:
             span.set_tag("apns_reason", response.description)
             if code == self.TOKEN_ERROR_CODE or response.description == self.TOKEN_ERROR_REASON:
-                return [request.device_token]
+                return [device.pushkey]
             elif 500 <= code < 600:
                 error = f"{response.status} {response.description}"
                 raise TemporaryNotificationDispatchException(error)
