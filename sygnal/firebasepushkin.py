@@ -102,7 +102,6 @@ class FirebasePushkin(Pushkin):
         return n.counts.unread or 0
 
     async def _dispatch_message(self, n, device, span, log):
-        log.info("dispatching message")
         notification_title = n.room_name or n.sender_display_name
         notification_body = self._map_notification_body(n).strip()
         notification = messaging.Notification(title=notification_title, body=notification_body)
@@ -125,7 +124,7 @@ class FirebasePushkin(Pushkin):
             apns=apns,
             token=device.pushkey,
         )
-        return await self._dispatch(request, span, log)
+        return await self._dispatch(request, device, span, log)
 
     async def _dispatch_event(self, n, device, span, log):
         logger.info("dispatching event")
@@ -144,32 +143,31 @@ class FirebasePushkin(Pushkin):
             apns=apns,
             token=device.pushkey
         )
-        return await self._dispatch(request, span, log)
+        return await self._dispatch(request, device, span, log)
 
-    async def _dispatch(self, request, span, log):
+    async def _dispatch(self, request, device, span, log):
         if request.data is None and request.notification:
             span.log_kv({logs.EVENT: "firebase_no_payload"})
 
-        log.info(f"Sending Firebase message")
         try:
             with SEND_TIME_HISTOGRAM.time():
                 response = await self._send_notification(request)
         except FirebaseError as e:
             span.set_tag("firebase_reason", e.cause)
-            log.info(f"{e}")
-            if e.code is UNAVAILABLE:
+            if e.code is NOT_FOUND:
+                # Token invalid
+                return [device.pushkey]
+            elif e.code is UNAVAILABLE:
                 error = f"FirebaseError: {e.code} {e.cause}"
                 raise TemporaryNotificationDispatchException(error)
             else:
                 error = f"FirebaseError: {e.code} {e.cause}"
                 raise NotificationDispatchException(error)
         except ValueError as e:
-            log.info(f"{e}")
             span.set_tag("firebase_reason", e)
             error = f"ValueError: {e}"
             raise NotificationDispatchException(error)
 
-        log.info("Success sending Firebase message")
         span.set_tag("firebase_id", response)
         return []
 
@@ -177,18 +175,14 @@ class FirebasePushkin(Pushkin):
         event_handlers = self.config.event_handlers
         if not event_handlers:
             if n.type != "m.room.message" or n.content["msgtype"] not in self.config.message_types:
-                log.info("event handlers not specified, no valid type or message type found")
                 return None
             else:
-                log.info("event handlers not specified, using message handler")
                 return self._dispatch_message
         else:
             handler = event_handlers.get(n.type, None)
             if handler == "message":
-                log.info("using message handler")
                 return self._dispatch_message
             elif handler == "event":
-                log.info("using event handler")
                 return self._dispatch_event
             else:
                 return None
@@ -205,25 +199,29 @@ class FirebasePushkin(Pushkin):
             if dispatch_handler is None:
                 return []  # skipped
 
-            for retry_number in range(self.MAX_TRIES):
+            for retry_number in range(MAX_TRIES):
                 try:
+                    log.debug("Trying")
+
+                    span_tags = {"retry_num": retry_number}
+
                     with self.sygnal.tracer.start_span(
                             "firebase_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
                         return await dispatch_handler(n, device, span, log)
                 except TemporaryNotificationDispatchException as ex:
-                    retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
+                    retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
                     if ex.custom_retry_delay is not None:
                         retry_delay = ex.custom_retry_delay
 
-                    logger.warning(
+                    log.warning(
                         "Temporary failure, will retry in %d seconds",
                         retry_delay, exc_info=True,
                     )
                     span_parent.log_kv(
                         {"event": "temporary_fail", "retrying_in": retry_delay}
                     )
-                    if retry_number == self.MAX_TRIES - 1:
+                    if retry_number == MAX_TRIES - 1:
                         raise NotificationDispatchException(
                             "Retried too many times."
                         ) from ex
