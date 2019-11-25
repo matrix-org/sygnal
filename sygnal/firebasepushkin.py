@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
-from typing import Dict, Optional
+from typing import Dict
 
 import attr
 from opentracing import logs
@@ -31,11 +30,6 @@ from .notifications import Pushkin
 SEND_TIME_HISTOGRAM = Histogram(
     "sygnal_fcm_request_time", "Time taken to send HTTP request"
 )
-
-MAX_TRIES = 3
-RETRY_DELAY_BASE = 10
-MAX_BYTES_PER_FIELD = 1024
-DEFAULT_MAX_CONNECTIONS = 20
 
 NOTIFICATION_DATA_INCLUDED = [
     'type',
@@ -56,6 +50,12 @@ class FirebaseConfig(object):
 
 
 class FirebasePushkin(Pushkin):
+
+    MAX_TRIES = 3
+    RETRY_DELAY_BASE = 10
+    MAX_BYTES_PER_FIELD = 1024
+    DEFAULT_MAX_CONNECTIONS = 20
+
     def __init__(self, name, sygnal, config):
         super(FirebasePushkin, self).__init__(name, sygnal, config)
 
@@ -76,34 +76,9 @@ class FirebasePushkin(Pushkin):
 
         self._app = initialize_app(cred, name="app")
 
-    def _decode_notification_body(self, message):
-        notification_body = message.get("title", "").strip() + " "
-        logger.debug("notification_body now %s", notification_body)
-        if "images" in message:
-            notification_body += self.config.message_types.get("m.image")
-        elif "videos" in message:
-            notification_body += self.config.message_types.get("m.video")
-        elif "title" not in message and "message" in message:
-            notification_body += message["message"].strip()
-        return notification_body
-
-    def _map_notification_body(self, n):
-        if n.type == "m.room.message" and n.content["msgtype"] == "m.text":
-            decoded_message = decode_complex_message(n.content["body"])
-            if decoded_message:
-                return self._decode_notification_body(decoded_message)
-        if n.room_name is None:
-            return n.content["body"]
-        else:
-            return n.sender_display_name + ": " + n.content["body"]
-
-    @staticmethod
-    def _map_counts_unread(n):
-        return n.counts.unread or 0
-
     async def _dispatch_message(self, n, device, span, log):
         notification_title = n.room_name or n.sender_display_name
-        notification_body = self._map_notification_body(n).strip()
+        notification_body = self._message_body_from_notification(n).strip()
         notification = messaging.Notification(title=notification_title, body=notification_body)
 
         android = messaging.AndroidConfig(priority=self._map_android_priority(n),
@@ -119,7 +94,7 @@ class FirebasePushkin(Pushkin):
 
         request = messaging.Message(
             notification=notification,
-            data=build_data_for_notification(n),
+            data=self._message_data_from_notification(n),
             android=android,
             apns=apns,
             token=device.pushkey,
@@ -138,7 +113,7 @@ class FirebasePushkin(Pushkin):
         )
 
         request = messaging.Message(
-            data=build_data_for_event(n),
+            data=self._event_data_from_notification(n),
             android=android,
             apns=apns,
             token=device.pushkey
@@ -151,7 +126,7 @@ class FirebasePushkin(Pushkin):
 
         try:
             with SEND_TIME_HISTOGRAM.time():
-                response = await self._send_notification(request)
+                response = messaging.send(request, app=self._app)
         except FirebaseError as e:
             span.set_tag("firebase_reason", e.cause)
             if e.code is NOT_FOUND:
@@ -199,7 +174,7 @@ class FirebasePushkin(Pushkin):
             if dispatch_handler is None:
                 return []  # skipped
 
-            for retry_number in range(MAX_TRIES):
+            for retry_number in range(self.MAX_TRIES):
                 try:
                     log.debug("Trying")
 
@@ -210,7 +185,7 @@ class FirebasePushkin(Pushkin):
                     ) as span:
                         return await dispatch_handler(n, device, span, log)
                 except TemporaryNotificationDispatchException as ex:
-                    retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
+                    retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
                     if ex.custom_retry_delay is not None:
                         retry_delay = ex.custom_retry_delay
 
@@ -221,7 +196,7 @@ class FirebasePushkin(Pushkin):
                     span_parent.log_kv(
                         {"event": "temporary_fail", "retrying_in": retry_delay}
                     )
-                    if retry_number == MAX_TRIES - 1:
+                    if retry_number == self.MAX_TRIES - 1:
                         raise NotificationDispatchException(
                             "Retried too many times."
                         ) from ex
@@ -230,8 +205,9 @@ class FirebasePushkin(Pushkin):
                             retry_delay, twisted_reactor=self.sygnal.reactor
                         )
 
-    async def _send_notification(self, request):
-        return messaging.send(request, app=self._app)
+    @staticmethod
+    def _map_counts_unread(n):
+        return n.counts.unread or 0
 
     @staticmethod
     def _map_android_priority(n):
@@ -241,69 +217,47 @@ class FirebasePushkin(Pushkin):
     def _map_ios_priority(n):
         return "10" if n.prio == 10 else "5"
 
+    def _message_body_from_notification(self, n):
+        from_display = ""
+        if n.room_name is not None and n.sender_display_name is not None:
+            from_display = n.sender_display_name + ": "
 
-def build_data_for_notification(n):
-    data = {}
-    for field in NOTIFICATION_DATA_INCLUDED:
-        if hasattr(n, field) and getattr(n, field) is not None:
-            data[field] = getattr(n, field)
-    return data
+        if n.type == "m.room.message" and n.content and "msgtype" in n.content:
+            body_replacement = self.config.message_types[n.content["msgtype"]]
+            if body_replacement is None or body_replacement is '' and "body" in n.content:
+                return from_display + n.content["body"]
+            else:
+                return from_display + body_replacement
 
+        # Handling for types other than m.room.message not implemented for now
+        return from_display
 
-def build_data_for_event(n):
-    data = {}
-    if n.room_id:
-        data["room_id"] = n.room_id
-    if n.event_id:
-        data["event_id"] = n.event_id
+    def _message_data_from_notification(self, n):
+        data = {}
+        for field in NOTIFICATION_DATA_INCLUDED:
+            if hasattr(n, field) and getattr(n, field) is not None:
+                data[field] = getattr(n, field)
+        return data
 
-    if n.type is not None and "m.call" in n.type:
-        data["type"] = n.type
-        if n.sender_display_name is not None:
-            data["sender_display_name"] = n.sender_display_name
+    def _event_data_from_notification(self, n):
+        data = {}
+        if n.room_id:
+            data["room_id"] = n.room_id
+        if n.event_id:
+            data["event_id"] = n.event_id
 
-        data["is_video_call"] = "false"
-        if n.content:
-            if "offer" in n.content and "sdp" in n.content["offer"]:
-                sdp = n.content["offer"]["sdp"]
-                if "m=video" in sdp:
-                    data["is_video_call"] = "true"
-            if "call_id" in n.content:
-                data["call_id"] = n.content["call_id"]
+        if n.type is not None and "m.call" in n.type:
+            data["type"] = n.type
+            if n.sender_display_name is not None:
+                data["sender_display_name"] = n.sender_display_name
 
-    return data
+            data["is_video_call"] = "false"
+            if n.content:
+                if "offer" in n.content and "sdp" in n.content["offer"]:
+                    sdp = n.content["offer"]["sdp"]
+                    if "m=video" in sdp:
+                        data["is_video_call"] = "true"
+                if "call_id" in n.content:
+                    data["call_id"] = n.content["call_id"]
 
-
-def decode_complex_message(message: str) -> Optional[Dict]:
-    """
-    Tries to parse a message as json
-
-    :param message: json string of notification m.text message
-    :return: dict if successful and None if parsing fails or message is not valid
-    """
-    try:
-        decoded_message = json.loads(message)
-        if is_valid_matrix_complex_message(decoded_message):
-            return decoded_message
-    except json.JSONDecodeError:
-        pass
-
-    return None
-
-
-def is_valid_matrix_complex_message(
-    decoded_message: dict, message_keys=("title", "message", "images", "videos")
-):
-    """
-    Checks if decoded message contains one of the predefined fields
-    of a MatrixComplexMessage
-
-    :param decoded_message: json decoded m.text message
-    :param message_keys: keys to check for
-    :return:
-    """
-    if not isinstance(decoded_message, dict):
-        return False
-
-    # Return whether any required key is in the decoded message
-    return not decoded_message.keys().isdisjoint(message_keys)
+        return data
