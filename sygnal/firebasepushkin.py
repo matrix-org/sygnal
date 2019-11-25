@@ -32,6 +32,11 @@ SEND_TIME_HISTOGRAM = Histogram(
     "sygnal_fcm_request_time", "Time taken to send HTTP request"
 )
 
+MAX_TRIES = 3
+RETRY_DELAY_BASE = 10
+MAX_BYTES_PER_FIELD = 1024
+DEFAULT_MAX_CONNECTIONS = 20
+
 NOTIFICATION_DATA_INCLUDED = [
     'type',
     'room_id',
@@ -51,11 +56,6 @@ class FirebaseConfig(object):
 
 
 class FirebasePushkin(Pushkin):
-    MAX_TRIES = 1
-    RETRY_DELAY_BASE = 10
-    MAX_BYTES_PER_FIELD = 1024
-    DEFAULT_MAX_CONNECTIONS = 20
-
     def __init__(self, name, sygnal, config):
         super(FirebasePushkin, self).__init__(name, sygnal, config)
 
@@ -64,33 +64,27 @@ class FirebasePushkin(Pushkin):
         self.config = FirebaseConfig(
             **{x: y for x, y in self.cfg.items() if x != "type"}
         )
-        logger.debug("self.config %s", self.config)
 
         credential_path = self.config.credentials
         if not credential_path:
             raise PushkinSetupException("No Credential path set in config")
 
         cred = credentials.Certificate(credential_path)
-        logger.debug("cred %s", cred)
 
         self._pool = ThreadPool(maxthreads=self.config.max_connections)
         self._pool.start()
 
         self._app = initialize_app(cred, name="app")
-        logger.debug("self._app %s", self._app)
 
     def _decode_notification_body(self, message):
         notification_body = message.get("title", "").strip() + " "
         logger.debug("notification_body now %s", notification_body)
         if "images" in message:
             notification_body += self.config.message_types.get("m.image")
-            logger.debug("notification_body now %s", notification_body)
         elif "videos" in message:
             notification_body += self.config.message_types.get("m.video")
-            logger.debug("notification_body now %s", notification_body)
         elif "title" not in message and "message" in message:
             notification_body += message["message"].strip()
-            logger.debug("notification_body now %s", notification_body)
         return notification_body
 
     def _map_notification_body(self, n):
@@ -300,7 +294,7 @@ def decode_complex_message(message: str) -> Optional[Dict]:
 
 
 def is_valid_matrix_complex_message(
-        decoded_message: dict, message_keys=("title", "message", "images", "videos")
+    decoded_message: dict, message_keys=("title", "message", "images", "videos")
 ):
     """
     Checks if decoded message contains one of the predefined fields

@@ -198,6 +198,8 @@ apps:
   #    'm.image': 📷
   #    'm.audio': 🎵
   #    'm.video': 🎬
+  #  event_types:
+  #    'm.room.message': ""
   # # Available handlers on firebase are (event | message)
   # # - event: represents a data push containing no notification (used for background notifications on android)
   # # - message: represents the default behavior including all event specific information as data and notification payload
@@ -206,4 +208,3 @@ apps:
   #    'm.call.invite': event
   #  # This is the maximum number of connections to Firebase servers at any one time.
   #  #max_connections: 20
-
