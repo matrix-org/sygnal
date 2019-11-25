@@ -145,7 +145,7 @@ class FirebasePushkin(Pushkin):
         )
 
         request = messaging.Message(
-            data=build_data_for_notification(n),
+            data=build_data_for_event(n),
             android=android,
             apns=apns,
             token=device.pushkey
@@ -255,6 +255,30 @@ def build_data_for_notification(n):
     for field in NOTIFICATION_DATA_INCLUDED:
         if hasattr(n, field) and getattr(n, field) is not None:
             data[field] = getattr(n, field)
+    return data
+
+
+def build_data_for_event(n):
+    data = {}
+    if n.room_id:
+        data["room_id"] = n.room_id
+    if n.event_id:
+        data["event_id"] = n.event_id
+
+    if n.type is not None and "m.call" in n.type:
+        data["type"] = n.type
+        if n.sender_display_name is not None:
+            data["sender_display_name"] = n.sender_display_name
+
+        data["is_video_call"] = "false"
+        if n.content:
+            if "offer" in n.content and "sdp" in n.content["offer"]:
+                sdp = n.content["offer"]["sdp"]
+                if "m=video" in sdp:
+                    data["is_video_call"] = "true"
+            if "call_id" in n.content:
+                data["call_id"] = n.content["call_id"]
+
     return data
 
 
