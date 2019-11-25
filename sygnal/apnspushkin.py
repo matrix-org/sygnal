@@ -61,8 +61,10 @@ class ApnsPushkin(Pushkin):
     RETRY_DELAY_BASE = 10
 
     MAX_FIELD_LENGTH = 1024
+    # Notification payload sizes:
+    # https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/generating_a_remote_notification
     MAX_JSON_BODY_SIZE = 4096
-    VOIP_MAX_JSON_BODY_SIZE = 5120
+    MAX_JSON_BODY_SIZE_VOIP = 5120
 
     UNDERSTOOD_CONFIG_FIELDS = {"type", "platform", "certfile", "event_handlers"}
 
@@ -128,10 +130,6 @@ class ApnsPushkin(Pushkin):
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
 
-    @staticmethod
-    def _map_device_token(device):
-        return base64.b64decode(device.pushkey).hex()
-
     def _map_event_dispatch_handler(self, n):
         if n.event_id and not n.type:
             return self._dispatch_event
@@ -155,7 +153,7 @@ class ApnsPushkin(Pushkin):
         See `event_handlers` configuration option
         """
         payload = apnstruncate.truncate(
-            self._get_payload_event(n),
+            self._get_payload_event_id_only(n),
             max_length=self.MAX_JSON_BODY_SIZE)
         return await self._dispatch(log, span, device, payload, n.prio)
 
@@ -166,7 +164,7 @@ class ApnsPushkin(Pushkin):
         """
         payload = apnstruncate.truncate(
             self._get_payload_voip(n, log),
-            max_length=self.VOIP_MAX_JSON_BODY_SIZE)
+            max_length=self.MAX_JSON_BODY_SIZE_VOIP)
         return await self._dispatch(log, span, device, payload, n.prio, push_type=PushType.VOIP)
 
     async def _dispatch_message(self, log, span, n, device):
@@ -189,9 +187,7 @@ class ApnsPushkin(Pushkin):
             span.log_kv({logs.EVENT: "apns_no_payload"})
             return
 
-        log.info(device.pushkey)
         device_token = base64.b64decode(device.pushkey).hex()
-        log.info(device_token)
 
         request = NotificationRequest(
             device_token=device_token,
@@ -209,7 +205,7 @@ class ApnsPushkin(Pushkin):
             with SEND_TIME_HISTOGRAM.time():
                 response = await self._send_notification(request)
         except aioapns.ConnectionError:
-            raise TemporaryNotificationDispatchException('aioapns: Connection Failure')
+            raise TemporaryNotificationDispatchException("aioapns: Connection Failure")
 
         code = int(response.status)
         span.set_tag(tags.HTTP_STATUS_CODE, code)
@@ -218,6 +214,7 @@ class ApnsPushkin(Pushkin):
         if response.is_successful:
             return []
         else:
+            # .description corresponds to the 'reason' response field
             span.set_tag("apns_reason", response.description)
             if code == self.TOKEN_ERROR_CODE or response.description == self.TOKEN_ERROR_REASON:
                 return [device.pushkey]
@@ -277,7 +274,7 @@ class ApnsPushkin(Pushkin):
                             retry_delay, twisted_reactor=self.sygnal.reactor
                         )
 
-    def _get_payload_event(self, n):
+    def _get_payload_event_id_only(self, n):
         """
         Constructs a payload for a notification where we know only the event ID.
         Args:
