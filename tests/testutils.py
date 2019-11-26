@@ -61,7 +61,7 @@ class TestCase(unittest.TestCase):
     def _make_dummy_notification(self, devices):
         return {
             "notification": {
-                "id": "$3957tyerfgewrf384",
+                "event_id": "$3957tyerfgewrf384",
                 "room_id": "!slw48wfj34rtnrf:example.com",
                 "type": "m.room.message",
                 "sender": "@exampleuser:matrix.org",

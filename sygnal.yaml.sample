@@ -195,16 +195,17 @@ apps:
   #  credentials: path_to_service_account_json_file
   #  # This is a map of message types to bodies for notifications.
   #  message_types:
+  #    'x.fancy_channel': '$body'
+  #    'm.text': '$name: $body'
   #    'm.image': 📷
   #    'm.audio': 🎵
   #    'm.video': 🎬
   #  event_types:
   #    'm.room.message': ""
   # # Available handlers on firebase are (event | message)
+  # # - voip: sends a voip type notification containing no alert and only call specific information
   # # - event: represents a data push containing no notification (used for background notifications on android)
   # # - message: represents the default behavior including all event specific information as data and notification payload
   #  event_handlers:
   #    'm.room.message': message
-  #    'm.call.invite': event
-  #  # This is the maximum number of connections to Firebase servers at any one time.
-  #  #max_connections: 20
+  #    'm.call.invite': voip

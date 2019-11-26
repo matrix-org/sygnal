@@ -163,7 +163,7 @@ class ApnsPushkin(Pushkin):
         See `event_handlers` configuration option
         """
         payload = apnstruncate.truncate(
-            self._get_payload_voip(n, log),
+            self._get_payload_voip(n),
             max_length=self.MAX_JSON_BODY_SIZE_VOIP)
         return await self._dispatch(log, span, device, payload, n.prio, push_type=PushType.VOIP)
 
@@ -297,12 +297,11 @@ class ApnsPushkin(Pushkin):
 
         return payload
 
-    def _get_payload_voip(self, n, log):
+    def _get_payload_voip(self, n):
         """
         Constructs a payload for a voip notification (no alert needed)
         Args:
             n: The notification to construct a payload for
-            log: A logger
 
         Returns:
             The APNs payload as nested dicts.

@@ -15,13 +15,12 @@
 
 import logging
 from typing import Dict
+from functools import partial
 
 import attr
 from opentracing import logs
-from firebase_admin import credentials, initialize_app, messaging
-from firebase_admin.exceptions import *
+from firebase_admin import credentials, initialize_app, messaging, exceptions as firebase_exceptions
 from prometheus_client import Histogram
-from twisted.python.threadpool import ThreadPool
 from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
 
 from .exceptions import PushkinSetupException, TemporaryNotificationDispatchException, NotificationDispatchException
@@ -38,6 +37,11 @@ NOTIFICATION_DATA_INCLUDED = [
     'sender_display_name',
 ]
 
+DEFAULT_HANDLER = {
+    "m.room.message": "message",
+    "m.call.invite": "voip"
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +50,7 @@ class FirebaseConfig(object):
     credentials = attr.ib()
     max_connections = attr.ib(default=20)
     message_types = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
-    event_handlers = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
+    event_handlers = attr.ib(default=DEFAULT_HANDLER, type=Dict[str, str])
 
 
 class FirebasePushkin(Pushkin):
@@ -65,25 +69,23 @@ class FirebasePushkin(Pushkin):
             **{x: y for x, y in self.cfg.items() if x != "type"}
         )
 
+        self._app = initialize_app(self._load_credentials(), name="app")
+
+    def _load_credentials(self):
         credential_path = self.config.credentials
         if not credential_path:
             raise PushkinSetupException("No Credential path set in config")
 
-        cred = credentials.Certificate(credential_path)
+        return credentials.Certificate(credential_path)
 
-        self._pool = ThreadPool(maxthreads=self.config.max_connections)
-        self._pool.start()
-
-        self._app = initialize_app(cred, name="app")
-
-    async def _dispatch_message(self, n, device, span, log):
+    async def _dispatch_message(self, n, data, device, span, log):
         notification_title = n.room_name or n.sender_display_name
-        notification_body = self._message_body_from_notification(n).strip()
+        notification_body = self._message_body_from_notification(n, self.config.message_types).strip()
         notification = messaging.Notification(title=notification_title, body=notification_body)
 
         android = messaging.AndroidConfig(priority=self._map_android_priority(n),
                                           notification=messaging.AndroidNotification(
-                                              click_action="FLUTTER_NOTIFICATION_CLICK",
+                                              click_action="FIREBASE_NOTIFICATION_CLICK",
                                               tag=n.room_id))
         apns = messaging.APNSConfig(
             headers={"apns-priority": self._map_ios_priority(n)},
@@ -94,14 +96,14 @@ class FirebasePushkin(Pushkin):
 
         request = messaging.Message(
             notification=notification,
-            data=self._message_data_from_notification(n),
+            data=data,
             android=android,
             apns=apns,
             token=device.pushkey,
         )
         return await self._dispatch(request, device, span, log)
 
-    async def _dispatch_event(self, n, device, span, log):
+    async def _dispatch_data_only(self, n, data, device, span, log):
         logger.info("dispatching event")
         android = messaging.AndroidConfig(priority=self._map_android_priority(n))
 
@@ -113,7 +115,7 @@ class FirebasePushkin(Pushkin):
         )
 
         request = messaging.Message(
-            data=self._event_data_from_notification(n),
+            data=data,
             android=android,
             apns=apns,
             token=device.pushkey
@@ -126,13 +128,13 @@ class FirebasePushkin(Pushkin):
 
         try:
             with SEND_TIME_HISTOGRAM.time():
-                response = messaging.send(request, app=self._app)
-        except FirebaseError as e:
+                response = self._perform_firebase_send(request)
+        except firebase_exceptions.FirebaseError as e:
             span.set_tag("firebase_reason", e.cause)
-            if e.code is NOT_FOUND:
+            if e.code is firebase_exceptions.NOT_FOUND:
                 # Token invalid
                 return [device.pushkey]
-            elif e.code is UNAVAILABLE:
+            elif e.code in (firebase_exceptions.UNAVAILABLE, firebase_exceptions.INTERNAL):
                 error = f"FirebaseError: {e.code} {e.cause}"
                 raise TemporaryNotificationDispatchException(error)
             else:
@@ -146,21 +148,19 @@ class FirebasePushkin(Pushkin):
         span.set_tag("firebase_id", response)
         return []
 
-    def _map_event_dispatch_handler(self, n, log):
-        event_handlers = self.config.event_handlers
-        if not event_handlers:
-            if n.type != "m.room.message" or n.content["msgtype"] not in self.config.message_types:
-                return None
-            else:
-                return self._dispatch_message
+    def _perform_firebase_send(self, request):
+        return messaging.send(request, app=self._app)
+
+    def _map_event_dispatch_handler(self, n):
+        handler = self.config.event_handlers.get(n.type, None)
+        if handler == "message":
+            return partial(self._dispatch_message, n, FirebasePushkin._message_data_from_notification(n))
+        elif handler == "voip":
+            return partial(self._dispatch_data_only, n, FirebasePushkin._voip_data_from_notification(n))
+        elif handler == "event":
+            return partial(self._dispatch_data_only, n, FirebasePushkin._event_data_from_notification(n))
         else:
-            handler = event_handlers.get(n.type, None)
-            if handler == "message":
-                return self._dispatch_message
-            elif handler == "event":
-                return self._dispatch_event
-            else:
-                return None
+            return None
 
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
@@ -170,7 +170,7 @@ class FirebasePushkin(Pushkin):
                 "firebase_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
 
-            dispatch_handler = self._map_event_dispatch_handler(n, log)
+            dispatch_handler = self._map_event_dispatch_handler(n)
             if dispatch_handler is None:
                 return []  # skipped
 
@@ -183,7 +183,7 @@ class FirebasePushkin(Pushkin):
                     with self.sygnal.tracer.start_span(
                             "firebase_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
-                        return await dispatch_handler(n, device, span, log)
+                        return await dispatch_handler(device, span, log)
                 except TemporaryNotificationDispatchException as ex:
                     retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
                     if ex.custom_retry_delay is not None:
@@ -215,31 +215,44 @@ class FirebasePushkin(Pushkin):
 
     @staticmethod
     def _map_ios_priority(n):
-        return "10" if n.prio == 10 else "5"
+        return "10" if n.prio == "high" else "5"
 
-    def _message_body_from_notification(self, n):
+    @staticmethod
+    def _message_body_from_notification(n, message_types):
+        if n.type != "m.room.message":
+            return ""
+
         from_display = ""
         if n.room_name is not None and n.sender_display_name is not None:
             from_display = n.sender_display_name + ": "
 
-        if n.type == "m.room.message" and n.content and "msgtype" in n.content:
-            body_replacement = self.config.message_types[n.content["msgtype"]]
-            if body_replacement is None or body_replacement is '' and "body" in n.content:
-                return from_display + n.content["body"]
-            else:
-                return from_display + body_replacement
+        body = message_types.get(n.content["msgtype"])
+        if body:
+            return body
 
-        # Handling for types other than m.room.message not implemented for now
-        return from_display
+        return from_display + n.content["body"]
 
-    def _message_data_from_notification(self, n):
+    @staticmethod
+    def _message_data_from_notification(n):
         data = {}
         for field in NOTIFICATION_DATA_INCLUDED:
-            if hasattr(n, field) and getattr(n, field) is not None:
-                data[field] = getattr(n, field)
+            value = getattr(n, field, None)
+            if value is not None:
+                data[field] = value
         return data
 
-    def _event_data_from_notification(self, n):
+    @staticmethod
+    def _event_data_from_notification(n):
+        data = {}
+        if n.room_id:
+            data["room_id"] = n.room_id
+        if n.event_id:
+            data["event_id"] = n.event_id
+
+        return data
+
+    @staticmethod
+    def _voip_data_from_notification(n):
         data = {}
         if n.room_id:
             data["room_id"] = n.room_id
