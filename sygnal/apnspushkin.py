@@ -153,8 +153,8 @@ class ApnsPushkin(Pushkin):
         See `event_handlers` configuration option
         """
         payload = apnstruncate.truncate(
-            self._get_payload_event_id_only(n),
-            max_length=self.MAX_JSON_BODY_SIZE)
+            self._get_payload_event_id_only(n), max_length=self.MAX_JSON_BODY_SIZE
+        )
         return await self._dispatch(log, span, device, payload, n.prio)
 
     async def _dispatch_voip(self, log, span, n, device):
@@ -163,9 +163,11 @@ class ApnsPushkin(Pushkin):
         See `event_handlers` configuration option
         """
         payload = apnstruncate.truncate(
-            self._get_payload_voip(n),
-            max_length=self.MAX_JSON_BODY_SIZE_VOIP)
-        return await self._dispatch(log, span, device, payload, n.prio, push_type=PushType.VOIP)
+            self._get_payload_voip(n), max_length=self.MAX_JSON_BODY_SIZE_VOIP
+        )
+        return await self._dispatch(
+            log, span, device, payload, n.prio, push_type=PushType.VOIP
+        )
 
     async def _dispatch_message(self, log, span, n, device):
         """
@@ -173,8 +175,8 @@ class ApnsPushkin(Pushkin):
         See `event_handlers` configuration option
         """
         payload = apnstruncate.truncate(
-            self._get_payload_message(n, log),
-            max_length=self.MAX_JSON_BODY_SIZE)
+            self._get_payload_message(n, log), max_length=self.MAX_JSON_BODY_SIZE
+        )
         return await self._dispatch(log, span, device, payload, n.prio)
 
     async def _dispatch(self, log, span, device, shaved_payload, prio, push_type=None):
@@ -194,7 +196,7 @@ class ApnsPushkin(Pushkin):
             notification_id=notification_id,
             message=shaved_payload,
             priority=self._map_priority(prio),
-            push_type=push_type
+            push_type=push_type,
         )
 
         log.info(f"Sending APN {request.notification_id}")
@@ -216,7 +218,10 @@ class ApnsPushkin(Pushkin):
         else:
             # .description corresponds to the 'reason' response field
             span.set_tag("apns_reason", response.description)
-            if code == self.TOKEN_ERROR_CODE or response.description == self.TOKEN_ERROR_REASON:
+            if (
+                code == self.TOKEN_ERROR_CODE
+                or response.description == self.TOKEN_ERROR_REASON
+            ):
                 return [device.pushkey]
             elif 500 <= code < 600:
                 error = f"{response.status} {response.description}"
@@ -338,16 +343,16 @@ class ApnsPushkin(Pushkin):
         from_display = n.sender
         if n.sender_display_name is not None:
             from_display = n.sender_display_name
-        from_display = from_display[0: self.MAX_FIELD_LENGTH]
+        from_display = from_display[0 : self.MAX_FIELD_LENGTH]
 
         loc_key = None
         loc_args = None
         if n.type == "m.room.message" or n.type == "m.room.encrypted":
             room_display = None
             if n.room_name:
-                room_display = n.room_name[0: self.MAX_FIELD_LENGTH]
+                room_display = n.room_name[0 : self.MAX_FIELD_LENGTH]
             elif n.room_alias:
-                room_display = n.room_alias[0: self.MAX_FIELD_LENGTH]
+                room_display = n.room_alias[0 : self.MAX_FIELD_LENGTH]
 
             content_display = None
             action_display = None
@@ -414,13 +419,13 @@ class ApnsPushkin(Pushkin):
                         loc_key = "USER_INVITE_TO_NAMED_ROOM"
                         loc_args = [
                             from_display,
-                            n.room_name[0: self.MAX_FIELD_LENGTH],
+                            n.room_name[0 : self.MAX_FIELD_LENGTH],
                         ]
                     elif n.room_alias:
                         loc_key = "USER_INVITE_TO_NAMED_ROOM"
                         loc_args = [
                             from_display,
-                            n.room_alias[0: self.MAX_FIELD_LENGTH],
+                            n.room_alias[0 : self.MAX_FIELD_LENGTH],
                         ]
                     else:
                         loc_key = "USER_INVITE_TO_CHAT"

@@ -19,11 +19,20 @@ from functools import partial
 
 import attr
 from opentracing import logs
-from firebase_admin import credentials, initialize_app, messaging, exceptions as firebase_exceptions
+from firebase_admin import (
+    credentials,
+    initialize_app,
+    messaging,
+    exceptions as firebase_exceptions,
+)
 from prometheus_client import Histogram
 from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
 
-from .exceptions import PushkinSetupException, TemporaryNotificationDispatchException, NotificationDispatchException
+from .exceptions import (
+    PushkinSetupException,
+    TemporaryNotificationDispatchException,
+    NotificationDispatchException,
+)
 from .notifications import Pushkin
 
 SEND_TIME_HISTOGRAM = Histogram(
@@ -31,16 +40,13 @@ SEND_TIME_HISTOGRAM = Histogram(
 )
 
 NOTIFICATION_DATA_INCLUDED = [
-    'type',
-    'room_id',
-    'event_id',
-    'sender_display_name',
+    "type",
+    "room_id",
+    "event_id",
+    "sender_display_name",
 ]
 
-DEFAULT_HANDLER = {
-    "m.room.message": "message",
-    "m.call.invite": "voip"
-}
+DEFAULT_HANDLER = {"m.room.message": "message", "m.call.invite": "voip"}
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +63,6 @@ class FirebasePushkin(Pushkin):
 
     MAX_TRIES = 3
     RETRY_DELAY_BASE = 10
-    MAX_BYTES_PER_FIELD = 1024
-    DEFAULT_MAX_CONNECTIONS = 20
 
     def __init__(self, name, sygnal, config):
         super(FirebasePushkin, self).__init__(name, sygnal, config)
@@ -80,18 +84,24 @@ class FirebasePushkin(Pushkin):
 
     async def _dispatch_message(self, n, data, device, span, log):
         notification_title = n.room_name or n.sender_display_name
-        notification_body = self._message_body_from_notification(n, self.config.message_types).strip()
-        notification = messaging.Notification(title=notification_title, body=notification_body)
+        notification_body = self._message_body_from_notification(
+            n, self.config.message_types
+        ).strip()
+        notification = messaging.Notification(
+            title=notification_title, body=notification_body
+        )
 
-        android = messaging.AndroidConfig(priority=self._map_android_priority(n),
-                                          notification=messaging.AndroidNotification(
-                                              click_action="FIREBASE_NOTIFICATION_CLICK",
-                                              tag=n.room_id))
+        android = messaging.AndroidConfig(
+            priority=self._map_android_priority(n),
+            notification=messaging.AndroidNotification(
+                click_action="FIREBASE_NOTIFICATION_CLICK", tag=n.room_id
+            ),
+        )
         apns = messaging.APNSConfig(
             headers={"apns-priority": self._map_ios_priority(n)},
             payload=messaging.APNSPayload(
                 aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id)
-            )
+            ),
         )
 
         request = messaging.Message(
@@ -111,14 +121,11 @@ class FirebasePushkin(Pushkin):
             headers={"apns-priority": self._map_ios_priority(n)},
             payload=messaging.APNSPayload(
                 aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id)
-            )
+            ),
         )
 
         request = messaging.Message(
-            data=data,
-            android=android,
-            apns=apns,
-            token=device.pushkey
+            data=data, android=android, apns=apns, token=device.pushkey
         )
         return await self._dispatch(request, device, span, log)
 
@@ -134,7 +141,10 @@ class FirebasePushkin(Pushkin):
             if e.code is firebase_exceptions.NOT_FOUND:
                 # Token invalid
                 return [device.pushkey]
-            elif e.code in (firebase_exceptions.UNAVAILABLE, firebase_exceptions.INTERNAL):
+            elif e.code in (
+                firebase_exceptions.UNAVAILABLE,
+                firebase_exceptions.INTERNAL,
+            ):
                 error = f"FirebaseError: {e.code} {e.cause}"
                 raise TemporaryNotificationDispatchException(error)
             else:
@@ -154,11 +164,23 @@ class FirebasePushkin(Pushkin):
     def _map_event_dispatch_handler(self, n):
         handler = self.config.event_handlers.get(n.type, None)
         if handler == "message":
-            return partial(self._dispatch_message, n, FirebasePushkin._message_data_from_notification(n))
+            return partial(
+                self._dispatch_message,
+                n,
+                FirebasePushkin._message_data_from_notification(n),
+            )
         elif handler == "voip":
-            return partial(self._dispatch_data_only, n, FirebasePushkin._voip_data_from_notification(n))
+            return partial(
+                self._dispatch_data_only,
+                n,
+                FirebasePushkin._voip_data_from_notification(n),
+            )
         elif handler == "event":
-            return partial(self._dispatch_data_only, n, FirebasePushkin._event_data_from_notification(n))
+            return partial(
+                self._dispatch_data_only,
+                n,
+                FirebasePushkin._event_data_from_notification(n),
+            )
         else:
             return None
 
@@ -167,7 +189,7 @@ class FirebasePushkin(Pushkin):
 
         span_tags = {}
         with self.sygnal.tracer.start_span(
-                "firebase_dispatch", tags=span_tags, child_of=context.opentracing_span
+            "firebase_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
 
             dispatch_handler = self._map_event_dispatch_handler(n)
@@ -181,7 +203,7 @@ class FirebasePushkin(Pushkin):
                     span_tags = {"retry_num": retry_number}
 
                     with self.sygnal.tracer.start_span(
-                            "firebase_dispatch_try", tags=span_tags, child_of=span_parent
+                        "firebase_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
                         return await dispatch_handler(device, span, log)
                 except TemporaryNotificationDispatchException as ex:
@@ -191,7 +213,8 @@ class FirebasePushkin(Pushkin):
 
                     log.warning(
                         "Temporary failure, will retry in %d seconds",
-                        retry_delay, exc_info=True,
+                        retry_delay,
+                        exc_info=True,
                     )
                     span_parent.log_kv(
                         {"event": "temporary_fail", "retrying_in": retry_delay}
