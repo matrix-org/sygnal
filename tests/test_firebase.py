@@ -57,7 +57,6 @@ class FirebaseTestCase(testutils.TestCase):
         config["apps"][PUSHKIN_ID] = {
             "type": "tests.test_firebase.TestFirebasePushkin",
             "credentials": "/path/to/my/certfile.pem",
-            "message_types": {"m.image": "<I>"},
         }
 
     def test_firebase_expected_message(self):
