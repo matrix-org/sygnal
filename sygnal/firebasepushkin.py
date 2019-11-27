@@ -63,8 +63,6 @@ class FirebasePushkin(Pushkin):
 
     MAX_TRIES = 3
     RETRY_DELAY_BASE = 10
-    MAX_BYTES_PER_FIELD = 1024
-    DEFAULT_MAX_CONNECTIONS = 20
 
     def __init__(self, name, sygnal, config):
         super(FirebasePushkin, self).__init__(name, sygnal, config)
