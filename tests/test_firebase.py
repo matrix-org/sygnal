@@ -25,15 +25,14 @@ def make_voip_invite_notification(pushkin, devices, is_video=False):
         "lifetime": 60000,
         "offer": {
             "sdp": f"v=0\r\nm={'video' if is_video else 'audio'} 9 UDP/TLS/RTP/SAVPF\r\n",
-            "type": "offer"
+            "type": "offer",
         },
-        "version": 0
+        "version": 0,
     }
     return notif
 
 
 class TestFirebasePushkin(FirebasePushkin):
-
     def __init__(self, name, sygnal, config):
         super().__init__(name, sygnal, config)
 
@@ -42,11 +41,12 @@ class TestFirebasePushkin(FirebasePushkin):
 
 
 class FirebaseTestCase(testutils.TestCase):
-
     def setUp(self):
         super().setUp()
         self.firebase_pushkin_notif = MagicMock()
-        self.sygnal.pushkins[PUSHKIN_ID]._perform_firebase_send = self.firebase_pushkin_notif
+        self.sygnal.pushkins[
+            PUSHKIN_ID
+        ]._perform_firebase_send = self.firebase_pushkin_notif
 
     def tearDown(self):
         delete_app(self.sygnal.pushkins[PUSHKIN_ID]._app)
@@ -57,9 +57,7 @@ class FirebaseTestCase(testutils.TestCase):
         config["apps"][PUSHKIN_ID] = {
             "type": "tests.test_firebase.TestFirebasePushkin",
             "credentials": "/path/to/my/certfile.pem",
-            "message_types": {
-                "m.image": "<I>"
-            }
+            "message_types": {"m.image": "<I>"},
         }
 
     def test_firebase_expected_message(self):
@@ -75,23 +73,32 @@ class FirebaseTestCase(testutils.TestCase):
         self.assertEquals(1, method.call_count)
         ((notif,), _kwargs) = method.call_args
 
-        self.assertEqual(notif.android.notification.click_action, "FIREBASE_NOTIFICATION_CLICK")
+        self.assertEqual(
+            notif.android.notification.click_action, "FIREBASE_NOTIFICATION_CLICK"
+        )
         self.assertEqual(notif.android.notification.tag, "!slw48wfj34rtnrf:example.com")
         self.assertEqual(notif.android.priority, "high")
 
         self.assertEqual(notif.apns.headers["apns-priority"], "10")
         self.assertEqual(notif.apns.payload.aps.badge, 2)
-        self.assertEqual(notif.apns.payload.aps.thread_id, "!slw48wfj34rtnrf:example.com")
+        self.assertEqual(
+            notif.apns.payload.aps.thread_id, "!slw48wfj34rtnrf:example.com"
+        )
 
-        self.assertEqual(notif.data, {
-            "event_id": "$3957tyerfgewrf384",
-            "room_id": "!slw48wfj34rtnrf:example.com",
-            "sender_display_name": "Major Tom",
-            "type": "m.room.message"
-        })
+        self.assertEqual(
+            notif.data,
+            {
+                "event_id": "$3957tyerfgewrf384",
+                "room_id": "!slw48wfj34rtnrf:example.com",
+                "sender_display_name": "Major Tom",
+                "type": "m.room.message",
+            },
+        )
 
         self.assertEqual(notif.notification.title, "Mission Control")
-        self.assertEqual(notif.notification.body, "Major Tom: I'm floating in a most peculiar way.")
+        self.assertEqual(
+            notif.notification.body, "Major Tom: I'm floating in a most peculiar way."
+        )
 
     def test_firebase_expected_voip(self):
         # Arrange
@@ -111,16 +118,21 @@ class FirebaseTestCase(testutils.TestCase):
 
         self.assertEqual(notif.apns.headers["apns-priority"], "10")
         self.assertEqual(notif.apns.payload.aps.badge, 2)
-        self.assertEqual(notif.apns.payload.aps.thread_id, "!slw48wfj34rtnrf:example.com")
+        self.assertEqual(
+            notif.apns.payload.aps.thread_id, "!slw48wfj34rtnrf:example.com"
+        )
 
-        self.assertEqual(notif.data, {
-            "event_id": "$3957tyerfgewrf384",
-            "room_id": "!slw48wfj34rtnrf:example.com",
-            "sender_display_name": "Major Tom",
-            "call_id": "12345",
-            "is_video_call": "false",
-            "type": "m.call.invite"
-        })
+        self.assertEqual(
+            notif.data,
+            {
+                "event_id": "$3957tyerfgewrf384",
+                "room_id": "!slw48wfj34rtnrf:example.com",
+                "sender_display_name": "Major Tom",
+                "call_id": "12345",
+                "is_video_call": "false",
+                "type": "m.call.invite",
+            },
+        )
 
         self.assertEqual(notif.notification, None)
 
@@ -159,7 +171,7 @@ class FirebaseTestCase(testutils.TestCase):
         method.side_effect = [
             firebase_exceptions.UnavailableError("Server unavailable"),
             firebase_exceptions.InternalError("Internal server error"),
-            FIREBASE_RETURN_VALUE
+            FIREBASE_RETURN_VALUE,
         ]
 
         # # Act
@@ -173,7 +185,9 @@ class FirebaseTestCase(testutils.TestCase):
         """
         # Arrange
         method = self.firebase_pushkin_notif
-        method.side_effect = firebase_exceptions.PermissionDeniedError("Permission denied")
+        method.side_effect = firebase_exceptions.PermissionDeniedError(
+            "Permission denied"
+        )
 
         # Act
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
@@ -202,9 +216,7 @@ class FirebaseMapping(testutils.TestCase):
         config["apps"][PUSHKIN_ID] = {
             "type": "tests.test_firebase.TestFirebasePushkin",
             "credentials": "/path/to/my/certfile.pem",
-            "message_types": {
-                "m.image": "<I>"
-            }
+            "message_types": {"m.image": "<I>"},
         }
 
     def tearDown(self):
@@ -229,7 +241,9 @@ class FirebaseMapping(testutils.TestCase):
         """
         Test audio-call detection
         """
-        payload = make_voip_invite_notification(self, [], is_video=False)["notification"]
+        payload = make_voip_invite_notification(self, [], is_video=False)[
+            "notification"
+        ]
         data = FirebasePushkin._voip_data_from_notification(Notification(payload))
 
         self.assertEqual(data.get("call_id"), "12345")
@@ -250,14 +264,14 @@ class FirebaseMapping(testutils.TestCase):
         Test message_types replacement
         """
         payload = self._make_dummy_notification([])["notification"]
-        payload["content"] = {
-            "msgtype": "m.image",
-            "body": "image.jpeg"
-        }
+        payload["content"] = {"msgtype": "m.image", "body": "image.jpeg"}
 
-        data = FirebasePushkin._message_body_from_notification(Notification(payload), {"m.image": "MY_SUB"})
+        data = FirebasePushkin._message_body_from_notification(
+            Notification(payload), {"m.image": "MY_SUB"}
+        )
         self.assertEqual(data, "MY_SUB")
 
-        data = FirebasePushkin._message_body_from_notification(Notification(payload), {})
+        data = FirebasePushkin._message_body_from_notification(
+            Notification(payload), {}
+        )
         self.assertEqual(data, "Major Tom: image.jpeg")
-

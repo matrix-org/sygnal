@@ -55,9 +55,9 @@ class ApnsTestCase(testutils.TestCase):
             "lifetime": 60000,
             "offer": {
                 "sdp": f"v=0\r\nm={'video' if is_video else 'audio'} 9 UDP/TLS/RTP/SAVPF\r\n",
-                "type": "offer"
+                "type": "offer",
             },
-            "version": 0
+            "version": 0,
         }
         return notif
 
@@ -110,7 +110,9 @@ class ApnsTestCase(testutils.TestCase):
         """
         Test audio-call detection
         """
-        payload = self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=False)["notification"]
+        payload = self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=False)[
+            "notification"
+        ]
         data = ApnsPushkin._get_payload_voip(Notification(payload))
 
         self.assertEqual(data.get("call_id"), "12345")
@@ -120,7 +122,9 @@ class ApnsTestCase(testutils.TestCase):
         """
         Test video-call detection
         """
-        payload = self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=True)["notification"]
+        payload = self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=True)[
+            "notification"
+        ]
         data = ApnsPushkin._get_payload_voip(Notification(payload))
 
         self.assertEqual(data.get("call_id"), "12345")
@@ -171,9 +175,7 @@ class ApnsTestCase(testutils.TestCase):
         a good response to the homeserver.
         """
         # Arrange
-        self.sygnal.pushkins[PUSHKIN_ID].event_handlers = {
-            "m.call.invite": "voip"
-        }
+        self.sygnal.pushkins[PUSHKIN_ID].event_handlers = {"m.call.invite": "voip"}
 
         method = self.apns_pushkin_snotif
         method.side_effect = testutils.make_async_magic_mock(
@@ -181,20 +183,25 @@ class ApnsTestCase(testutils.TestCase):
         )
 
         # Act
-        resp = self._request(self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=False))
+        resp = self._request(
+            self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=False)
+        )
 
         # Assert
         self.assertEquals(1, method.call_count)
         ((notification_req,), _kwargs) = method.call_args
 
-        self.assertEqual(notification_req.message, {
-            "event_id": "$3957tyerfgewrf384",
-            "room_id": "!slw48wfj34rtnrf:example.com",
-            "sender_display_name": "Major Tom",
-            "call_id": "12345",
-            "is_video_call": False,
-            "type": "m.call.invite"
-        })
+        self.assertEqual(
+            notification_req.message,
+            {
+                "event_id": "$3957tyerfgewrf384",
+                "room_id": "!slw48wfj34rtnrf:example.com",
+                "sender_display_name": "Major Tom",
+                "call_id": "12345",
+                "is_video_call": False,
+                "type": "m.call.invite",
+            },
+        )
 
         self.assertEquals({"rejected": []}, resp)
 
