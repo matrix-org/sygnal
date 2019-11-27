@@ -165,6 +165,80 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertEquals({"rejected": []}, resp)
 
+    def test_expected_message(self):
+        """
+        Tests the expected case for event notifications: a good response from APNS means we pass on
+        a good response to the homeserver.
+        """
+        # Arrange
+        self.sygnal.pushkins[PUSHKIN_ID].event_handlers = {
+            "m.room.message": "message"
+        }
+
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(
+            NotificationResult("notID", "200")
+        )
+
+        # Act
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+
+        # Assert
+        self.assertEquals(1, method.call_count)
+        ((notification_req,), _kwargs) = method.call_args
+
+        self.assertEquals(
+            {
+                "room_id": "!slw48wfj34rtnrf:example.com",
+                "aps": {
+                    "alert": {
+                        "loc-key": "MSG_FROM_USER_IN_ROOM_WITH_CONTENT",
+                        "loc-args": [
+                            "Major Tom",
+                            "Mission Control",
+                            "I'm floating in a most peculiar way.",
+                        ],
+                    },
+                    "badge": 3,
+                    "content-available": 1,
+                },
+            },
+            notification_req.message,
+        )
+
+        self.assertEquals({"rejected": []}, resp)
+
+    def test_expected_event(self):
+        """
+        Tests the expected case for event notifications: a good response from APNS means we pass on
+        a good response to the homeserver.
+        """
+        # Arrange
+        self.sygnal.pushkins[PUSHKIN_ID].event_handlers = {
+            "m.room.message": "event"
+        }
+
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(
+            NotificationResult("notID", "200")
+        )
+
+        # Act
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+
+        # Assert
+        self.assertEquals(1, method.call_count)
+        ((notification_req,), _kwargs) = method.call_args
+
+        self.assertEqual(notification_req.message, {
+            "event_id": "$3957tyerfgewrf384",
+            "room_id": "!slw48wfj34rtnrf:example.com",
+            "unread_count": 2,
+            "missed_calls": 1
+        })
+
+        self.assertEquals({"rejected": []}, resp)
+
     def test_expected_voip(self):
         """
         Tests the expected case for voip notifications: a good response from APNS means we pass on
@@ -193,7 +267,9 @@ class ApnsTestCase(testutils.TestCase):
             "sender_display_name": "Major Tom",
             "call_id": "12345",
             "is_video_call": False,
-            "type": "m.call.invite"
+            "type": "m.call.invite",
+            "unread_count": 2,
+            "missed_calls": 1
         })
 
         self.assertEquals({"rejected": []}, resp)

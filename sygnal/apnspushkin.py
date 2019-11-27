@@ -308,27 +308,22 @@ class ApnsPushkin(Pushkin):
         Returns:
             The APNs payload as nested dicts.
         """
-        data = {}
-        if n.room_id:
-            data["room_id"] = n.room_id
-        if n.event_id:
-            data["event_id"] = n.event_id
-
+        payload = ApnsPushkin._get_payload_event_id_only(n)
         if n.type is not None and "m.call" in n.type:
-            data["type"] = n.type
+            payload["type"] = n.type
             if n.sender_display_name is not None:
-                data["sender_display_name"] = n.sender_display_name
+                payload["sender_display_name"] = n.sender_display_name
 
-            data["is_video_call"] = False
+            payload["is_video_call"] = False
             if n.content:
                 if "offer" in n.content and "sdp" in n.content["offer"]:
                     sdp = n.content["offer"]["sdp"]
                     if "m=video" in sdp:
-                        data["is_video_call"] = True
+                        payload["is_video_call"] = True
                 if "call_id" in n.content:
-                    data["call_id"] = n.content["call_id"]
+                    payload["call_id"] = n.content["call_id"]
 
-        return data
+        return payload
 
     def _get_payload_message(self, n, log):
         """
