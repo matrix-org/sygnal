@@ -274,7 +274,8 @@ class ApnsPushkin(Pushkin):
                             retry_delay, twisted_reactor=self.sygnal.reactor
                         )
 
-    def _get_payload_event_id_only(self, n):
+    @staticmethod
+    def _get_payload_event_id_only(n):
         """
         Constructs a payload for a notification where we know only the event ID.
         Args:
@@ -297,7 +298,8 @@ class ApnsPushkin(Pushkin):
 
         return payload
 
-    def _get_payload_voip(self, n):
+    @staticmethod
+    def _get_payload_voip(n):
         """
         Constructs a payload for a voip notification (no alert needed)
         Args:

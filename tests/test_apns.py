@@ -17,6 +17,8 @@ from unittest.mock import patch, MagicMock
 from aioapns.common import NotificationResult
 
 from sygnal import apnstruncate
+from sygnal.apnspushkin import ApnsPushkin
+from sygnal.notifications import Notification
 from tests import testutils
 
 PUSHKIN_ID = "com.example.apns"
@@ -44,6 +46,20 @@ class ApnsTestCase(testutils.TestCase):
     def config_setup(self, config):
         super(ApnsTestCase, self).config_setup(config)
         config["apps"][PUSHKIN_ID] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
+
+    def _make_voip_invite_notification(self, devices, is_video=False):
+        notif = self._make_dummy_notification(devices=devices)
+        notif["notification"]["type"] = "m.call.invite"
+        notif["notification"]["content"] = {
+            "call_id": "12345",
+            "lifetime": 60000,
+            "offer": {
+                "sdp": f"v=0\r\nm={'video' if is_video else 'audio'} 9 UDP/TLS/RTP/SAVPF\r\n",
+                "type": "offer"
+            },
+            "version": 0
+        }
+        return notif
 
     def test_payload_truncation(self):
         """
@@ -90,6 +106,26 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertGreater(len(apnstruncate.json_encode(payload)), 200)
 
+    def test_get_payload_audio_call_from_notifications(self):
+        """
+        Test audio-call detection
+        """
+        payload = self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=False)["notification"]
+        data = ApnsPushkin._get_payload_voip(Notification(payload))
+
+        self.assertEqual(data.get("call_id"), "12345")
+        self.assertEqual(data.get("is_video_call"), False)
+
+    def test_get_payload_video_call_from_notifications(self):
+        """
+        Test video-call detection
+        """
+        payload = self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=True)["notification"]
+        data = ApnsPushkin._get_payload_voip(Notification(payload))
+
+        self.assertEqual(data.get("call_id"), "12345")
+        self.assertEqual(data.get("is_video_call"), True)
+
     def test_expected(self):
         """
         Tests the expected case: a good response from APNS means we pass on
@@ -126,6 +162,39 @@ class ApnsTestCase(testutils.TestCase):
             },
             notification_req.message,
         )
+
+        self.assertEquals({"rejected": []}, resp)
+
+    def test_expected_voip(self):
+        """
+        Tests the expected case for voip notifications: a good response from APNS means we pass on
+        a good response to the homeserver.
+        """
+        # Arrange
+        self.sygnal.pushkins[PUSHKIN_ID].event_handlers = {
+            "m.call.invite": "voip"
+        }
+
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(
+            NotificationResult("notID", "200")
+        )
+
+        # Act
+        resp = self._request(self._make_voip_invite_notification([DEVICE_EXAMPLE], is_video=False))
+
+        # Assert
+        self.assertEquals(1, method.call_count)
+        ((notification_req,), _kwargs) = method.call_args
+
+        self.assertEqual(notification_req.message, {
+            "event_id": "$3957tyerfgewrf384",
+            "room_id": "!slw48wfj34rtnrf:example.com",
+            "sender_display_name": "Major Tom",
+            "call_id": "12345",
+            "is_video_call": False,
+            "type": "m.call.invite"
+        })
 
         self.assertEquals({"rejected": []}, resp)
 

@@ -249,6 +249,11 @@ class FirebasePushkin(Pushkin):
         if n.event_id:
             data["event_id"] = n.event_id
 
+        if n.counts.unread is not None:
+            data["unread_count"] = n.counts.unread
+        if n.counts.missed_calls is not None:
+            data["missed_calls"] = n.counts.missed_calls
+
         return data
 
     @staticmethod
