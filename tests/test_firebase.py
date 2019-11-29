@@ -11,6 +11,7 @@ from firebase_admin import delete_app, exceptions as firebase_exceptions
 PUSHKIN_ID = "com.example.firebase"
 DEVICE_EXAMPLE = {"app_id": "com.example.firebase", "pushkey": "spqr", "pushkey_ts": 42}
 FIREBASE_RETURN_VALUE = str(uuid.uuid4())
+FIREBASE_ANDROID_CLICK_HANDLER = "ANDROID_CLICK_HANDLER"
 
 
 def make_voip_invite_notification(pushkin, devices, is_video=False):
@@ -57,6 +58,7 @@ class FirebaseTestCase(testutils.TestCase):
         config["apps"][PUSHKIN_ID] = {
             "type": "tests.test_firebase.TestFirebasePushkin",
             "credentials": "/path/to/my/certfile.pem",
+            "android_notification_click_action": FIREBASE_ANDROID_CLICK_HANDLER,
         }
 
     def test_firebase_expected_message(self):
@@ -73,7 +75,7 @@ class FirebaseTestCase(testutils.TestCase):
         ((notif,), _kwargs) = method.call_args
 
         self.assertEqual(
-            notif.android.notification.click_action, "FIREBASE_NOTIFICATION_CLICK"
+            notif.android.notification.click_action, FIREBASE_ANDROID_CLICK_HANDLER
         )
         self.assertEqual(notif.android.notification.tag, "!slw48wfj34rtnrf:example.com")
         self.assertEqual(notif.android.priority, "high")

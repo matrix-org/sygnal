@@ -57,6 +57,9 @@ class FirebaseConfig(object):
     max_connections = attr.ib(default=20)
     message_types = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
     event_handlers = attr.ib(default=DEFAULT_HANDLER, type=Dict[str, str])
+    android_notification_click_action = attr.ib(
+        default="FIREBASE_NOTIFICATION_CLICK", type=str
+    )
 
 
 class FirebasePushkin(Pushkin):
@@ -94,7 +97,8 @@ class FirebasePushkin(Pushkin):
         android = messaging.AndroidConfig(
             priority=self._map_android_priority(n),
             notification=messaging.AndroidNotification(
-                click_action="FIREBASE_NOTIFICATION_CLICK", tag=n.room_id
+                click_action=self.config.android_notification_click_action,
+                tag=n.room_id,
             ),
         )
         apns = messaging.APNSConfig(

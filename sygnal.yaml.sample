@@ -205,3 +205,5 @@ apps:
   #  event_handlers:
   #    'm.room.message': message
   #    'm.call.invite': voip
+  # # Override Android click handler, defaults to FIREBASE_NOTIFICATION_CLICK
+  #  android_notification_click_action: "MY_CLICK_HANDLER"
