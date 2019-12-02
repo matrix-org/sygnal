@@ -206,4 +206,6 @@ apps:
   #    'm.room.message': message
   #    'm.call.invite': voip
   # # Override Android click handler, defaults to FIREBASE_NOTIFICATION_CLICK
-  #  android_notification_click_action: "MY_CLICK_HANDLER"
+  #
+  # # Android key for notification messages: https://firebase.google.com/docs/cloud-messaging/http-server-ref
+  #  android_click_action: "ACTION_USER_CLICK"

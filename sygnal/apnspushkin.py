@@ -131,26 +131,37 @@ class ApnsPushkin(Pushkin):
         self.apns_client.pool.max_connection_attempts = 3
 
     def _map_event_dispatch_handler(self, n):
+        """
+        Map event types to dispatch handler with custom behavior, e.g. voip contains
+        VoIP-related content and the message handler is intended for a visible user
+        notification.
+
+        Args:
+            n: The notification to dispatch.
+
+        Returns:
+            Function to dispatch notification to a device.
+        """
         if n.event_id and not n.type:
             return self._dispatch_event
 
         if not self.event_handlers:
             return self._dispatch_message
 
-        handler = self.event_handlers.get(n.type, None)
+        handler = self.event_handlers.get(n.type)
         if handler == "message":
             return self._dispatch_message
         elif handler == "voip":
             return self._dispatch_voip
         elif handler == "event":
             return self._dispatch_event
-        else:
-            return None
+
+        return None
 
     async def _dispatch_event(self, log, span, n, device):
         """
         Dispatch handler for a data only notification (no alert)
-        See `event_handlers` configuration option
+        See `event_handlers` configuration option for more information
         """
         payload = apnstruncate.truncate(
             self._get_payload_event_id_only(n), max_length=self.MAX_JSON_BODY_SIZE
@@ -160,7 +171,7 @@ class ApnsPushkin(Pushkin):
     async def _dispatch_voip(self, log, span, n, device):
         """
         Dispatch handler for a voip notification
-        See `event_handlers` configuration option
+        See `event_handlers` configuration option for more information
         """
         payload = apnstruncate.truncate(
             self._get_payload_voip(n), max_length=self.MAX_JSON_BODY_SIZE_VOIP
@@ -171,8 +182,8 @@ class ApnsPushkin(Pushkin):
 
     async def _dispatch_message(self, log, span, n, device):
         """
-        Dispatch handler for a standard notification
-        See `event_handlers` configuration option
+        Dispatch handler for a standard user notification
+        See `event_handlers` configuration option for more information
         """
         payload = apnstruncate.truncate(
             self._get_payload_message(n, log), max_length=self.MAX_JSON_BODY_SIZE

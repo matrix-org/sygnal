@@ -61,7 +61,7 @@ class FirebaseTestCase(testutils.TestCase):
         config["apps"][PUSHKIN_ID] = {
             "type": "tests.test_firebase.TestFirebasePushkin",
             "credentials": "/path/to/my/certfile.pem",
-            "android_notification_click_action": FIREBASE_ANDROID_CLICK_HANDLER,
+            "android_click_action": FIREBASE_ANDROID_CLICK_HANDLER,
         }
 
     def test_firebase_expected_message(self):

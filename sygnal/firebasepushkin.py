@@ -57,9 +57,7 @@ class FirebaseConfig(object):
     max_connections = attr.ib(default=20)
     message_types = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
     event_handlers = attr.ib(default=DEFAULT_HANDLER, type=Dict[str, str])
-    android_notification_click_action = attr.ib(
-        default="FIREBASE_NOTIFICATION_CLICK", type=str
-    )
+    android_click_action = attr.ib(default=None, type=str)
 
 
 class FirebasePushkin(Pushkin):
@@ -86,6 +84,13 @@ class FirebasePushkin(Pushkin):
         return credentials.Certificate(credential_path)
 
     async def _dispatch_message(self, n, data, device, span, log):
+        """
+        Construct Firebase message and dispatch to device.
+
+        Args:
+            n: The notification for the user and device.
+            data: Optional data fields, see `firebase_admin.messaging.Message`.
+        """
         notification_title = n.room_name or n.sender_display_name
         notification_body = self._message_body_from_notification(
             n, self.config.message_types
@@ -97,8 +102,7 @@ class FirebasePushkin(Pushkin):
         android = messaging.AndroidConfig(
             priority=self._map_android_priority(n),
             notification=messaging.AndroidNotification(
-                click_action=self.config.android_notification_click_action,
-                tag=n.room_id,
+                click_action=self.config.android_click_action, tag=n.room_id,
             ),
         )
         apns = messaging.APNSConfig(
@@ -118,7 +122,7 @@ class FirebasePushkin(Pushkin):
         return await self._dispatch(request, device, span, log)
 
     async def _dispatch_data_only(self, n, data, device, span, log):
-        logger.info("dispatching event")
+        logger.info("Dispatching data-only event")
         android = messaging.AndroidConfig(priority=self._map_android_priority(n))
 
         apns = messaging.APNSConfig(
@@ -166,7 +170,18 @@ class FirebasePushkin(Pushkin):
         return messaging.send(request, app=self._app)
 
     def _map_event_dispatch_handler(self, n):
-        handler = self.config.event_handlers.get(n.type, None)
+        """
+        Map event types to dispatch handler with custom behavior, e.g. voip contains
+        VoIP-related content and the message handler is intended for a visible user
+        notification.
+
+        Args:
+            n: The notification to dispatch.
+
+        Returns:
+            Function to dispatch notification to a device.
+        """
+        handler = self.config.event_handlers.get(n.type)
         if handler == "message":
             return partial(
                 self._dispatch_message,
@@ -185,8 +200,8 @@ class FirebasePushkin(Pushkin):
                 n,
                 FirebasePushkin._event_data_from_notification(n),
             )
-        else:
-            return None
+
+        return None
 
     async def dispatch_notification(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
