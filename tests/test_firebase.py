@@ -13,6 +13,9 @@ DEVICE_EXAMPLE = {"app_id": "com.example.firebase", "pushkey": "spqr", "pushkey_
 FIREBASE_RETURN_VALUE = str(uuid.uuid4())
 FIREBASE_ANDROID_CLICK_HANDLER = "ANDROID_CLICK_HANDLER"
 
+SDP_VIDEO = "v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF\r\n"
+SDP_AUDIO = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF\r\n"
+
 
 def make_voip_invite_notification(pushkin, devices, is_video=False):
     """
@@ -25,7 +28,7 @@ def make_voip_invite_notification(pushkin, devices, is_video=False):
         "call_id": "12345",
         "lifetime": 60000,
         "offer": {
-            "sdp": f"v=0\r\nm={'video' if is_video else 'audio'} 9 UDP/TLS/RTP/SAVPF\r\n",
+            "sdp": SDP_VIDEO if is_video else SDP_AUDIO,
             "type": "offer",
         },
         "version": 0,

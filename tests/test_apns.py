@@ -27,6 +27,9 @@ TEST_CERTFILE_PATH = "/path/to/my/certfile.pem"
 
 DEVICE_EXAMPLE = {"app_id": "com.example.apns", "pushkey": "spqr", "pushkey_ts": 42}
 
+SDP_VIDEO = "v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF\r\n"
+SDP_AUDIO = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF\r\n"
+
 
 class ApnsTestCase(testutils.TestCase):
     def setUp(self):
@@ -54,7 +57,7 @@ class ApnsTestCase(testutils.TestCase):
             "call_id": "12345",
             "lifetime": 60000,
             "offer": {
-                "sdp": f"v=0\r\nm={'video' if is_video else 'audio'} 9 UDP/TLS/RTP/SAVPF\r\n",
+                "sdp": SDP_VIDEO if is_video else SDP_AUDIO,
                 "type": "offer",
             },
             "version": 0,
@@ -171,8 +174,8 @@ class ApnsTestCase(testutils.TestCase):
 
     def test_expected_message(self):
         """
-        Tests the expected case for event notifications: a good response from APNS means we pass on
-        a good response to the homeserver.
+        Tests the expected case for event notifications: a good response from APNS means
+        we pass on a good response to the homeserver.
         """
         # Arrange
         self.sygnal.pushkins[PUSHKIN_ID].event_handlers = {"m.room.message": "message"}
@@ -212,8 +215,8 @@ class ApnsTestCase(testutils.TestCase):
 
     def test_expected_event(self):
         """
-        Tests the expected case for event notifications: a good response from APNS means we pass on
-        a good response to the homeserver.
+        Tests the expected case for event notifications: a good response from APNS means
+        we pass on a good response to the homeserver.
         """
         # Arrange
         self.sygnal.pushkins[PUSHKIN_ID].event_handlers = {"m.room.message": "event"}
@@ -244,8 +247,8 @@ class ApnsTestCase(testutils.TestCase):
 
     def test_expected_voip(self):
         """
-        Tests the expected case for voip notifications: a good response from APNS means we pass on
-        a good response to the homeserver.
+        Tests the expected case for voip notifications: a good response from APNS means
+        we pass on a good response to the homeserver.
         """
         # Arrange
         self.sygnal.pushkins[PUSHKIN_ID].event_handlers = {"m.call.invite": "voip"}
