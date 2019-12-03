@@ -92,7 +92,11 @@ class FirebasePushkin(Pushkin):
 
         if data["type"] == "m.room.message.private":
             message = self.text_message_notification(
-                data, notification_title, unread_count, pushkeys, self.config.event_types.get('m.room.message.private'),
+                data,
+                notification_title,
+                unread_count,
+                pushkeys,
+                self.config.event_types.get("m.room.message.private"),
             )
         elif data["content"]["msgtype"] == "m.text":
             message = self.text_message_notification(
@@ -175,7 +179,12 @@ class FirebasePushkin(Pushkin):
         # Check if data contains a json-decodable and valid MatrixComplexMessage
         if decoded_message:
             return self.complex_message_notification(
-                data, decoded_message, notification_title, unread_count, pushkeys, body_prefix,
+                data,
+                decoded_message,
+                notification_title,
+                unread_count,
+                pushkeys,
+                body_prefix,
             )
 
         if data["room_name"] is None:
@@ -192,7 +201,13 @@ class FirebasePushkin(Pushkin):
         )
 
     def complex_message_notification(
-        self, data, message, notification_title, unread_count, pushkeys, body_prefix: str = "",
+        self,
+        data,
+        message,
+        notification_title,
+        unread_count,
+        pushkeys,
+        body_prefix: str = "",
     ):
         notification_body = message.get("title", "").strip() + " "
         if body_prefix:
