@@ -23,17 +23,17 @@ from uuid import uuid4
 import aioapns
 from aioapns import APNs, NotificationRequest, PushType
 from opentracing import logs, tags
-from prometheus_client import Histogram, Counter
+from prometheus_client import Counter, Histogram
 from twisted.internet.defer import Deferred
 
 from sygnal import apnstruncate
 from sygnal.exceptions import (
+    NotificationDispatchException,
     PushkinSetupException,
     TemporaryNotificationDispatchException,
-    NotificationDispatchException,
 )
 from sygnal.notifications import Pushkin
-from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
+from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +78,7 @@ class ApnsPushkin(Pushkin):
                 nonunderstood,
             )
 
-        self.template = self.get_config("template")
-        self.event_handlers = self.get_config("event_handlers")
+        self.event_handlers = self.get_config("event_handlers", default={})
 
         platform = self.get_config("platform")
         if not platform or platform == "production" or platform == "prod":
@@ -135,6 +134,9 @@ class ApnsPushkin(Pushkin):
         Map event types to dispatch handler with custom behavior, e.g. voip contains
         VoIP-related content and the message handler is intended for a visible user
         notification.
+        If no handler is specified for a given event the default behavior applies
+        -> event handler if type not given
+        -> message handler otherwise
 
         Args:
             n: The notification to dispatch.
@@ -142,13 +144,13 @@ class ApnsPushkin(Pushkin):
         Returns:
             Function to dispatch notification to a device.
         """
-        if n.event_id and not n.type:
-            return self._dispatch_event
-
-        if not self.event_handlers:
-            return self._dispatch_message
-
         handler = self.event_handlers.get(n.type)
+        if not handler:
+            if n.event_id and not n.type:
+                handler = "event"
+            else:
+                handler = "message"
+
         if handler == "message":
             return self._dispatch_message
         elif handler == "voip":
@@ -259,7 +261,7 @@ class ApnsPushkin(Pushkin):
 
             for retry_number in range(self.MAX_TRIES):
                 try:
-                    log.debug("Trying")
+                    log.debug(f"Trying {retry_number} of {self.MAX_TRIES}")
                     span_tags = {"retry_num": retry_number}
 
                     with self.sygnal.tracer.start_span(
@@ -488,6 +490,15 @@ class ApnsPushkin(Pushkin):
 
     @staticmethod
     def _map_priority(priority):
+        """
+        Maps the notification priority coming from synapse to
+        an apns conform value
+        Args:
+            priority (str): Notification priority coming from synapse
+
+        Returns:
+            int: Apns conform priority value
+        """
         p = 10
         if priority == "low":
             p = 5

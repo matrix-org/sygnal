@@ -145,7 +145,9 @@ metrics:
 # For the type, you may specify a fully-qualified Python classname if desired.
 #
 # event_handlers offer a possibility configure certain pushers to only consider certain events and treat them in a
-# specific way. If no event_handler is specified default behavior applies
+# specific way. If no event_handler is specified default behavior applies, meaning that incoming events will be treated
+# by the message type handler, except when no type is specified, then they will be treated as the event type handler.
+# The example config for com.example.myapp.ios describes the different handlers in detail.
 #
 apps:
   # This is an example APNs push configuration using certificate authentication.
@@ -154,7 +156,7 @@ apps:
   #  type: apns
   #  certfile: com.example.myApp_prod_APNS.pem
   # # Available handlers on apns are (voip | event | message)
-  # # - voip: sends a voip type notification containing no alert and only call specific information
+  # # - voip: sends a voip type notification containing no alert and only call specific information (voip certificate required)
   # # - event: sends a notification containing no alert and a payload only containing event_id and room_id if available
   # # - message: represents the default behavior including all event specific information in an alert
   #  event_handlers:
@@ -171,9 +173,6 @@ apps:
   #  topic: MY_TOPIC
   # # Configures which handler should be used to send notifications for a specific event
   # # Available handlers on apns are (voip | event | message)
-  # # - voip: sends a voip type notification containing no alert and only call specific information
-  # # - event: sends a notification containing no alert and a payload only containing event_id and room_id if available
-  # # - message: represents the default behavior including all event specific information in an alert
   #  event_handlers:
   #    'm.call.invite': voip
   #    'm.room.message': message
@@ -198,10 +197,10 @@ apps:
   #    'm.image': 📷
   #    'm.audio': 🎵
   #    'm.video': 🎬
-  # # Available handlers on firebase are (event | message)
-  # # - voip: sends a voip type notification containing no alert and only call specific information
-  # # - event: represents a data push containing no notification (used for background notifications on android)
-  # # - message: represents the default behavior including all event specific information as data and notification payload
+  # # Available handlers on firebase are (voip | event | message)
+  # # Firebase currently does not support voip type pushes for iOS. It is therefore recommended to configure an apns
+  # # pushkin to handle these notifications separately. On Android, voip type pushes are data pushes with calling
+  # # specific information.
   #  event_handlers:
   #    'm.room.message': message
   #    'm.call.invite': voip

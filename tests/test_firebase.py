@@ -1,12 +1,12 @@
 import uuid
 from unittest.mock import MagicMock
 
+from firebase_admin import delete_app, exceptions as firebase_exceptions
+
 from sygnal.firebasepushkin import FirebasePushkin
 from sygnal.notifications import Notification
 
 from tests import testutils
-
-from firebase_admin import delete_app, exceptions as firebase_exceptions
 
 PUSHKIN_ID = "com.example.firebase"
 DEVICE_EXAMPLE = {"app_id": "com.example.firebase", "pushkey": "spqr", "pushkey_ts": 42}
@@ -61,6 +61,9 @@ class FirebaseTestCase(testutils.TestCase):
         config["apps"][PUSHKIN_ID] = {
             "type": "tests.test_firebase.TestFirebasePushkin",
             "credentials": "/path/to/my/certfile.pem",
+            "event_handlers": {
+                "m.call.invite": "voip"
+            },
             "android_click_action": FIREBASE_ANDROID_CLICK_HANDLER,
         }
 
@@ -161,7 +164,7 @@ class FirebaseTestCase(testutils.TestCase):
         method = self.firebase_pushkin_notif
         method.side_effect = firebase_exceptions.UnavailableError("Server unavailable")
 
-        # # Act
+        # Act
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
         self.assertEqual(method.call_count, 3)
         self.assertEqual(resp, 502)
@@ -178,7 +181,7 @@ class FirebaseTestCase(testutils.TestCase):
             FIREBASE_RETURN_VALUE,
         ]
 
-        # # Act
+        # Act
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
         self.assertEqual(method.call_count, 3)
         self.assertEqual(resp, {"rejected": []})
@@ -263,19 +266,30 @@ class FirebaseMapping(testutils.TestCase):
         self.assertEqual(data.get("call_id"), "12345")
         self.assertEqual(data.get("is_video_call"), "true")
 
-    def test_message_body_from_notification(self):
+    def test_message_notification_content(self):
         """
         Test message_types replacement
         """
         payload = self._make_dummy_notification([])["notification"]
         payload["content"] = {"msgtype": "m.image", "body": "image.jpeg"}
 
-        data = FirebasePushkin._message_body_from_notification(
+        title, body = FirebasePushkin._message_notification_content(
             Notification(payload), {"m.image": "MY_SUB"}
         )
-        self.assertEqual(data, "MY_SUB")
+        self.assertEqual(body, "Major Tom: MY_SUB")
 
-        data = FirebasePushkin._message_body_from_notification(
+        payload["room_name"] = ""
+        title, body = FirebasePushkin._message_notification_content(
             Notification(payload), {}
         )
-        self.assertEqual(data, "Major Tom: image.jpeg")
+
+        self.assertEqual(title, payload["sender_display_name"])
+        self.assertEqual(body, "image.jpeg")
+
+        payload["sender_display_name"] = ""
+        title, body = FirebasePushkin._message_notification_content(
+            Notification(payload), {}
+        )
+
+        self.assertEqual(title, "")
+        self.assertEqual(body, "image.jpeg")
