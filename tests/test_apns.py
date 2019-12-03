@@ -56,10 +56,7 @@ class ApnsTestCase(testutils.TestCase):
         notif["notification"]["content"] = {
             "call_id": "12345",
             "lifetime": 60000,
-            "offer": {
-                "sdp": SDP_VIDEO if is_video else SDP_AUDIO,
-                "type": "offer",
-            },
+            "offer": {"sdp": SDP_VIDEO if is_video else SDP_AUDIO, "type": "offer",},
             "version": 0,
         }
         return notif

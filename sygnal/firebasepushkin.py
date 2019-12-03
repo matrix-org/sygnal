@@ -328,7 +328,8 @@ class FirebasePushkin(Pushkin):
 
         Args:
             n: The incoming notification
-            message_types (dict of str: str): Mapping from message types to body replacement strings
+            message_types (dict of str: str): Mapping from message types to
+            body replacement strings
 
         Returns:
             (str, str): The title and body of the visible notification
@@ -361,7 +362,7 @@ class FirebasePushkin(Pushkin):
             n: The incoming notification for which the data should be generated
 
         Returns:
-            (dict of str: obj): Containing the data payload for the outgoing notification
+            (dict of str: obj): Containing data payload for the outgoing notification
         """
         data = {}
         for field in NOTIFICATION_DATA_INCLUDED:
@@ -380,7 +381,7 @@ class FirebasePushkin(Pushkin):
             n: The incoming notification for which the data should be generated
 
         Returns:
-            (dict of str: obj): Containing the data payload for the outgoing notification
+            (dict of str: obj): Containing data payload for the outgoing notification
         """
         data = {}
         if n.room_id is not None:
@@ -405,7 +406,7 @@ class FirebasePushkin(Pushkin):
             n: The incoming notification for which the data should be generated
 
         Returns:
-            (dict of str: obj): Containing the data payload for the outgoing notification
+            (dict of str: obj): Containing data payload for the outgoing notification
         """
         data = {}
         if n.room_id is not None:

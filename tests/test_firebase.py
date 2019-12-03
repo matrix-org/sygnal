@@ -27,10 +27,7 @@ def make_voip_invite_notification(pushkin, devices, is_video=False):
     notif["notification"]["content"] = {
         "call_id": "12345",
         "lifetime": 60000,
-        "offer": {
-            "sdp": SDP_VIDEO if is_video else SDP_AUDIO,
-            "type": "offer",
-        },
+        "offer": {"sdp": SDP_VIDEO if is_video else SDP_AUDIO, "type": "offer",},
         "version": 0,
     }
     return notif
@@ -61,9 +58,7 @@ class FirebaseTestCase(testutils.TestCase):
         config["apps"][PUSHKIN_ID] = {
             "type": "tests.test_firebase.TestFirebasePushkin",
             "credentials": "/path/to/my/certfile.pem",
-            "event_handlers": {
-                "m.call.invite": "voip"
-            },
+            "event_handlers": {"m.call.invite": "voip"},
             "android_click_action": FIREBASE_ANDROID_CLICK_HANDLER,
         }
 
