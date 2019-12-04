@@ -30,6 +30,8 @@ def read(fname):
 
 
 DEPENDENCIES = [
+    "attr>=0.3.1",
+    "firebase-admin>=3.2.0",
     "Twisted>=19.2.1",
     "prometheus_client>=0.7.0,<0.8",
     "aioapns>=1.7",
