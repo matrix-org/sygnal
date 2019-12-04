@@ -133,10 +133,8 @@ class ApnsPushkin(Pushkin):
         """
         Map event types to dispatch handler with custom behavior, e.g. voip contains
         VoIP-related content and the message handler is intended for a visible user
-        notification.
-        If no handler is specified for a given event the default behavior applies
-        -> event handler if type not given
-        -> message handler otherwise
+        notification. If no handler is specified for a given event, it defaults to the
+        message handler.
 
         Args:
             n (Notification): The notification to dispatch.
@@ -145,13 +143,10 @@ class ApnsPushkin(Pushkin):
             Function to dispatch notifications to a device.
             Either _dispatch_message, _dispatch_voip or _dispatch_event.
         """
-        handler = self.event_handlers.get(n.type)
-        if not handler:
-            if n.event_id and not n.type:
-                handler = "event"
-            else:
-                handler = "message"
+        if n.type is None:
+            return None
 
+        handler = self.event_handlers.get(n.type, "message")
         if handler == "message":
             return self._dispatch_message
         elif handler == "voip":

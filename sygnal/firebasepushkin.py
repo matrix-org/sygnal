@@ -219,10 +219,8 @@ class FirebasePushkin(Pushkin):
         """
         Map event types to dispatch handler with custom behavior, e.g. voip contains
         VoIP-related content and the message handler is intended for a visible user
-        notification.
-        If no handler is specified for a given event the default behavior applies
-        -> event handler if type not given
-        -> message handler otherwise
+        notification. If no handler is specified for a given event, it defaults to the
+        message handler.
 
         Args:
             n (Notification): The notification to dispatch.
@@ -231,13 +229,10 @@ class FirebasePushkin(Pushkin):
             partial: _dispatch_message or _dispatch_data_only partial with pre-filled
                 n (Notification) and data (dict[str:obj]).
         """
-        handler = self.config.event_handlers.get(n.type)
-        if not handler:
-            if n.event_id and not n.type:
-                handler = "event"
-            else:
-                handler = "message"
+        if n.type is None:
+            return None
 
+        handler = self.config.event_handlers.get(n.type, "message")
         if handler == "message":
             return partial(
                 self._dispatch_message,
@@ -427,9 +422,9 @@ class FirebasePushkin(Pushkin):
             data["event_id"] = n.event_id
 
         if n.counts.unread is not None:
-            data["unread_count"] = n.counts.unread
+            data["unread_count"] = str(n.counts.unread)
         if n.counts.missed_calls is not None:
-            data["missed_calls"] = n.counts.missed_calls
+            data["missed_calls"] = str(n.counts.missed_calls)
 
         return data
 

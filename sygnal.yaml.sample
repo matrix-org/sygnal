@@ -147,8 +147,7 @@ metrics:
 # event_handlers offer a possibility configure certain pushers to only consider certain
 # events and treat them in a specific way.
 # If no event_handler is specified, then default behavior applies, meaning that incoming
-# events will be treated by the 'message' type handler, except when the incoming
-# notification does not contain an event type, then the 'event' type handler is used.
+# events will be treated by the 'message' type handler.
 # The example config com.example.myapp.ios describes the different handlers in detail.
 #
 # Available event_handlers types:
