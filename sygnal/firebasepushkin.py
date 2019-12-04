@@ -64,6 +64,7 @@ class FirebasePushkin(Pushkin):
 
     MAX_TRIES = 3
     RETRY_DELAY_BASE = 10
+    MAX_BYTES_PER_FIELD = 1024
 
     def __init__(self, name, sygnal, config):
         super(FirebasePushkin, self).__init__(name, sygnal, config)
@@ -97,12 +98,16 @@ class FirebasePushkin(Pushkin):
         )
 
         notification = messaging.Notification(
-            title=notification_title, body=notification_body
+            title=notification_title[0 : self.MAX_BYTES_PER_FIELD],
+            body=notification_body[0 : self.MAX_BYTES_PER_FIELD],
         )
         android = messaging.AndroidConfig(
+            collapse_key=n.room_id,
             priority=self._map_android_priority(n),
             notification=messaging.AndroidNotification(
-                click_action=self.config.android_click_action, tag=n.room_id,
+                tag=n.event_id,
+                click_action=self.config.android_click_action,
+                notification_count=self._map_counts_unread(n),
             ),
         )
 
@@ -334,6 +339,10 @@ class FirebasePushkin(Pushkin):
         Returns:
             (str, str): The title and body of the visible notification
         """
+        notification_title = n.room_name or n.sender_display_name or ""
+        if n.content is None:
+            return notification_title, ""
+
         from_display = ""
         if n.room_name and n.sender_display_name:
             from_display = n.sender_display_name + ": "

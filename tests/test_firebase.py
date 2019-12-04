@@ -78,7 +78,8 @@ class FirebaseTestCase(testutils.TestCase):
         self.assertEqual(
             notif.android.notification.click_action, FIREBASE_ANDROID_CLICK_HANDLER
         )
-        self.assertEqual(notif.android.notification.tag, "!slw48wfj34rtnrf:example.com")
+        self.assertEqual(notif.android.collapse_key, "!slw48wfj34rtnrf:example.com")
+        self.assertEqual(notif.android.notification.tag, "$3957tyerfgewrf384")
         self.assertEqual(notif.android.priority, "high")
 
         self.assertEqual(notif.apns.headers["apns-priority"], "10")
