@@ -139,10 +139,11 @@ class ApnsPushkin(Pushkin):
         -> message handler otherwise
 
         Args:
-            n: The notification to dispatch.
+            n (Notification): The notification to dispatch.
 
         Returns:
-            Function to dispatch notification to a device.
+            Function to dispatch notifications to a device.
+            Either _dispatch_message, _dispatch_voip or _dispatch_event.
         """
         handler = self.event_handlers.get(n.type)
         if not handler:
@@ -164,6 +165,15 @@ class ApnsPushkin(Pushkin):
         """
         Dispatch handler for a data only notification (no alert)
         See `event_handlers` configuration option for more information
+
+        Args:
+            log (NotificationLoggerAdapter): The logger of the context.
+            span (Span): The span for the dispatch request triggering.
+            n (Notification): The notification for the user and device.
+            device (Device): The device to dispatch the notification for.
+
+        Returns:
+            list[str]: List of unregistered device tokens.
         """
         payload = apnstruncate.truncate(
             self._get_payload_event_id_only(n), max_length=self.MAX_JSON_BODY_SIZE
@@ -174,6 +184,15 @@ class ApnsPushkin(Pushkin):
         """
         Dispatch handler for a voip notification
         See `event_handlers` configuration option for more information
+
+        Args:
+            log (NotificationLoggerAdapter): The logger of the context.
+            span (Span): The span for the dispatch request triggering.
+            n (Notification): The notification for the user and device.
+            device (Device): The device to dispatch the notification for.
+
+        Returns:
+            list[str]: List of unregistered device tokens.
         """
         payload = apnstruncate.truncate(
             self._get_payload_voip(n), max_length=self.MAX_JSON_BODY_SIZE_VOIP
@@ -186,6 +205,15 @@ class ApnsPushkin(Pushkin):
         """
         Dispatch handler for a standard user notification
         See `event_handlers` configuration option for more information
+
+        Args:
+            log (NotificationLoggerAdapter): The logger of the context.
+            span (Span): The span for the dispatch request triggering.
+            n (Notification): The notification for the user and device.
+            device (Device): The device to dispatch the notification for.
+
+        Returns:
+            list[str]: List of unregistered device tokens.
         """
         payload = apnstruncate.truncate(
             self._get_payload_message(n, log), max_length=self.MAX_JSON_BODY_SIZE
@@ -193,6 +221,26 @@ class ApnsPushkin(Pushkin):
         return await self._dispatch(log, span, device, payload, n.prio)
 
     async def _dispatch(self, log, span, device, shaved_payload, prio, push_type=None):
+        """
+        Dispatches a notification with payload (shaved_payload) for (device) with
+        type (push_type) and priority (priority) to apns.
+
+        Args:
+            log (NotificationLoggerAdapter): The logger of the context.
+            span (Span): The span for the dispatch request triggering.
+            device (Device): The device to dispatch the notification for.
+            shaved_payload (dict[str:obj]): Nested dict which should comply with
+                the maximum length restriction.
+            prio (str): The priority of the notification.
+            push_type (PushType): The type of the push.
+
+        Returns:
+            list[str]: list of device keys which are no longer registered
+
+        Raises:
+            NotificationDispatchException: Error during dispatch.
+            TemporaryNotificationDispatchException: Server is currently unavailable.
+        """
         notification_id = str(uuid4())
 
         log.info(f"Sending as APNs-ID {notification_id}")
@@ -244,6 +292,22 @@ class ApnsPushkin(Pushkin):
                 raise NotificationDispatchException(error)
 
     async def dispatch_notification(self, n, device, context):
+        """
+        Dispatches a notification using a handler base on the configured parameters and
+        information of the incoming event. Implements retry and error handling for the
+        dispatching process.
+
+        Args:
+            n (Notification): The incoming notification.
+            device (Device): The device token to which the notification should be sent.
+            context (NotificationContext): The request context.
+
+        Returns:
+            list[str]: List of unregistered device tokens.
+
+        Raises:
+            NotificationDispatchException: Error during dispatch (retry failed).
+        """
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
         # The pushkey is kind of secret because you can use it to send push
@@ -296,11 +360,12 @@ class ApnsPushkin(Pushkin):
     def _get_payload_event_id_only(n):
         """
         Constructs a payload for a notification where we know only the event ID.
+
         Args:
-            n: The notification to construct a payload for.
+            n (Notification): The notification to construct a payload for.
 
         Returns:
-            The APNs payload as a nested dicts.
+            dict[str:obj]: The APNs payload as a nested dicts.
         """
         payload = {}
 
@@ -321,10 +386,10 @@ class ApnsPushkin(Pushkin):
         """
         Constructs a payload for a voip notification (no alert needed)
         Args:
-            n: The notification to construct a payload for
+            n (Notification): The notification to construct a payload for
 
         Returns:
-            The APNs payload as nested dicts.
+            dict[str:obj]: The APNs payload as nested dicts.
         """
         payload = ApnsPushkin._get_payload_event_id_only(n)
         if n.type is not None and "m.call" in n.type:
@@ -346,12 +411,13 @@ class ApnsPushkin(Pushkin):
     def _get_payload_message(self, n, log):
         """
         Constructs a payload for a notification.
+
         Args:
-            n: The notification to construct a payload for.
-            log: A logger.
+            n (Notification): The notification to construct a payload for.
+            log (NotificationLoggerAdapter): A logger.
 
         Returns:
-            The APNs payload as nested dicts.
+            dict[str:obj]: The APNs payload as nested dicts.
         """
         from_display = n.sender
         if n.sender_display_name is not None:
@@ -484,6 +550,12 @@ class ApnsPushkin(Pushkin):
         return payload
 
     async def _send_notification(self, request):
+        """
+        Send notification to apns.
+
+        Args:
+            request (NotificationRequest): The request to be sent.
+        """
         return await Deferred.fromFuture(
             asyncio.ensure_future(self.apns_client.send_notification(request))
         )
@@ -492,12 +564,13 @@ class ApnsPushkin(Pushkin):
     def _map_priority(priority):
         """
         Maps the notification priority coming from synapse to
-        an apns conform value
+        an apns conform value.
+
         Args:
-            priority (str): Notification priority coming from synapse
+            priority (str): Notification priority coming from synapse.
 
         Returns:
-            int: Apns conform priority value
+            int: Apns conform priority value.
         """
         p = 10
         if priority == "low":

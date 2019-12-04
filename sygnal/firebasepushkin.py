@@ -87,11 +87,14 @@ class FirebasePushkin(Pushkin):
         Construct Firebase message and dispatch to device.
 
         Args:
-            n: The notification for the user and device.
-            data: Optional data fields, see `firebase_admin.messaging.Message`.
+            n (Notification): The notification for the user and device.
+            data (dict[str:obj]): Optional data fields,
+                see `firebase_admin.messaging.Message`.
+            device (Device): The device to dispatch the notification for.
+            span (Span): The span for the dispatch request triggering.
 
         Returns:
-            (list: str): List of unregistered device tokens
+            list[str]: List of unregistered device tokens.
         """
         notification_title, notification_body = self._message_notification_content(
             n, self.config.message_types
@@ -128,6 +131,20 @@ class FirebasePushkin(Pushkin):
         return await self._dispatch(request, device, span)
 
     async def _dispatch_data_only(self, n, data, device, span):
+        """
+        Dispatch handler for data pushes. Used to handle event_id only requests
+        and VoIP pushes on Android.
+
+        Args:
+            n (Notification): The notification for the user and device.
+            data (dict[str:obj]): Optional data fields,
+                see `firebase_admin.messaging.Message`.
+            device (Device): The device to dispatch the notification for.
+            span (Span): The span for the dispatch request triggering.
+
+        Returns:
+            list[str]: List of unregistered device tokens.
+        """
         logger.info("Dispatching data-only event")
         android = messaging.AndroidConfig(priority=self._map_android_priority(n))
 
@@ -145,19 +162,20 @@ class FirebasePushkin(Pushkin):
 
     async def _dispatch(self, request, device, span):
         """
-        Dispatches a notification request [request] for [device] to firebase.
+        Dispatches a notification request (request) for (device) to firebase.
 
         Args:
-            request: The notification request
-            device: The device token the request is for
-            span: The span in which this function is executed
+            request (Message): The notification request,
+                see `firebase_admin.messaging.Message`.
+            device (Device): The device to dispatch the notification for.
+            span (Span): The span for the dispatch request triggering.
 
         Returns:
-            (list: str): list of device keys which are no longer registered
+            list[str]: list of device keys which are no longer registered
 
         Raises:
-            NotificationDispatchException: error during dispatch
-            TemporaryNotificationDispatchException: server is currently unavailable
+            NotificationDispatchException: Error during dispatch..
+            TemporaryNotificationDispatchException: Server is currently unavailable.
         """
         if request.data is None and request.notification:
             span.log_kv({logs.EVENT: "firebase_no_payload"})
@@ -192,7 +210,8 @@ class FirebasePushkin(Pushkin):
         Sends a request to firebase
 
         Args:
-            request: The request to be sent
+            request (Message): The message to be sent,
+                see `firebase_admin.messaging.Message`.
         """
         return messaging.send(request, app=self._app)
 
@@ -206,12 +225,12 @@ class FirebasePushkin(Pushkin):
         -> message handler otherwise
 
         Args:
-            n: The notification to dispatch.
+            n (Notification): The notification to dispatch.
 
         Returns:
-            Function to dispatch notification to a device.
+            partial: _dispatch_message or _dispatch_data_only partial with pre-filled
+                n (Notification) and data (dict[str:obj]).
         """
-
         handler = self.config.event_handlers.get(n.type)
         if not handler:
             if n.event_id and not n.type:
@@ -247,11 +266,15 @@ class FirebasePushkin(Pushkin):
         dispatching process.
 
         Args:
-            n: The incoming notification
-            device: The device token to which the notification should be sent
+            n (Notification): The incoming notification.
+            device (Device): The device token to which the notification should be sent.
+            context (NotificationContext): The request context.
 
         Returns:
-            (list: str): List of unregistered device tokens
+            list[str]: List of unregistered device tokens.
+
+        Raises:
+            NotificationDispatchException: Error during dispatch (retry failed).
         """
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
@@ -297,15 +320,17 @@ class FirebasePushkin(Pushkin):
 
     @staticmethod
     def _map_counts_unread(n):
+        """Returns unread count if included in incoming notification or 0"""
         return n.counts.unread or 0
 
     @staticmethod
     def _map_android_priority(n):
         """
         Maps the notification priority coming from synapse to
-        an fcm conform value
+        an fcm conform value.
+
         Args:
-            n: Incoming notification
+            n (Notification): The incoming notification.
 
         Returns:
             str: Fcm conform priority value
@@ -316,12 +341,13 @@ class FirebasePushkin(Pushkin):
     def _map_ios_priority(n):
         """
         Maps the notification priority coming from synapse to
-        an apns conform value
+        an apns conform value.
+
         Args:
-            n: Incoming notification
+            n (Notification): The incoming notification.
 
         Returns:
-            int: Apns conform priority value
+            int: Apns conform priority value.
         """
         return "10" if n.prio == "high" else "5"
 
@@ -332,12 +358,12 @@ class FirebasePushkin(Pushkin):
         incoming notification [n] and [message_types].
 
         Args:
-            n: The incoming notification
-            message_types (dict of str: str): Mapping from message types to
-            body replacement strings
+            n (Notification): The incoming notification
+            message_types (dict[str: str]): Mapping from message types to
+                body replacement strings.
 
         Returns:
-            (str, str): The title and body of the visible notification
+            (str, str): The title and body of the visible notification.
         """
         notification_title = n.room_name or n.sender_display_name or ""
         if n.content is None:
@@ -364,14 +390,15 @@ class FirebasePushkin(Pushkin):
     @staticmethod
     def _message_data_from_notification(n):
         """
-        Generates the data payload for an outgoing message type notification
-        based on the predefined fields in [NOTIFICATION_DATA_INCLUDED]
+        Generates the data payload for an outgoing 'message' type notification
+        based on the predefined fields in [NOTIFICATION_DATA_INCLUDED].
 
         Args:
-            n: The incoming notification for which the data should be generated
+            n (Notification): The incoming notification for which the data
+                should be generated.
 
         Returns:
-            (dict of str: obj): Containing data payload for the outgoing notification
+            dict[str:obj]: Containing data payload for the outgoing notification.
         """
         data = {}
         for field in NOTIFICATION_DATA_INCLUDED:
@@ -383,14 +410,15 @@ class FirebasePushkin(Pushkin):
     @staticmethod
     def _event_data_from_notification(n):
         """
-        Generates the data payload for an outgoing event type notification
-        including minimal information about the event
+        Generates the data payload for an outgoing 'event' type notification
+        including minimal information about the event.
 
         Args:
-            n: The incoming notification for which the data should be generated
+            n (Notification): The incoming notification for which the data
+                should be generated.
 
         Returns:
-            (dict of str: obj): Containing data payload for the outgoing notification
+            dict[str:obj]: Containing data payload for the outgoing notification.
         """
         data = {}
         if n.room_id is not None:
@@ -408,14 +436,15 @@ class FirebasePushkin(Pushkin):
     @staticmethod
     def _voip_data_from_notification(n):
         """
-        Generates the data payload for an outgoing voip type notification
-        including voice call specific information
+        Generates the data payload for an outgoing 'voip' type notification
+        including voice call specific information.
 
         Args:
-            n: The incoming notification for which the data should be generated
+            n (Notification): The incoming notification for which the data
+                should be generated.
 
         Returns:
-            (dict of str: obj): Containing data payload for the outgoing notification
+            dict[str,obj]: Containing data payload for the outgoing notification.
         """
         data = {}
         if n.room_id is not None:

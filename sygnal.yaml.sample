@@ -144,10 +144,20 @@ metrics:
 # Specify the pushkey for the application and also the type.
 # For the type, you may specify a fully-qualified Python classname if desired.
 #
-# event_handlers offer a possibility configure certain pushers to only consider certain events and treat them in a
-# specific way. If no event_handler is specified default behavior applies, meaning that incoming events will be treated
-# by the message type handler, except when no type is specified, then they will be treated as the event type handler.
-# The example config for com.example.myapp.ios describes the different handlers in detail.
+# event_handlers offer a possibility configure certain pushers to only consider certain
+# events and treat them in a specific way.
+# If no event_handler is specified, then default behavior applies, meaning that incoming
+# events will be treated by the 'message' type handler, except when the incoming
+# notification does not contain an event type, then the 'event' type handler is used.
+# The example config com.example.myapp.ios describes the different handlers in detail.
+#
+# Available event_handlers types:
+# - voip: sends a voip type notification containing no alert and only call specific
+#   information (voip certificate required for apns)
+# - event: sends a notification containing no alert and a payload only containing
+#   event_id and room_id if available
+# - message: represents the default behavior including all event specific
+#   information in an alert
 #
 apps:
   # This is an example APNs push configuration using certificate authentication.
@@ -156,9 +166,6 @@ apps:
   #  type: apns
   #  certfile: com.example.myApp_prod_APNS.pem
   # # Available handlers on apns are (voip | event | message)
-  # # - voip: sends a voip type notification containing no alert and only call specific information (voip certificate required)
-  # # - event: sends a notification containing no alert and a payload only containing event_id and room_id if available
-  # # - message: represents the default behavior including all event specific information in an alert
   #  event_handlers:
   #    'm.call.invite': voip
   #    'm.room.message': message
@@ -198,13 +205,13 @@ apps:
   #    'm.audio': 🎵
   #    'm.video': 🎬
   # # Available handlers on firebase are (voip | event | message)
-  # # Firebase currently does not support voip type pushes for iOS. It is therefore recommended to configure an apns
-  # # pushkin to handle these notifications separately. On Android, voip type pushes are data pushes with calling
-  # # specific information.
+  # # Firebase currently does not support voip type pushes for iOS. It is therefore
+  # # recommended to configure an apns pushkin to handle these notifications separately.
+  # # On Android, voip type pushes are data pushes with calling specific information.
   #  event_handlers:
   #    'm.room.message': message
   #    'm.call.invite': voip
   # # Override Android click handler, defaults to FIREBASE_NOTIFICATION_CLICK
-  #
-  # # Android key for notification messages: https://firebase.google.com/docs/cloud-messaging/http-server-ref
+  # # Android key for notification messages:
+  # # https://firebase.google.com/docs/cloud-messaging/http-server-ref
   #  android_click_action: "ACTION_USER_CLICK"
