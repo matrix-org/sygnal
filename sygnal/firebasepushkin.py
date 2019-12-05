@@ -321,7 +321,7 @@ class FirebasePushkin(Pushkin):
     @staticmethod
     def _map_android_priority(n):
         """
-        Maps the notification priority coming from synapse to
+        Maps the notification priority coming from the homeserver to
         an fcm conform value.
 
         Args:
@@ -335,7 +335,7 @@ class FirebasePushkin(Pushkin):
     @staticmethod
     def _map_ios_priority(n):
         """
-        Maps the notification priority coming from synapse to
+        Maps the notification priority coming from the homeserver to
         an apns conform value.
 
         Args:

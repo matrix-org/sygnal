@@ -558,11 +558,11 @@ class ApnsPushkin(Pushkin):
     @staticmethod
     def _map_priority(priority):
         """
-        Maps the notification priority coming from synapse to
+        Maps the notification priority coming from the homeserver to
         an apns conform value.
 
         Args:
-            priority (str): Notification priority coming from synapse.
+            priority (str): Notification priority coming from the homeserver.
 
         Returns:
             int: Apns conform priority value.
