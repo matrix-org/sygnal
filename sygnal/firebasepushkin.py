@@ -13,27 +13,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
-from typing import Dict, Optional
+from functools import partial
+from typing import Dict
 
 import attr
-from firebase_admin import credentials, initialize_app, messaging
+from firebase_admin import (
+    credentials,
+    exceptions as firebase_exceptions,
+    initialize_app,
+    messaging,
+)
+from opentracing import logs
 from prometheus_client import Histogram
-from twisted.internet.defer import Deferred
-from twisted.python.threadpool import ThreadPool
 
-from .exceptions import PushkinSetupException
+from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
+
+from .exceptions import (
+    NotificationDispatchException,
+    PushkinSetupException,
+    TemporaryNotificationDispatchException,
+)
 from .notifications import Pushkin
 
 SEND_TIME_HISTOGRAM = Histogram(
     "sygnal_fcm_request_time", "Time taken to send HTTP request"
 )
 
-MAX_TRIES = 3
-RETRY_DELAY_BASE = 10
-MAX_BYTES_PER_FIELD = 1024
-DEFAULT_MAX_CONNECTIONS = 20
+NOTIFICATION_DATA_INCLUDED = [
+    "type",
+    "room_id",
+    "event_id",
+    "sender_display_name",
+]
+
+DEFAULT_HANDLER = {"m.room.message": "message", "m.call.invite": "voip"}
 
 logger = logging.getLogger(__name__)
 
@@ -41,246 +55,410 @@ logger = logging.getLogger(__name__)
 @attr.s
 class FirebaseConfig(object):
     credentials = attr.ib()
-    max_connections = attr.ib(default=20)
     message_types = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
+    event_handlers = attr.ib(default=attr.Factory(dict), type=Dict[str, str])
+    android_click_action = attr.ib(default=None, type=str)
 
 
 class FirebasePushkin(Pushkin):
+
+    MAX_TRIES = 3
+    RETRY_DELAY_BASE = 10
+    MAX_BYTES_PER_FIELD = 1024
+
     def __init__(self, name, sygnal, config):
         super(FirebasePushkin, self).__init__(name, sygnal, config)
 
-        self.db = sygnal.database
-        self.reactor = sygnal.reactor
         self.config = FirebaseConfig(
             **{x: y for x, y in self.cfg.items() if x != "type"}
         )
 
+        self._app = initialize_app(self._load_credentials(), name="app")
+
+    def _load_credentials(self):
         credential_path = self.config.credentials
         if not credential_path:
             raise PushkinSetupException("No Credential path set in config")
 
-        cred = credentials.Certificate(credential_path)
+        return credentials.Certificate(credential_path)
 
-        self._pool = ThreadPool(maxthreads=self.config.max_connections)
-        self._pool.start()
+    async def _dispatch_message(self, n, data, device, span):
+        """
+        Construct Firebase message and dispatch to device.
 
-        self._app = initialize_app(cred, name="app")
+        Args:
+            n (Notification): The notification for the user and device.
+            data (dict[str:obj]): Optional data fields,
+                see `firebase_admin.messaging.Message`.
+            device (Device): The device to dispatch the notification for.
+            span (Span): The span for the dispatch request triggering.
+
+        Returns:
+            list[str]: List of unregistered device tokens.
+        """
+        notification_title, notification_body = self._message_notification_content(
+            n, self.config.message_types
+        )
+
+        notification = messaging.Notification(
+            title=notification_title[0 : self.MAX_BYTES_PER_FIELD],
+            body=notification_body[0 : self.MAX_BYTES_PER_FIELD],
+        )
+        android = messaging.AndroidConfig(
+            collapse_key=n.room_id,
+            priority=self._map_android_priority(n),
+            notification=messaging.AndroidNotification(
+                tag=n.event_id,
+                click_action=self.config.android_click_action,
+                notification_count=self._map_counts_unread(n),
+            ),
+        )
+
+        apns = messaging.APNSConfig(
+            headers={"apns-priority": self._map_ios_priority(n)},
+            payload=messaging.APNSPayload(
+                aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id)
+            ),
+        )
+
+        request = messaging.Message(
+            notification=notification,
+            data=data,
+            android=android,
+            apns=apns,
+            token=device.pushkey,
+        )
+        return await self._dispatch(request, device, span)
+
+    async def _dispatch_data_only(self, n, data, device, span):
+        """
+        Dispatch handler for data pushes. Used to handle event_id only requests
+        and VoIP pushes on Android.
+
+        Args:
+            n (Notification): The notification for the user and device.
+            data (dict[str:obj]): Optional data fields,
+                see `firebase_admin.messaging.Message`.
+            device (Device): The device to dispatch the notification for.
+            span (Span): The span for the dispatch request triggering.
+
+        Returns:
+            list[str]: List of unregistered device tokens.
+        """
+        logger.info("Dispatching data-only event")
+        android = messaging.AndroidConfig(priority=self._map_android_priority(n))
+
+        apns = messaging.APNSConfig(
+            headers={"apns-priority": self._map_ios_priority(n)},
+            payload=messaging.APNSPayload(
+                aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id)
+            ),
+        )
+
+        request = messaging.Message(
+            data=data, android=android, apns=apns, token=device.pushkey
+        )
+        return await self._dispatch(request, device, span)
+
+    async def _dispatch(self, request, device, span):
+        """
+        Dispatches a notification request (request) for (device) to firebase.
+
+        Args:
+            request (Message): The notification request,
+                see `firebase_admin.messaging.Message`.
+            device (Device): The device to dispatch the notification for.
+            span (Span): The span for the dispatch request triggering.
+
+        Returns:
+            list[str]: list of device keys which are no longer registered
+
+        Raises:
+            NotificationDispatchException: Error during dispatch..
+            TemporaryNotificationDispatchException: Server is currently unavailable.
+        """
+        if request.data is None and request.notification:
+            span.log_kv({logs.EVENT: "firebase_no_payload"})
+
+        try:
+            with SEND_TIME_HISTOGRAM.time():
+                response = self._perform_firebase_send(request)
+        except firebase_exceptions.FirebaseError as e:
+            span.set_tag("firebase_reason", e.cause)
+            if e.code is firebase_exceptions.NOT_FOUND:
+                # Token invalid
+                return [device.pushkey]
+            elif e.code in (
+                firebase_exceptions.UNAVAILABLE,
+                firebase_exceptions.INTERNAL,
+            ):
+                error = f"FirebaseError: {e.code} {e.cause}"
+                raise TemporaryNotificationDispatchException(error)
+            else:
+                error = f"FirebaseError: {e.code} {e.cause}"
+                raise NotificationDispatchException(error)
+        except ValueError as e:
+            span.set_tag("firebase_reason", e)
+            error = f"ValueError: {e}"
+            raise NotificationDispatchException(error)
+
+        span.set_tag("firebase_id", response)
+        return []
+
+    def _perform_firebase_send(self, request):
+        """
+        Sends a request to firebase
+
+        Args:
+            request (Message): The message to be sent,
+                see `firebase_admin.messaging.Message`.
+        """
+        return messaging.send(request, app=self._app)
+
+    def _map_event_dispatch_handler(self, n):
+        """
+        Map event types to dispatch handler with custom behavior, e.g. voip contains
+        VoIP-related content and the message handler is intended for a visible user
+        notification. If no handler is specified for a given event, it defaults to the
+        message handler.
+
+        Args:
+            n (Notification): The notification to dispatch.
+
+        Returns:
+            partial: _dispatch_message or _dispatch_data_only partial with pre-filled
+                n (Notification) and data (dict[str:obj]).
+        """
+        if n.type is None:
+            return None
+
+        handler = self.config.event_handlers.get(n.type, "message")
+        if handler == "message":
+            return partial(
+                self._dispatch_message,
+                n,
+                FirebasePushkin._message_data_from_notification(n),
+            )
+        elif handler == "voip":
+            return partial(
+                self._dispatch_data_only,
+                n,
+                FirebasePushkin._voip_data_from_notification(n),
+            )
+        elif handler == "event":
+            return partial(
+                self._dispatch_data_only,
+                n,
+                FirebasePushkin._event_data_from_notification(n),
+            )
+
+        return None
 
     async def dispatch_notification(self, n, device, context):
+        """
+        Dispatches a notification using a handler base on the configured parameters and
+        information of the incoming event. Implements retry and error handling for the
+        dispatching process.
 
-        pushkeys = [
-            device.pushkey for device in n.devices if device.app_id == self.name
-        ]
+        Args:
+            n (Notification): The incoming notification.
+            device (Device): The device token to which the notification should be sent.
+            context (NotificationContext): The request context.
 
-        failed = []
-        data = self.build_message(n)
+        Returns:
+            list[str]: List of unregistered device tokens.
 
-        logger.debug("Type: %s", data["type"])
+        Raises:
+            NotificationDispatchException: Error during dispatch (retry failed).
+        """
+        log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
-        if (
-            data["type"] not in self.config.event_types
-            or data["content"]["msgtype"] not in self.config.message_types
-        ):
-            return failed
+        span_tags = {}
+        with self.sygnal.tracer.start_span(
+            "firebase_dispatch", tags=span_tags, child_of=context.opentracing_span
+        ) as span_parent:
 
-        unread_count = data["unread"] if data["unread"] is not None else 0
-        notification_title = (
-            data["sender_display_name"]
-            if data["room_name"] is None
-            else data["room_name"]
-        )
+            dispatch_handler = self._map_event_dispatch_handler(n)
+            if dispatch_handler is None:
+                return []  # skipped
 
-        if data["type"] == "m.room.message.private":
-            message = self.text_message_notification(
-                data,
-                notification_title,
-                unread_count,
-                pushkeys,
-                self.config.event_types.get("m.room.message.private"),
-            )
-        elif data["content"]["msgtype"] == "m.text":
-            message = self.text_message_notification(
-                data, notification_title, unread_count, pushkeys
-            )
-        else:
-            message = self.default_notification(
-                data,
-                notification_title,
-                unread_count,
-                pushkeys,
-                self.config.message_types[data["content"]["msgtype"]],
-            )
+            for retry_number in range(self.MAX_TRIES):
+                try:
+                    log.debug(f"Trying {retry_number} of {self.MAX_TRIES}")
+                    span_tags = {"retry_num": retry_number}
 
-        failed.extend(await self.send(message))
+                    with self.sygnal.tracer.start_span(
+                        "firebase_dispatch_try", tags=span_tags, child_of=span_parent
+                    ) as span:
+                        return await dispatch_handler(device, span)
+                except TemporaryNotificationDispatchException as ex:
+                    retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
+                    if ex.custom_retry_delay is not None:
+                        retry_delay = ex.custom_retry_delay
 
-        return failed
-
-    async def send(self, message):
-
-        d = Deferred()
-
-        def done(success, result):
-            self.reactor.callFromThread(d.callback, result)
-
-        with SEND_TIME_HISTOGRAM.time():
-            self._pool.callInThreadWithCallback(
-                done, messaging.send_multicast, message, app=self._app
-            )
-            response = await d
-
-        logger.debug(
-            "Message send success: %s of %s",
-            response.success_count,
-            response.success_count + response.failure_count,
-        )
-
-        failed = []
-
-        return failed
+                    log.warning(
+                        "Temporary failure, will retry in %d seconds",
+                        retry_delay,
+                        exc_info=True,
+                    )
+                    span_parent.log_kv(
+                        {"event": "temporary_fail", "retrying_in": retry_delay}
+                    )
+                    if retry_number == self.MAX_TRIES - 1:
+                        raise NotificationDispatchException(
+                            "Retried too many times."
+                        ) from ex
+                    else:
+                        await twisted_sleep(
+                            retry_delay, twisted_reactor=self.sygnal.reactor
+                        )
 
     @staticmethod
-    def build_message(n):
+    def _map_counts_unread(n):
+        """Returns unread count if included in incoming notification or 0"""
+        return n.counts.unread or 0
+
+    @staticmethod
+    def _map_android_priority(n):
+        """
+        Maps the notification priority coming from the homeserver to
+        an fcm conform value.
+
+        Args:
+            n (Notification): The incoming notification.
+
+        Returns:
+            str: Fcm conform priority value
+        """
+        return "normal" if n.prio == "low" else "high"
+
+    @staticmethod
+    def _map_ios_priority(n):
+        """
+        Maps the notification priority coming from the homeserver to
+        an apns conform value.
+
+        Args:
+            n (Notification): The incoming notification.
+
+        Returns:
+            int: Apns conform priority value.
+        """
+        return "10" if n.prio == "high" else "5"
+
+    @staticmethod
+    def _message_notification_content(n, message_types):
+        """
+        Generates the title and body of the visible notification given an
+        incoming notification [n] and [message_types].
+
+        Args:
+            n (Notification): The incoming notification
+            message_types (dict[str: str]): Mapping from message types to
+                body replacement strings.
+
+        Returns:
+            (str, str): The title and body of the visible notification.
+        """
+        notification_title = n.room_name or n.sender_display_name or ""
+        if n.content is None:
+            return notification_title, ""
+
+        from_display = ""
+        if n.room_name and n.sender_display_name:
+            from_display = n.sender_display_name + ": "
+
+        body = ""
+        content_msgtype = n.content.get("msgtype")
+        if n.type == "m.room.message" and content_msgtype:
+            body = message_types.get(content_msgtype, "")
+
+        if body:
+            notification_body = from_display + body
+        else:
+            notification_body = from_display + n.content.get("body", "")
+
+        notification_title = n.room_name or n.sender_display_name or ""
+
+        return notification_title, notification_body
+
+    @staticmethod
+    def _message_data_from_notification(n):
+        """
+        Generates the data payload for an outgoing 'message' type notification
+        based on the predefined fields in [NOTIFICATION_DATA_INCLUDED].
+
+        Args:
+            n (Notification): The incoming notification for which the data
+                should be generated.
+
+        Returns:
+            dict[str:obj]: Containing data payload for the outgoing notification.
+        """
         data = {}
-        for attribute in [
-            "event_id",
-            "type",
-            "sender",
-            "room_name",
-            "room_alias",
-            "membership",
-            "sender_display_name",
-            "content",
-            "room_id",
-        ]:
-            if hasattr(n, attribute):
-                data[attribute] = getattr(n, attribute)
-                # Truncate fields to a sensible maximum length. If the whole
-                # body is too long, GCM will reject it.
-                if (
-                    data[attribute] is not None
-                    and len(data[attribute]) > MAX_BYTES_PER_FIELD
-                ):
-                    data[attribute] = data[attribute][0:MAX_BYTES_PER_FIELD]
+        for field in NOTIFICATION_DATA_INCLUDED:
+            value = getattr(n, field, None)
+            if value is not None:
+                data[field] = value
+        return data
 
-        data["prio"] = "high"
-        if n.prio == "low":
-            data["prio"] = "normal"
+    @staticmethod
+    def _event_data_from_notification(n):
+        """
+        Generates the data payload for an outgoing 'event' type notification
+        including minimal information about the event.
 
-        if getattr(n, "counts", None):
-            data["unread"] = n.counts.unread
-            data["missed_calls"] = n.counts.missed_calls
+        Args:
+            n (Notification): The incoming notification for which the data
+                should be generated.
+
+        Returns:
+            dict[str:obj]: Containing data payload for the outgoing notification.
+        """
+        data = {}
+        if n.room_id is not None:
+            data["room_id"] = n.room_id
+        if n.event_id is not None:
+            data["event_id"] = n.event_id
+
+        if n.counts.unread is not None:
+            data["unread_count"] = str(n.counts.unread)
+        if n.counts.missed_calls is not None:
+            data["missed_calls"] = str(n.counts.missed_calls)
 
         return data
 
-    def text_message_notification(
-        self, data, notification_title, unread_count, pushkeys, body_prefix: str = "",
-    ):
-        decoded_message = decode_complex_message(data["content"]["body"])
-        # Check if data contains a json-decodable and valid MatrixComplexMessage
-        if decoded_message:
-            return self.complex_message_notification(
-                data,
-                decoded_message,
-                notification_title,
-                unread_count,
-                pushkeys,
-                body_prefix,
-            )
+    @staticmethod
+    def _voip_data_from_notification(n):
+        """
+        Generates the data payload for an outgoing 'voip' type notification
+        including voice call specific information.
 
-        if data["room_name"] is None:
-            notification_body = data["content"]["body"]
-        else:
-            notification_body = (
-                data["sender_display_name"] + ": " + data["content"]["body"]
-            )
-        if body_prefix:
-            notification_body = f"{body_prefix} {notification_body}"
+        Args:
+            n (Notification): The incoming notification for which the data
+                should be generated.
 
-        return self.default_notification(
-            data, notification_title, unread_count, pushkeys, notification_body.strip()
-        )
+        Returns:
+            dict[str,obj]: Containing data payload for the outgoing notification.
+        """
+        data = {}
+        if n.room_id is not None:
+            data["room_id"] = n.room_id
+        if n.event_id is not None:
+            data["event_id"] = n.event_id
 
-    def complex_message_notification(
-        self,
-        data,
-        message,
-        notification_title,
-        unread_count,
-        pushkeys,
-        body_prefix: str = "",
-    ):
-        notification_body = message.get("title", "").strip() + " "
-        if body_prefix:
-            notification_body = f"{body_prefix} {notification_body}"
-        if "images" in message:
-            notification_body += self.config.message_types.get("m.image")
-        elif "videos" in message:
-            notification_body += self.config.message_types.get("m.video")
-        elif "title" not in message and "message" in message:
-            notification_body += message["message"].strip()
+        if n.type is not None and "m.call" in n.type:
+            data["type"] = n.type
+            if n.sender_display_name is not None:
+                data["sender_display_name"] = n.sender_display_name
 
-        return self.default_notification(
-            data, notification_title, unread_count, pushkeys, notification_body
-        )
+            data["is_video_call"] = "false"
+            if n.content:
+                if "offer" in n.content and "sdp" in n.content["offer"]:
+                    sdp = n.content["offer"]["sdp"]
+                    if "m=video" in sdp:
+                        data["is_video_call"] = "true"
+                if "call_id" in n.content:
+                    data["call_id"] = n.content["call_id"]
 
-    def default_notification(
-        self, data, notification_title, unread_count, pushkeys, notification_body
-    ):
-        return messaging.MulticastMessage(
-            notification=messaging.Notification(
-                title=notification_title, body=notification_body
-            ),
-            data={
-                "title": notification_title,
-                "body": notification_body,
-                "room_id": data["room_id"],
-            },
-            android=messaging.AndroidConfig(
-                priority=data["prio"],
-                notification=messaging.AndroidNotification(
-                    click_action="FLUTTER_NOTIFICATION_CLICK", tag=data["room_id"]
-                ),
-            ),
-            apns=messaging.APNSConfig(
-                headers={"apns-priority": "10" if data["prio"] == 10 else "5"},
-                payload=messaging.APNSPayload(
-                    aps=messaging.Aps(badge=unread_count, thread_id=data["room_id"])
-                ),
-            ),
-            tokens=pushkeys,
-        )
-
-
-def decode_complex_message(message: str) -> Optional[Dict]:
-    """
-    Tries to parse a message as json
-
-    :param message: json string of notification m.text message
-    :return: dict if successful and None if parsing fails or message is not valid
-    """
-    try:
-        decoded_message = json.loads(message)
-        if is_valid_matrix_complex_message(decoded_message):
-            return decoded_message
-    except json.JSONDecodeError:
-        pass
-
-    return None
-
-
-def is_valid_matrix_complex_message(
-    decoded_message: dict, message_keys=("title", "message", "images", "videos")
-):
-    """
-    Checks if decoded message contains one of the predefined fields
-    of a MatrixComplexMessage
-
-    :param decoded_message: json decoded m.text message
-    :param message_keys: keys to check for
-    :return:
-    """
-    if not isinstance(decoded_message, dict):
-        return False
-
-    # Return whether any required key is in the decoded message
-    return not decoded_message.keys().isdisjoint(message_keys)
+        return data

@@ -20,6 +20,7 @@ import logging
 import logging.config
 import os
 import sys
+import traceback
 
 import opentracing
 import prometheus_client
@@ -159,6 +160,7 @@ class Sygnal(object):
             try:
                 self.pushkins[app_id] = await self._make_pushkin(app_id, app_cfg)
             except Exception:
+                traceback.print_exc()
                 raise Exception(
                     "Failed to load and create pushkin for kind %s" % app_cfg["type"]
                 )
