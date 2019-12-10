@@ -73,6 +73,9 @@ class FirebasePushkin(Pushkin):
             **{x: y for x, y in self.cfg.items() if x != "type"}
         )
 
+        # Play the default notification sound of the default on receiving a message
+        self.notification_sound = messaging.CriticalSound("default")
+
         self._app = initialize_app(self._load_credentials(), name="app")
 
     def _load_credentials(self):
@@ -117,7 +120,7 @@ class FirebasePushkin(Pushkin):
         apns = messaging.APNSConfig(
             headers={"apns-priority": self._map_ios_priority(n)},
             payload=messaging.APNSPayload(
-                aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id)
+                aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id, sound=self.notification_sound)
             ),
         )
 
@@ -151,7 +154,7 @@ class FirebasePushkin(Pushkin):
         apns = messaging.APNSConfig(
             headers={"apns-priority": self._map_ios_priority(n)},
             payload=messaging.APNSPayload(
-                aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id)
+                aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id, sound=self.notification_sound)
             ),
         )
 
