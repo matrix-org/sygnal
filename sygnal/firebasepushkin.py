@@ -120,7 +120,11 @@ class FirebasePushkin(Pushkin):
         apns = messaging.APNSConfig(
             headers={"apns-priority": self._map_ios_priority(n)},
             payload=messaging.APNSPayload(
-                aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id, sound=self.notification_sound)
+                aps=messaging.Aps(
+                    badge=self._map_counts_unread(n),
+                    thread_id=n.room_id,
+                    sound=self.notification_sound,
+                )
             ),
         )
 
@@ -154,7 +158,11 @@ class FirebasePushkin(Pushkin):
         apns = messaging.APNSConfig(
             headers={"apns-priority": self._map_ios_priority(n)},
             payload=messaging.APNSPayload(
-                aps=messaging.Aps(badge=self._map_counts_unread(n), thread_id=n.room_id, sound=self.notification_sound)
+                aps=messaging.Aps(
+                    badge=self._map_counts_unread(n),
+                    thread_id=n.room_id,
+                    sound=self.notification_sound,
+                )
             ),
         )
 
