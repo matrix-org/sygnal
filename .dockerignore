@@ -1,0 +1,6 @@
+.buildkite/
+matrix_sygnal.egg-info/
+tests/
+.git/
+.idea/
+sygnal.yaml
