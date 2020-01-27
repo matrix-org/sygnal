@@ -59,96 +59,12 @@ gcm
 firebase
   This sends push notifications to iOS and Android using Firebase.
 
-Other configuration options
----------------------------
-event_handlers:
-  The firebase and apns pushkin are also configurable with event handlers,
-  making it possible to specify different handlers for certain events.
-
-  Currently three types of handlers are available:
-
-  voip:
-    | For apns this handler uses the voIP type notification and includes VoIP
-    | specific information to the device. On firebase the data pushes are used to send the
-    | same information
-
-  event:
-    | Includes only the most basic information (event_id and room_id) and
-    | uses no alert (visible notification)
-
-  message:
-    | Includes all information of the event and is sent as a visible notification
-    | with data attached to it. (Data can be truncated to stay within the data limits
-    | of apns and firebase)
-
-.. sourcecode:: js
-
-      event_handlers:
-        'm.call.invite': voip
-        'm.room.message': message
-        'm.room.member': event
-
-|
-
-message_types:
-  Firebase currently also provides an option for 'm.room.message' to replace the content
-  of the visible notification with a replacement per 'msg_type'.
-
-.. sourcecode:: js
-
-  message_types:
-    'm.image': This is an image message
-    'm.audio': This is a audio message
-    'm.video': This is a video message
-
 Running
 =======
 
 ``python -m sygnal.sygnal``
 
 Python 3.7 or higher is required.
-
-Deployment
-==========
-Sygnal can be deployed using docker. The docker file can be found at 'docker/Dockerfile'
-to customize configuration.
-
-
-Building the image:
-    | Specify the {organization}/{repository}:{version-tag} you want to push
-    | the image to as the '-t' option.
-
-.. sourcecode:: bash
-
-    docker build . -f docker/Dockerfile -t {organization}/{repository}:{version-tag}
-
-Pushing the image to docker hub:
-    | Before pushing you need to log into an account which has write access to the
-    | repository.
-
-.. sourcecode:: bash
-
-    docker login --username {username} --password {password}
-    docker build . -f docker/Dockerfile -t {organization}/{repository}:{version-tag}
-
-Deployment:
-    | A simple docker-compose file can be used to deploy sygnal to a server.
-
-.. sourcecode:: yaml
-
-    version: '3.7'
-
-    services:
-      sygnal:
-        image: {organization}/{repository}:{version-tag}
-        restart: unless-stopped
-        environment:
-          - SYGNAL_CONF=/data/sygnal.yaml
-        volumes:
-          - ./data:/data
-        ports:
-          - 5000:5000
-
 
 Log Rotation
 ============
