@@ -108,10 +108,9 @@ class FirebasePushkin(Pushkin):
             body=notification_body[0 : self.MAX_BYTES_PER_FIELD],
         )
         android = messaging.AndroidConfig(
-            collapse_key=n.room_id,
             priority=self._map_android_priority(n),
             notification=messaging.AndroidNotification(
-                tag=n.event_id,
+                tag=n.room_id,
                 click_action=self.config.android_click_action,
                 notification_count=self._map_counts_unread(n),
             ),
