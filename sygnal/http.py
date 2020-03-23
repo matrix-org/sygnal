@@ -14,27 +14,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import contextlib
 import json
 import logging
 import sys
 import time
 import traceback
+from typing import Optional
 from uuid import uuid4
 
-from opentracing import Format, tags, logs
-from prometheus_client import Counter, Histogram
+from opentracing import Format, logs, tags
+from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import ensureDeferred
 from twisted.web import server
 from twisted.web.http import (
-    proxiedLogFormatter,
-    datetimeToLogString,
     combinedLogFormatter,
+    datetimeToLogString,
+    proxiedLogFormatter,
 )
 from twisted.web.resource import Resource
-from twisted.web.server import NOT_DONE_YET
+from twisted.web.server import NOT_DONE_YET, Request
 
 from sygnal.notifications import NotificationContext
 from sygnal.utils import NotificationLoggerAdapter
+
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
 
@@ -66,6 +69,12 @@ NOTIFY_HANDLE_HISTOGRAM = Histogram(
     labelnames=["code"],
 )
 
+REQUESTS_IN_FLIGHT_GUAGE = Gauge(
+    "sygnal_requests_in_flight",
+    "Number of HTTP requests in flight",
+    labelnames=["resource"],
+)
+
 
 class V1NotifyHandler(Resource):
     def __init__(self, sygnal):
@@ -88,7 +97,7 @@ class V1NotifyHandler(Resource):
             PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
         return response
 
-    def _handle_request(self, request):
+    def _handle_request(self, request: "SygnalRequest"):
         """
         Actually handle the request.
         Args:
@@ -164,9 +173,11 @@ class V1NotifyHandler(Resource):
 
             root_span_accounted_for = True
 
-            ensureDeferred(
-                self._handle_dispatch(root_span, request, log, notif, context)
-            )
+            async def cb():
+                with request.processing():
+                    await self._handle_dispatch(root_span, request, log, notif, context)
+
+            ensureDeferred(cb())
 
             # we have to try and send the notifications first,
             # so we can find out which ones to reject
@@ -262,6 +273,95 @@ class HealthHandler(Resource):
         return b""
 
 
+class SygnalRequest(Request):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        # track if we are processing this as an asynchronous request
+        self._is_processing = False
+
+        # track if the response has been written, or the client connection has been
+        # dropped.
+        self._finished = False
+
+        # the in-flight metric to decrement on finish
+        self._in_flight_metric = None  # type: Optional[Gauge]
+
+    def render(self, resrc):
+        # this is called once a Resource has been found to serve the request.
+        self._in_flight_metric = REQUESTS_IN_FLIGHT_GUAGE.labels(
+            resrc.__class__.__name__
+        )
+        self._in_flight_metric.inc()
+        super().render(resrc)
+
+    @contextlib.contextmanager
+    def processing(self):
+        """Record the fact that we are processing this request.
+
+        Returns a context manager; the correct way to use this is:
+
+        async def handle_request(request):
+            with request.processing("FooServlet"):
+                awati really_handle_the_request()
+
+        Once the context manager is closed, the various metrics will be updated.
+        """
+        if self._is_processing:
+            raise RuntimeError("Request is already processing")
+        self._is_processing = True
+
+        try:
+            yield
+        except Exception:
+            # this should already have been caught, and sent back to the client as a
+            # 500.
+            logger.exception("Asynchronous messge handler raised an uncaught exception")
+        finally:
+            # the request handler has finished its work and either sent the whole
+            # response back, or handed over responsibility to a Producer.
+            self._is_processing = False
+
+            # if we've already sent the response (or we will never do so, because the
+            # connection has been lost), log it now; otherwise, we wait for the
+            # response to be sent.
+            if self._finished:
+                self._finished_processing()
+
+    def finish(self):
+        # this is called once the application has finished writing the response body;
+        # note that if the connection drops before that happens it should never be
+        # called.
+        super().finish()
+        self._finished = True
+        if not self._is_processing:
+            self._finished_processing()
+
+    def connectionLost(self, reason):
+        # this is called when the client connection is closed before the response is
+        # written.
+        self._finished = True
+        super().connectionLost(self)
+
+        logger.warning(
+            "Client connection lost when processing %r: %s %s",
+            self,
+            reason.type,
+            reason.value,
+        )
+
+        if not self._is_processing:
+            self._finished_processing()
+
+    def _finished_processing(self):
+        if self._in_flight_metric is None:
+            # this can happen if the connection is lost before the request headers are
+            # read (ie, before render() is called); alternatively it could happen
+            # if we get here twice somehow. Either way, there is nothing to do.
+            return
+        self._in_flight_metric.dec()
+        self._in_flight_metric = None
+
+
 class SygnalLoggedSite(server.Site):
     """
     A subclass of Site to perform access logging in a way that makes sense for
@@ -308,5 +408,8 @@ class PushGatewayApiServer(object):
         )
 
         self.site = SygnalLoggedSite(
-            root, reactor=sygnal.reactor, log_formatter=log_formatter
+            root,
+            log_formatter=log_formatter,
+            reactor=sygnal.reactor,
+            requestFactory=SygnalRequest,
         )
