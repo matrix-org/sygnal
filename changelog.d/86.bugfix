@@ -1,0 +1,1 @@
+Fix a bug which meant that requests were logged with an invalid timestamp.
