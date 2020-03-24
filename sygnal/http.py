@@ -21,20 +21,21 @@ import time
 import traceback
 from uuid import uuid4
 
-from opentracing import Format, tags, logs
-from prometheus_client import Counter, Histogram
+from opentracing import Format, logs, tags
+from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import ensureDeferred
 from twisted.web import server
 from twisted.web.http import (
-    proxiedLogFormatter,
-    datetimeToLogString,
     combinedLogFormatter,
+    datetimeToLogString,
+    proxiedLogFormatter,
 )
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from sygnal.notifications import NotificationContext
 from sygnal.utils import NotificationLoggerAdapter
+
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
 
@@ -64,6 +65,12 @@ NOTIFY_HANDLE_HISTOGRAM = Histogram(
     "sygnal_notify_time",
     "Time taken to handle /notify push gateway request",
     labelnames=["code"],
+)
+
+REQUESTS_IN_FLIGHT_GUAGE = Gauge(
+    "sygnal_requests_in_flight",
+    "Number of HTTP requests in flight",
+    labelnames=["resource"],
 )
 
 
@@ -164,9 +171,13 @@ class V1NotifyHandler(Resource):
 
             root_span_accounted_for = True
 
-            ensureDeferred(
-                self._handle_dispatch(root_span, request, log, notif, context)
-            )
+            async def cb():
+                with REQUESTS_IN_FLIGHT_GUAGE.labels(
+                    self.__class__.__name__
+                ).track_inprogress():
+                    await self._handle_dispatch(root_span, request, log, notif, context)
+
+            ensureDeferred(cb())
 
             # we have to try and send the notifications first,
             # so we can find out which ones to reject
