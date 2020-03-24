@@ -270,16 +270,18 @@ class SygnalLoggedSite(server.Site):
     Sygnal.
     """
 
-    def __init__(self, *args, reactor, log_formatter, **kwargs):
-        super().__init__(*args, reactor=reactor, **kwargs)
+    def __init__(self, *args, log_formatter, **kwargs):
+        super().__init__(*args, **kwargs)
         self.log_formatter = log_formatter
-        self.reactor = reactor
         self.logger = logging.getLogger("sygnal.access")
 
     def log(self, request):
-        log_date_time = datetimeToLogString(self.reactor.seconds())
+        """Log this request. Called by request.finish."""
+        # this also works around a bug in twisted.web.http.HTTPFactory which uses a
+        # monotonic time as an epoch time.
+        log_date_time = datetimeToLogString()
         line = self.log_formatter(log_date_time, request)
-        self.logger.info("%s", line)
+        self.logger.info("Handled request: %s", line)
 
 
 class PushGatewayApiServer(object):
