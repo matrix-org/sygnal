@@ -15,16 +15,17 @@
 import json
 from io import BytesIO
 from threading import Condition
+from typing import BinaryIO, Optional, Union
 
+import attr
 from twisted.internet.defer import ensureDeferred
 from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial import unittest
 from twisted.web.http_headers import Headers
-from twisted.web.server import NOT_DONE_YET
-from twisted.web.test.requesthelper import DummyRequest as UnaugmentedDummyRequest
+from twisted.web.server import Request
 
 from sygnal.http import PushGatewayApiServer
-from sygnal.sygnal import Sygnal, merge_left_with_defaults, CONFIG_DEFAULTS
+from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
 
 REQ_PATH = b"/_matrix/push/v1/notify"
 
@@ -78,77 +79,36 @@ class TestCase(unittest.TestCase):
             }
         }
 
-    def _make_request(self, payload, headers=None):
+    def _request(self, payload) -> Union[dict, int]:
         """
-        Make a dummy request to the notify endpoint with the specified
+        Make a dummy request to the notify endpoint with the specified payload
+
         Args:
             payload: payload to be JSON encoded
-            headers (dict, optional): A L{dict} mapping header names as L{bytes}
-            to L{list}s of header values as L{bytes}
-
-        Returns (DummyRequest):
-            A dummy request corresponding to the request arguments supplied.
-
-        """
-        pathparts = REQ_PATH.split(b"/")
-        if pathparts[0] == b"":
-            pathparts = pathparts[1:]
-        dreq = DummyRequest(pathparts)
-        dreq.requestHeaders = Headers(headers or {})
-        dreq.responseCode = 200  # default to 200
-
-        if isinstance(payload, dict):
-            payload = json.dumps(payload)
-
-        dreq.content = BytesIO(payload.encode())
-        dreq.method = "POST"
-
-        return dreq
-
-    def _collect_request(self, request):
-        """
-        Collects (waits until done and then returns the result of) the request.
-        Args:
-            request (Request): a request to collect
 
         Returns (dict or int):
             If successful (200 response received), the response is JSON decoded
             and the resultant dict is returned.
             If the response code is not 200, returns the response code.
         """
-        resource = self.v1api.site.getResourceFor(request)
-        rendered = resource.render(request)
+        if isinstance(payload, dict):
+            payload = json.dumps(payload)
+        content = BytesIO(payload.encode())
 
-        if request.responseCode != 200:
-            return request.responseCode
+        channel = FakeChannel(self.v1api.site, self.sygnal.reactor)
+        channel.process_request(b"POST", REQ_PATH, content)
 
-        if isinstance(rendered, str):
-            return json.loads(rendered)
-        elif rendered == NOT_DONE_YET:
+        while not channel.done:
+            # we need to advance until the request has been finished
+            self.sygnal.reactor.advance(1)
+            self.sygnal.reactor.wait_for_work(lambda: channel.done)
 
-            while not request.finished:
-                # we need to advance until the request has been finished
-                self.sygnal.reactor.advance(1)
-                self.sygnal.reactor.wait_for_work(lambda: request.finished)
+        assert channel.done
 
-            assert request.finished > 0
+        if channel.result.code != 200:
+            return channel.result.code
 
-            if request.responseCode != 200:
-                return request.responseCode
-
-            written_bytes = b"".join(request.written)
-            return json.loads(written_bytes)
-        else:
-            raise RuntimeError(f"Can't collect: {rendered}")
-
-    def _request(self, *args, **kwargs):
-        """
-        Makes and collects a request.
-        See L{_make_request} and L{_collect_request}.
-        """
-        request = self._make_request(*args, **kwargs)
-
-        return self._collect_request(request)
+        return json.loads(channel.response_body)
 
 
 class ExtendedMemoryReactorClock(MemoryReactorClock):
@@ -192,20 +152,6 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
             self.work_notifier.release()
 
 
-class DummyRequest(UnaugmentedDummyRequest):
-    """
-    Tracks the response code in the 'code' field, like a normal Request.
-    """
-
-    def __init__(self, postpath, session=None, client=None):
-        super().__init__(postpath, session, client)
-        self.code = 200
-
-    def setResponseCode(self, code, message=None):
-        super().setResponseCode(code, message)
-        self.code = code
-
-
 class DummyResponse(object):
     def __init__(self, code):
         self.code = code
@@ -216,3 +162,63 @@ def make_async_magic_mock(ret_val):
         return ret_val
 
     return dummy
+
+
+@attr.s
+class HTTPResult:
+    """Holds the result data for FakeChannel"""
+
+    version = attr.ib(type=str)
+    code = attr.ib(type=int)
+    reason = attr.ib(type=str)
+    headers = attr.ib(type=Headers)
+
+
+@attr.s
+class FakeChannel(object):
+    """
+    A fake Twisted Web Channel (the part that interfaces with the
+    wire).
+    """
+
+    site = attr.ib()
+    _reactor = attr.ib()
+    _producer = None
+
+    result = attr.ib(type=Optional[HTTPResult], default=None)
+    response_body = b""
+    done = attr.ib(type=bool, default=False)
+
+    @property
+    def code(self):
+        if not self.result:
+            raise Exception("No result yet.")
+        return int(self.result.code)
+
+    def writeHeaders(self, version, code, reason, headers):
+        self.result = HTTPResult(version, int(code), reason, headers)
+
+    def write(self, content):
+        assert isinstance(content, bytes), "Should be bytes! " + repr(content)
+        self.response_body += content
+
+    def requestDone(self, _self):
+        self.done = True
+
+    def getPeer(self):
+        return None
+
+    def getHost(self):
+        return None
+
+    @property
+    def transport(self):
+        return None
+
+    def process_request(self, method: bytes, request_path: bytes, content: BinaryIO):
+        """pretend that a request has arrived, and process it"""
+
+        # this is normally done by HTTPChannel, in its various lineReceived etc methods
+        req = self.site.requestFactory(self)  # type: Request
+        req.content = content
+        req.requestReceived(method, request_path, b"1.1")

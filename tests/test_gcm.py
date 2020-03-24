@@ -68,9 +68,7 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
-
-        resp = self._collect_request(req)
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         self.assertEquals(resp, {"rejected": []})
         self.assertEquals(gcm.num_requests, 1)
@@ -85,9 +83,7 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"registration_id": "spqr", "error": "NotRegistered"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
-
-        resp = self._collect_request(req)
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         self.assertEquals(resp, {"rejected": ["spqr"]})
         self.assertEquals(gcm.num_requests, 1)
@@ -103,9 +99,7 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg42"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
-
-        resp = self._collect_request(req)
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         self.assertEquals(resp, {"rejected": []})
 
@@ -113,9 +107,7 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg43"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
-
-        resp = self._collect_request(req)
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         self.assertEquals(gcm.last_request_body["to"], "spqr_new")
 
@@ -138,11 +130,9 @@ class GcmTestCase(testutils.TestCase):
             },
         )
 
-        req = self._make_request(
+        resp = self._request(
             self._make_dummy_notification([DEVICE_EXAMPLE, DEVICE_EXAMPLE2])
         )
-
-        resp = self._collect_request(req)
 
         self.assertEquals(resp, {"rejected": []})
         self.assertEquals(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
@@ -166,11 +156,9 @@ class GcmTestCase(testutils.TestCase):
             },
         )
 
-        req = self._make_request(
+        resp = self._request(
             self._make_dummy_notification([DEVICE_EXAMPLE, DEVICE_EXAMPLE2])
         )
-
-        resp = self._collect_request(req)
 
         self.assertEquals(resp, {"rejected": ["spqr2"]})
         self.assertEquals(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
@@ -188,9 +176,7 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg42"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
-
-        resp = self._collect_request(req)
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         self.assertEquals(resp, {"rejected": []})
 
@@ -202,9 +188,7 @@ class GcmTestCase(testutils.TestCase):
             {"results": [{"registration_id": "spqr_new", "error": "NotRegistered"}]},
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
-
-        resp = self._collect_request(req)
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         self.assertEquals(gcm.last_request_body["to"], "spqr_new")
 
