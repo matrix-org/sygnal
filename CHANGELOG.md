@@ -1,3 +1,25 @@
+Sygnal 0.3.0 (2020-03-24)
+=========================
+
+Features
+--------
+
+- Add prometheus metric for the number of requests in flight. ([\#87](https://github.com/matrix-org/sygnal/issues/87))
+- Add prometheus metrics to track pushkin things. ([\#88](https://github.com/matrix-org/sygnal/issues/88))
+
+
+Bugfixes
+--------
+
+- Fix warnings about finish() after disconnect. ([\#84](https://github.com/matrix-org/sygnal/issues/84))
+- Fix a bug which meant that requests were logged with an invalid timestamp. ([\#86](https://github.com/matrix-org/sygnal/issues/86))
+
+
+Internal Changes
+----------------
+
+- Change how we stub out HTTP requests in the tests. ([\#85](https://github.com/matrix-org/sygnal/issues/85))
+
 
 ### Sygnal 0.2.4 (2019-08-29)
 
