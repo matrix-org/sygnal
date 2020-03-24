@@ -172,7 +172,9 @@ class V1NotifyHandler(Resource):
             root_span_accounted_for = True
 
             async def cb():
-                with REQUESTS_IN_FLIGHT_GUAGE.track_inprogress():
+                with REQUESTS_IN_FLIGHT_GUAGE.labels(
+                    self.__class__.__name__
+                ).track_inprogress():
                     await self._handle_dispatch(root_span, request, log, notif, context)
 
             ensureDeferred(cb())
