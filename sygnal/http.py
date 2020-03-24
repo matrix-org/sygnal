@@ -240,7 +240,9 @@ class V1NotifyHandler(Resource):
             request.setResponseCode(500)
             log.error("Exception whilst dispatching notification.", exc_info=True)
         finally:
-            request.finish()
+            if not request._disconnected:
+                request.finish()
+
             PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
             root_span.set_tag(tags.HTTP_STATUS_CODE, request.code)
 
