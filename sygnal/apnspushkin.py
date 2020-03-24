@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright 2014 OpenMarket Ltd
 # Copyright 2017 Vector Creations Ltd
-# Copyright 2019 The Matrix.org Foundation C.I.C.
+# Copyright 2019-2020 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from uuid import uuid4
 import aioapns
 from aioapns import APNs, NotificationRequest
 from opentracing import logs, tags
-from prometheus_client import Histogram, Counter
+from prometheus_client import Histogram, Counter, Gauge
 from twisted.internet.defer import Deferred
 
 from sygnal import apnstruncate
@@ -39,6 +39,10 @@ logger = logging.getLogger(__name__)
 
 SEND_TIME_HISTOGRAM = Histogram(
     "sygnal_apns_request_time", "Time taken to send HTTP request to APNS"
+)
+
+ACTIVE_REQUESTS_GAUGE = Gauge(
+    "sygnal_active_apns_requests", "Number of APNS requests in flight"
 )
 
 RESPONSE_STATUS_CODES_COUNTER = Counter(
@@ -148,8 +152,10 @@ class ApnsPushkin(Pushkin):
         )
 
         try:
-            with SEND_TIME_HISTOGRAM.time():
-                response = await self._send_notification(request)
+
+            with ACTIVE_REQUESTS_GAUGE.track_inprogress():
+                with SEND_TIME_HISTOGRAM.time():
+                    response = await self._send_notification(request)
         except aioapns.ConnectionError:
             raise TemporaryNotificationDispatchException("aioapns Connection Failure")
 
