@@ -40,14 +40,12 @@ CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
     "db": {
-        "args": {
-            "host": "localhost",
-            "port": 5432,
-            "user": "sygnal",
-            "database": "sygnal",
-            "cp_min": 1,
-            "cp_max": 1,
-        },
+        "host": "localhost",
+        "port": 5432,
+        "user": "sygnal",
+        "database": "sygnal",
+        "cp_min": 1,
+        "cp_max": 1,
     },
     "metrics": {
         "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
@@ -130,7 +128,7 @@ class Sygnal(object):
                 sys.exit(1)
 
         self.database = ConnectionPool(
-            "psycopg2", cp_reactor=self.reactor, **config["db"].get("args", {}),
+            "psycopg2", cp_reactor=self.reactor, **config["db"],
         )
 
     async def _make_pushkin(self, app_name, app_config):

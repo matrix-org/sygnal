@@ -170,10 +170,9 @@ apps:
   #  #max_connections: 20
 
 db:
-  args:
-    host: localhost
-    database: sygnal
-    user: postgres
-    password: pass
-    cp_min: 1
-    cp_max: 5
+  host: localhost
+  database: sygnal
+  user: postgres
+  password: pass
+  cp_min: 1
+  cp_max: 5

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+from os import environ
+from time import time_ns
 from io import BytesIO
 from threading import Condition
 from typing import BinaryIO, Optional, Union
@@ -24,15 +26,55 @@ from twisted.trial import unittest
 from twisted.web.http_headers import Headers
 from twisted.web.server import Request
 
+import psycopg2
+
 from sygnal.http import PushGatewayApiServer
 from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
 
 REQ_PATH = b"/_matrix/push/v1/notify"
 
+# the dbname we will connect to in order to create the base database.
+POSTGRES_DBNAME_FOR_INITIAL_CREATE = "postgres"
+POSTGRES_USER=environ.get("TEST_POSTGRES_USER", None)
+POSTGRES_PASSWORD=environ.get("TEST_POSTGRES_PASSWORD", None)
+POSTGRES_HOST=environ.get("TEST_POSTGRES_HOST", None)
 
 class TestCase(unittest.TestCase):
     def config_setup(self, config):
-        config["db"]["dbfile"] = ":memory:"
+        self.dbname = "_sygnal_%s" % (time_ns())
+        config["db"] = {
+            "user": POSTGRES_USER,
+            "password": POSTGRES_PASSWORD,
+            "database": self.dbname,
+            "host": POSTGRES_HOST,
+        }
+
+    def _set_up_database(self, dbname):
+        conn = psycopg2.connect(
+            database=POSTGRES_DBNAME_FOR_INITIAL_CREATE,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD,
+            host=POSTGRES_HOST,
+        )
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("DROP DATABASE IF EXISTS %s;" % (dbname,))
+        cur.execute("CREATE DATABASE %s;" % (dbname,))
+        cur.close()
+        conn.close()
+
+    def _tear_down_database(self, dbname):
+        conn = psycopg2.connect(
+            database=POSTGRES_DBNAME_FOR_INITIAL_CREATE,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD,
+            host=POSTGRES_HOST,
+        )
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("DROP DATABASE %s;" % (dbname,))
+        cur.close()
+        conn.close()
 
     def setUp(self):
         reactor = ExtendedMemoryReactorClock()
@@ -41,6 +83,7 @@ class TestCase(unittest.TestCase):
         config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
 
         self.config_setup(config)
+        self._set_up_database(self.dbname)
 
         self.sygnal = Sygnal(config, reactor)
         self.sygnal.database.start()
@@ -51,13 +94,14 @@ class TestCase(unittest.TestCase):
         )
 
         while not start_deferred.called:
-            # we need to advance until the pushkins have started up
+            # we need to wait for the database
             self.sygnal.reactor.advance(1)
             self.sygnal.reactor.wait_for_work(lambda: start_deferred.called)
 
     def tearDown(self):
         super().tearDown()
         self.sygnal.database.close()
+        self._tear_down_database(self.dbname)
 
     def _make_dummy_notification(self, devices):
         return {
