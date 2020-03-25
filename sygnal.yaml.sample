@@ -172,7 +172,7 @@ apps:
 db:
   host: localhost
   database: sygnal
-  user: postgres
+  user: sygnal
   password: pass
   cp_min: 1
   cp_max: 5

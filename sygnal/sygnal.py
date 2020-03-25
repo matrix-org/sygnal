@@ -237,7 +237,6 @@ def check_config(config):
     check_section(
         "access", {"file", "enabled", "x_forwarded_for"}, cfgpart=config["log"]
     )
-    check_section("db", {"args"})
     check_section("metrics", {"opentracing", "sentry", "prometheus"})
     check_section(
         "opentracing",

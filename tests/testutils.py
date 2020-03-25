@@ -71,9 +71,9 @@ class TestCase(unittest.TestCase):
             password=POSTGRES_PASSWORD,
             host=POSTGRES_HOST,
         )
-        conn.autocommit = True
         cur = conn.cursor()
         cur.execute("DROP DATABASE %s;" % (dbname,))
+        cur.commit()
         cur.close()
         conn.close()
 
@@ -95,7 +95,7 @@ class TestCase(unittest.TestCase):
         )
 
         while not start_deferred.called:
-            # we need to wait for the database
+            # we need to advance until the pushkins have started up
             self.sygnal.reactor.advance(1)
             self.sygnal.reactor.wait_for_work(lambda: start_deferred.called)
 

@@ -489,10 +489,11 @@ class CanonicalRegIdStore(object):
 
         results = dict(
             await self.db.runQuery(
-                """SELECT reg_id, canonical_reg_id
-               FROM gcm_canonical_reg_id
-               WHERE reg_id = ANY (%s)
-            """,
+                """
+                SELECT reg_id, canonical_reg_id
+                FROM gcm_canonical_reg_id
+                WHERE reg_id = ANY (%s)
+                """,
                 (reg_ids,),
             )
         )
