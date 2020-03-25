@@ -496,4 +496,4 @@ class CanonicalRegIdStore(object):
                 (reg_ids,),
             )
         )
-        return {reg_id: results[reg_id] for reg_id in reg_ids}
+        return {reg_id: results.get(reg_id, None) for reg_id in reg_ids}
