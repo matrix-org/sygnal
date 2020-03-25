@@ -91,7 +91,7 @@ class GcmPushkin(Pushkin):
     Pushkin that relays notifications to Google/Firebase Cloud Messaging.
     """
 
-    UNDERSTOOD_CONFIG_FIELDS = {"type", "api_key"}
+    UNDERSTOOD_CONFIG_FIELDS = {"type", "api_key", "max_connections"}
 
     def __init__(self, name, sygnal, config, canonical_reg_id_store):
         super(GcmPushkin, self).__init__(name, sygnal, config)
@@ -451,12 +451,12 @@ class CanonicalRegIdStore(object):
         to complete, so it must be an `async def` method.
 
         Args:
-            db (adbapi.ConnectionPool): database to prepare
+            db (psycopg2.pool.AbstractConnectionPool): database to prepare
 
         """
         self.db = db
 
-        await self.db.runQuery(self.TABLE_CREATE_QUERY)
+        await self.db.runOperation(self.TABLE_CREATE_QUERY)
 
     async def set_canonical_id(self, reg_id, canonical_reg_id):
         """
@@ -465,8 +465,12 @@ class CanonicalRegIdStore(object):
             reg_id (str): a registration ID
             canonical_reg_id (str): the canonical registration ID for `reg_id`
         """
-        await self.db.runQuery(
-            "INSERT OR REPLACE INTO gcm_canonical_reg_id VALUES (?, ?);",
+        await self.db.runOperation(
+            """
+            INSERT INTO gcm_canonical_reg_id VALUES (%s, %s)
+            ON CONFLICT (reg_id) DO UPDATE
+                 SET canonical_reg_id = EXCLUDED.canonical_reg_id;
+            """,
             (reg_id, canonical_reg_id),
         )
 
@@ -482,23 +486,12 @@ class CanonicalRegIdStore(object):
             mapping of registration ID to either its canonical registration ID,
             or `None` if there is no entry.
         """
-        return {reg_id: await self.get_canonical_id(reg_id) for reg_id in reg_ids}
 
-    async def get_canonical_id(self, reg_id):
-        """
-        Retrieves the canonical registration ID for one registration ID.
-
-        Args:
-            reg_id (str): registration ID to retrieve the canonical registration
-                ID for.
-
-        Returns (dict):
-            its canonical registration ID, or `None` if there is no entry.
-        """
-        rows = await self.db.runQuery(
-            "SELECT canonical_reg_id FROM gcm_canonical_reg_id WHERE reg_id = ?",
-            (reg_id,),
-        )
-
-        if rows:
-            return rows[0][0]
+        results = dict(await self.db.runQuery(
+            """SELECT reg_id, canonical_reg_id
+               FROM gcm_canonical_reg_id
+               WHERE reg_id = ANY (%s)
+            """,
+            (reg_ids,),
+        ))
+        return {reg_id: results[reg_id] for reg_id in reg_ids}

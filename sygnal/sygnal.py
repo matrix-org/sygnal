@@ -39,7 +39,16 @@ logger = logging.getLogger(__name__)
 CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
-    "db": {"dbfile": "sygnal.db"},
+    "db": {
+        "args": {
+            "host": "localhost",
+            "port": 5432,
+            "user": "sygnal",
+            "database": "sygnal",
+            "cp_min": 1,
+            "cp_max": 1,
+        },
+    },
     "metrics": {
         "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
         "opentracing": {
@@ -121,12 +130,9 @@ class Sygnal(object):
                 sys.exit(1)
 
         self.database = ConnectionPool(
-            "sqlite3",
-            config["db"]["dbfile"],
+            "psycopg2",
             cp_reactor=self.reactor,
-            cp_min=1,
-            cp_max=1,
-            check_same_thread=False,
+            **config["db"].get("args", {}),
         )
 
     async def _make_pushkin(self, app_name, app_config):
@@ -235,7 +241,7 @@ def check_config(config):
     check_section(
         "access", {"file", "enabled", "x_forwarded_for"}, cfgpart=config["log"]
     )
-    check_section("db", {"dbfile"})
+    check_section("db", {"args"})
     check_section("metrics", {"opentracing", "sentry", "prometheus"})
     check_section(
         "opentracing",
