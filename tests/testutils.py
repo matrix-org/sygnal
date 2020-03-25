@@ -35,9 +35,10 @@ REQ_PATH = b"/_matrix/push/v1/notify"
 
 # the dbname we will connect to in order to create the base database.
 POSTGRES_DBNAME_FOR_INITIAL_CREATE = "postgres"
-POSTGRES_USER=environ.get("TEST_POSTGRES_USER", None)
-POSTGRES_PASSWORD=environ.get("TEST_POSTGRES_PASSWORD", None)
-POSTGRES_HOST=environ.get("TEST_POSTGRES_HOST", None)
+POSTGRES_USER = environ.get("TEST_POSTGRES_USER", None)
+POSTGRES_PASSWORD = environ.get("TEST_POSTGRES_PASSWORD", None)
+POSTGRES_HOST = environ.get("TEST_POSTGRES_HOST", None)
+
 
 class TestCase(unittest.TestCase):
     def config_setup(self, config):
