@@ -130,9 +130,7 @@ class Sygnal(object):
                 sys.exit(1)
 
         self.database = ConnectionPool(
-            "psycopg2",
-            cp_reactor=self.reactor,
-            **config["db"].get("args", {}),
+            "psycopg2", cp_reactor=self.reactor, **config["db"].get("args", {}),
         )
 
     async def _make_pushkin(self, app_name, app_config):

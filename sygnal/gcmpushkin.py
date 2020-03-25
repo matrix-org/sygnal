@@ -487,11 +487,13 @@ class CanonicalRegIdStore(object):
             or `None` if there is no entry.
         """
 
-        results = dict(await self.db.runQuery(
-            """SELECT reg_id, canonical_reg_id
+        results = dict(
+            await self.db.runQuery(
+                """SELECT reg_id, canonical_reg_id
                FROM gcm_canonical_reg_id
                WHERE reg_id = ANY (%s)
             """,
-            (reg_ids,),
-        ))
+                (reg_ids,),
+            )
+        )
         return {reg_id: results[reg_id] for reg_id in reg_ids}
