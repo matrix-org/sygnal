@@ -3,8 +3,6 @@
 # See: matrix.org
 ##
 
-
-
 # The 'database' setting defines the database that sygnal uses to store all of
 # its data.
 #

@@ -39,12 +39,7 @@ logger = logging.getLogger(__name__)
 CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
-    "database": {
-        "name": "sqlite3",
-        "args": {
-            "dbfile": "sygnal.db"
-        }
-    },
+    "database": {"name": "sqlite3", "args": {"dbfile": "sygnal.db"}},
     "metrics": {
         "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
         "opentracing": {
@@ -83,12 +78,13 @@ class Sygnal(object):
 
         # Old format db config
         if config.get("db", None) is not None:
-            logger.warning("Config includes the legacy 'db' option, please migrate to 'database' instead");
+            logger.warning(
+                "Config includes the legacy 'db' option, please migrate"
+                + "to 'database' instead"
+            )
             config["database"] = {
                 "name": "sqlite3",
-                "args": {
-                    "dbfile": config["db"]["dbfile"]
-                }
+                "args": {"dbfile": config["db"]["dbfile"]},
             }
 
         sentrycfg = config["metrics"]["sentry"]
@@ -141,9 +137,7 @@ class Sygnal(object):
             logger.info("Using postgresql database")
             self.database_engine = "postgresql"
             self.database = ConnectionPool(
-                "psycopg2",
-                cp_reactor=self.reactor,
-                **config["database"].get("args"),
+                "psycopg2", cp_reactor=self.reactor, **config["database"].get("args"),
             )
         elif db_name == "sqlite3":
             logger.info("Using sqlite database")
@@ -276,6 +270,7 @@ def check_config(config):
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
     check_section("database", {"name", "args"})
+
 
 def merge_left_with_defaults(defaults, loaded_config):
     """

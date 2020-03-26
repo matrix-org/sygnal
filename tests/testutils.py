@@ -52,15 +52,10 @@ class TestCase(unittest.TestCase):
                     "password": POSTGRES_PASSWORD,
                     "database": self.dbname,
                     "host": POSTGRES_HOST,
-                }
+                },
             }
         else:
-            config["db"] = {
-                "name": "sqlite3",
-                "args": {
-                    "dbfile": ":memory:",
-                }
-            }
+            config["db"] = {"name": "sqlite3", "args": {"dbfile": ":memory:"}}
 
     def _set_up_database(self, dbname):
         conn = psycopg2.connect(
