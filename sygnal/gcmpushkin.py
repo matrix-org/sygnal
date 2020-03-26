@@ -496,7 +496,9 @@ class CanonicalRegIdStore(object):
         rows = dict(
             await self.db.runQuery(
                 """
-            SELECT reg_id, canonical_reg_id FROM gcm_canonical_reg_id WHERE reg_id IN (%s)
+            SELECT reg_id, canonical_reg_id
+            FROM gcm_canonical_reg_id
+            WHERE reg_id IN (%s)
             """
                 % (",".join(["?"] * len(reg_ids))),
                 reg_ids,
