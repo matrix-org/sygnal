@@ -91,7 +91,7 @@ class GcmPushkin(Pushkin):
     Pushkin that relays notifications to Google/Firebase Cloud Messaging.
     """
 
-    UNDERSTOOD_CONFIG_FIELDS = {"type", "api_key", "max_connections"}
+    UNDERSTOOD_CONFIG_FIELDS = {"type", "api_key"}
 
     def __init__(self, name, sygnal, config, canonical_reg_id_store):
         super(GcmPushkin, self).__init__(name, sygnal, config)
