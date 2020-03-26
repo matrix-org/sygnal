@@ -33,6 +33,7 @@ from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
 
 REQ_PATH = b"/_matrix/push/v1/notify"
 
+USE_POSTGRES = environ.get("TEST_USE_POSTGRES", False)
 # the dbname we will connect to in order to create the base database.
 POSTGRES_DBNAME_FOR_INITIAL_CREATE = "postgres"
 POSTGRES_USER = environ.get("TEST_POSTGRES_USER", None)
@@ -43,12 +44,15 @@ POSTGRES_HOST = environ.get("TEST_POSTGRES_HOST", None)
 class TestCase(unittest.TestCase):
     def config_setup(self, config):
         self.dbname = "_sygnal_%s" % (time_ns())
-        config["db"] = {
-            "user": POSTGRES_USER,
-            "password": POSTGRES_PASSWORD,
-            "database": self.dbname,
-            "host": POSTGRES_HOST,
-        }
+        if USE_POSTGRES:
+            config["db"] = {
+                "user": POSTGRES_USER,
+                "password": POSTGRES_PASSWORD,
+                "database": self.dbname,
+                "host": POSTGRES_HOST,
+            }
+        else:
+            config["db"] = {"dbfile": ":memory:"}
 
     def _set_up_database(self, dbname):
         conn = psycopg2.connect(
@@ -84,7 +88,9 @@ class TestCase(unittest.TestCase):
         config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
 
         self.config_setup(config)
-        self._set_up_database(self.dbname)
+
+        if USE_POSTGRES:
+            self._set_up_database(self.dbname)
 
         self.sygnal = Sygnal(config, reactor)
         self.sygnal.database.start()
@@ -102,7 +108,8 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
         self.sygnal.database.close()
-        self._tear_down_database(self.dbname)
+        if USE_POSTGRES:
+            self._tear_down_database(self.dbname)
 
     def _make_dummy_notification(self, devices):
         return {

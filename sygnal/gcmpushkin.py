@@ -137,7 +137,7 @@ class GcmPushkin(Pushkin):
         """
         logger.debug("About to set up CanonicalRegId Store")
         canonical_reg_id_store = CanonicalRegIdStore()
-        await canonical_reg_id_store.setup(sygnal.database)
+        await canonical_reg_id_store.setup(sygnal.database, sygnal.database_engine)
         logger.debug("Finished setting up CanonicalRegId Store")
 
         return cls(name, sygnal, config, canonical_reg_id_store)
@@ -443,7 +443,7 @@ class CanonicalRegIdStore(object):
     def __init__(self):
         self.db = None
 
-    async def setup(self, db):
+    async def setup(self, db, engine):
         """
         Prepares, if necessary, the database for storing canonical registration IDs.
 
@@ -451,10 +451,11 @@ class CanonicalRegIdStore(object):
         to complete, so it must be an `async def` method.
 
         Args:
-            db (psycopg2.pool.AbstractConnectionPool): database to prepare
+            db (adbapi.ConnectionPool): database to prepare
 
         """
         self.db = db
+        self.engine = engine
 
         await self.db.runOperation(self.TABLE_CREATE_QUERY)
 
@@ -465,14 +466,20 @@ class CanonicalRegIdStore(object):
             reg_id (str): a registration ID
             canonical_reg_id (str): the canonical registration ID for `reg_id`
         """
-        await self.db.runOperation(
-            """
-            INSERT INTO gcm_canonical_reg_id VALUES (%s, %s)
-            ON CONFLICT (reg_id) DO UPDATE
-                 SET canonical_reg_id = EXCLUDED.canonical_reg_id;
-            """,
-            (reg_id, canonical_reg_id),
-        )
+        if self.engine == "sqlite":
+            await self.db.runOperation(
+                "INSERT OR REPLACE INTO gcm_canonical_reg_id VALUES (?, ?);",
+                (reg_id, canonical_reg_id),
+            )
+        else:
+            await self.db.runOperation(
+                """
+                INSERT INTO gcm_canonical_reg_id VALUES (%s, %s)
+                ON CONFLICT (reg_id) DO UPDATE
+                    SET canonical_reg_id = EXCLUDED.canonical_reg_id;
+                """,
+                (reg_id, canonical_reg_id),
+            )
 
     async def get_canonical_ids(self, reg_ids):
         """
@@ -486,15 +493,13 @@ class CanonicalRegIdStore(object):
             mapping of registration ID to either its canonical registration ID,
             or `None` if there is no entry.
         """
-
-        results = dict(
+        rows = dict(
             await self.db.runQuery(
                 """
-                SELECT reg_id, canonical_reg_id
-                FROM gcm_canonical_reg_id
-                WHERE reg_id = ANY (%s)
-                """,
-                (reg_ids,),
+            SELECT reg_id, canonical_reg_id FROM gcm_canonical_reg_id WHERE reg_id IN (%s)
+            """
+                % (",".join(["?"] * len(reg_ids))),
+                reg_ids,
             )
         )
-        return {reg_id: results.get(reg_id, None) for reg_id in reg_ids}
+        return {reg_id: dict(rows).get(reg_id, None) for reg_id in reg_ids}

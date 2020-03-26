@@ -39,14 +39,7 @@ logger = logging.getLogger(__name__)
 CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
-    "db": {
-        "host": "localhost",
-        "port": 5432,
-        "user": "sygnal",
-        "database": "sygnal",
-        "cp_min": 1,
-        "cp_max": 1,
-    },
+    "db": {"dbfile": "sygnal.db"},
     "metrics": {
         "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
         "opentracing": {
@@ -127,9 +120,23 @@ class Sygnal(object):
                 )
                 sys.exit(1)
 
-        self.database = ConnectionPool(
-            "psycopg2", cp_reactor=self.reactor, **config["db"],
-        )
+        if config["db"].get("host", None):
+            logger.info("Using postgresql database")
+            self.database_engine = "postgresql"
+            self.database = ConnectionPool(
+                "psycopg2", cp_reactor=self.reactor, **config["db"],
+            )
+        else:
+            logger.info("Using sqlite database")
+            self.database_engine = "sqlite"
+            self.database = ConnectionPool(
+                "sqlite3",
+                config["db"]["dbfile"],
+                cp_reactor=self.reactor,
+                cp_min=1,
+                cp_max=1,
+                check_same_thread=False,
+            )
 
     async def _make_pushkin(self, app_name, app_config):
         """
@@ -247,6 +254,13 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
+
+    # Database can contain different sections depending on the type of database
+    if config["db"].get("host", None):
+        # password, database, and cp_* are optional
+        check_section("db", {"host", "user"})
+    else:
+        check_section("db", {"dbfile"})
 
 
 def merge_left_with_defaults(defaults, loaded_config):
