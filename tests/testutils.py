@@ -45,14 +45,22 @@ class TestCase(unittest.TestCase):
     def config_setup(self, config):
         self.dbname = "_sygnal_%s" % (time_ns())
         if USE_POSTGRES:
-            config["db"] = {
-                "user": POSTGRES_USER,
-                "password": POSTGRES_PASSWORD,
-                "database": self.dbname,
-                "host": POSTGRES_HOST,
+            config["database"] = {
+                "name": "psycopg2",
+                "args": {
+                    "user": POSTGRES_USER,
+                    "password": POSTGRES_PASSWORD,
+                    "database": self.dbname,
+                    "host": POSTGRES_HOST,
+                }
             }
         else:
-            config["db"] = {"dbfile": ":memory:"}
+            config["db"] = {
+                "name": "sqlite3",
+                "args": {
+                    "dbfile": ":memory:",
+                }
+            }
 
     def _set_up_database(self, dbname):
         conn = psycopg2.connect(
