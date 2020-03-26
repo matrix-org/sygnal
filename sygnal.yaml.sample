@@ -3,6 +3,21 @@
 # See: matrix.org
 ##
 
+## Database #
+# You should uncomment one of these options to enable the appropriate database.
+# If host is provided, postgresql will be used. Otherwise sqlite will be selected
+# and will use the value of `dbfile` for it's databases.
+db:
+  ## for sqlite
+  dbfile: sygnal.db # Default
+  ## for postgresql
+  # host: localhost
+  # database: sygnal
+  # user: sygnal
+  # password: pass
+  # cp_min: 1
+  # cp_max: 5
+
 ## Logging #
 #
 log:
@@ -168,11 +183,3 @@ apps:
   #  # This is the maximum number of connections to GCM servers at any one time
   #  # the default is 20.
   #  #max_connections: 20
-
-db:
-  host: localhost
-  database: sygnal
-  user: sygnal
-  password: pass
-  cp_min: 1
-  cp_max: 5
