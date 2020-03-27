@@ -55,7 +55,12 @@ class TestCase(unittest.TestCase):
                 },
             }
         else:
-            config["db"] = {"name": "sqlite3", "args": {"dbfile": ":memory:"}}
+            config["database"] = {
+                "name": "sqlite3",
+                "args": {
+                    "dbfile": ":memory:"
+                }
+            }
 
     def _set_up_database(self, dbname):
         conn = psycopg2.connect(
