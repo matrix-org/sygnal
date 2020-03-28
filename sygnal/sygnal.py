@@ -77,10 +77,10 @@ class Sygnal(object):
         observer.start()
 
         # Old format db config
-        if config.get("db", None) is not None:
+        if config.get("db") is not None:
             logger.warning(
                 "Config includes the legacy 'db' option, please migrate"
-                + "to 'database' instead"
+                " to 'database' instead"
             )
             config["database"] = {
                 "name": "sqlite3",

@@ -452,6 +452,8 @@ class CanonicalRegIdStore(object):
 
         Args:
             db (adbapi.ConnectionPool): database to prepare
+            engine (str):
+                Database engine in use. This is either "sqlite" or "postgresql".
 
         """
         self.db = db
@@ -496,12 +498,12 @@ class CanonicalRegIdStore(object):
         rows = dict(
             await self.db.runQuery(
                 """
-            SELECT reg_id, canonical_reg_id
-            FROM gcm_canonical_reg_id
-            WHERE reg_id IN (%s)
-            """
+                SELECT reg_id, canonical_reg_id
+                FROM gcm_canonical_reg_id
+                WHERE reg_id IN (%s)
+                """
                 % (",".join(["?"] * len(reg_ids))),
                 reg_ids,
             )
         )
-        return {reg_id: dict(rows).get(reg_id, None) for reg_id in reg_ids}
+        return {reg_id: dict(rows).get(reg_id) for reg_id in reg_ids}
