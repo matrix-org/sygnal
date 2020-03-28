@@ -70,7 +70,7 @@ class TruncateTestCase(unittest.TestCase):
         # This shouldn't need to be truncated
         txt = simplestring(20)
         aps = {"alert": txt}
-        self.assertEquals(txt, truncate(payload_for_aps(aps), 256)["aps"]["alert"])
+        self.assertEqual(txt, truncate(payload_for_aps(aps), 256)["aps"]["alert"])
 
     def test_truncate_alert(self):
         """
@@ -79,7 +79,7 @@ class TruncateTestCase(unittest.TestCase):
         overhead = len(json_encode(payload_for_aps({"alert": ""})))
         txt = simplestring(10)
         aps = {"alert": txt}
-        self.assertEquals(
+        self.assertEqual(
             txt[:5], truncate(payload_for_aps(aps), overhead + 5)["aps"]["alert"]
         )
 
@@ -90,7 +90,7 @@ class TruncateTestCase(unittest.TestCase):
         overhead = len(json_encode(payload_for_aps({"alert": {"body": ""}})))
         txt = simplestring(10)
         aps = {"alert": {"body": txt}}
-        self.assertEquals(
+        self.assertEqual(
             txt[:5],
             truncate(payload_for_aps(aps), overhead + 5)["aps"]["alert"]["body"],
         )
@@ -103,7 +103,7 @@ class TruncateTestCase(unittest.TestCase):
         overhead = len(json_encode(payload_for_aps({"alert": {"loc-args": [""]}})))
         txt = simplestring(10)
         aps = {"alert": {"loc-args": [txt]}}
-        self.assertEquals(
+        self.assertEqual(
             txt[:5],
             truncate(payload_for_aps(aps), overhead + 5)["aps"]["alert"]["loc-args"][0],
         )
@@ -117,13 +117,13 @@ class TruncateTestCase(unittest.TestCase):
         txt = simplestring(10)
         txt2 = simplestring(10, 3)
         aps = {"alert": {"loc-args": [txt, txt2]}}
-        self.assertEquals(
+        self.assertEqual(
             txt[:5],
             truncate(payload_for_aps(aps), overhead + 10)["aps"]["alert"]["loc-args"][
                 0
             ],
         )
-        self.assertEquals(
+        self.assertEqual(
             txt2[:5],
             truncate(payload_for_aps(aps), overhead + 10)["aps"]["alert"]["loc-args"][
                 1
@@ -156,7 +156,7 @@ class TruncateTestCase(unittest.TestCase):
         aps = {"alert": txt}
         # NB. The number of characters of the string we get is dependent
         # on the json encoding used.
-        self.assertEquals(
+        self.assertEqual(
             txt[:17], truncate(payload_for_aps(aps), overhead + 20)["aps"]["alert"]
         )
 
@@ -171,7 +171,7 @@ class TruncateTestCase(unittest.TestCase):
         trunc = truncate(payload_for_aps(aps), overhead + 30)
         # The string is all 4 byte characters so the trunctaed UTF-8 string
         # should be a multiple of 4 bytes long
-        self.assertEquals(len(trunc["aps"]["alert"].encode()) % 4, 0)
+        self.assertEqual(len(trunc["aps"]["alert"].encode()) % 4, 0)
         # NB. The number of characters of the string we get is dependent
         # on the json encoding used.
-        self.assertEquals(txt[:7], trunc["aps"]["alert"])
+        self.assertEqual(txt[:7], trunc["aps"]["alert"])
