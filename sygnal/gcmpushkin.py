@@ -453,7 +453,7 @@ class CanonicalRegIdStore(object):
         Args:
             db (adbapi.ConnectionPool): database to prepare
             engine (str):
-                Database engine in use. This is either "sqlite" or "postgresql".
+                Database engine to use. Shoud be either "sqlite" or "postgresql".
 
         """
         self.db = db
