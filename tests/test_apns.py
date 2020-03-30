@@ -61,7 +61,7 @@ class ApnsTestCase(testutils.TestCase):
         self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         # Assert
-        self.assertEquals(1, method.call_count)
+        self.assertEqual(1, method.call_count)
         ((notification_req,), _kwargs) = method.call_args
         payload = notification_req.message
 
@@ -84,7 +84,7 @@ class ApnsTestCase(testutils.TestCase):
         self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         # Assert
-        self.assertEquals(1, method.call_count)
+        self.assertEqual(1, method.call_count)
         ((notification_req,), _kwargs) = method.call_args
         payload = notification_req.message
 
@@ -105,10 +105,10 @@ class ApnsTestCase(testutils.TestCase):
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         # Assert
-        self.assertEquals(1, method.call_count)
+        self.assertEqual(1, method.call_count)
         ((notification_req,), _kwargs) = method.call_args
 
-        self.assertEquals(
+        self.assertEqual(
             {
                 "room_id": "!slw48wfj34rtnrf:example.com",
                 "aps": {
@@ -127,7 +127,7 @@ class ApnsTestCase(testutils.TestCase):
             notification_req.message,
         )
 
-        self.assertEquals({"rejected": []}, resp)
+        self.assertEqual({"rejected": []}, resp)
 
     def test_rejection(self):
         """
@@ -144,8 +144,8 @@ class ApnsTestCase(testutils.TestCase):
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         # Assert
-        self.assertEquals(1, method.call_count)
-        self.assertEquals({"rejected": ["spqr"]}, resp)
+        self.assertEqual(1, method.call_count)
+        self.assertEqual({"rejected": ["spqr"]}, resp)
 
     def test_no_retry_on_4xx(self):
         """
@@ -162,8 +162,8 @@ class ApnsTestCase(testutils.TestCase):
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
         # Assert
-        self.assertEquals(1, method.call_count)
-        self.assertEquals(502, resp)
+        self.assertEqual(1, method.call_count)
+        self.assertEqual(502, resp)
 
     def test_retry_on_5xx(self):
         """
@@ -181,4 +181,4 @@ class ApnsTestCase(testutils.TestCase):
 
         # Assert
         self.assertGreater(method.call_count, 1)
-        self.assertEquals(502, resp)
+        self.assertEqual(502, resp)

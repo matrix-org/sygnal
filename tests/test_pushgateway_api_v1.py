@@ -100,7 +100,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         Test that devices which are accepted by the Pushkin
         do not lead to a rejection being returned to the homeserver.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._request(self._make_dummy_notification([DEVICE_ACCEPTED])),
             {"rejected": []},
         )
@@ -110,7 +110,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         Test that devices which are rejected by the Pushkin
         DO lead to a rejection being returned to the homeserver.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._request(self._make_dummy_notification([DEVICE_REJECTED])),
             {"rejected": [DEVICE_REJECTED["pushkey"]]},
         )
@@ -121,7 +121,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         are the only ones to have a rejection returned to the homeserver,
         even if other devices feature in the request.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._request(
                 self._make_dummy_notification([DEVICE_REJECTED, DEVICE_ACCEPTED])
             ),
@@ -132,7 +132,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         """
         Test that bad requests lead to a 400 Bad Request response.
         """
-        self.assertEquals(self._request({}), 400)
+        self.assertEqual(self._request({}), 400)
 
     def test_exceptions_give_500(self):
         """
@@ -140,19 +140,19 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         response.
         """
 
-        self.assertEquals(
+        self.assertEqual(
             self._request(self._make_dummy_notification([DEVICE_RAISE_EXCEPTION])), 500
         )
 
         # we also check that a successful device doesn't hide the exception
-        self.assertEquals(
+        self.assertEqual(
             self._request(
                 self._make_dummy_notification([DEVICE_ACCEPTED, DEVICE_RAISE_EXCEPTION])
             ),
             500,
         )
 
-        self.assertEquals(
+        self.assertEqual(
             self._request(
                 self._make_dummy_notification([DEVICE_RAISE_EXCEPTION, DEVICE_ACCEPTED])
             ),
@@ -165,19 +165,19 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         lead to a 502 Bad Gateway response.
         """
 
-        self.assertEquals(
+        self.assertEqual(
             self._request(self._make_dummy_notification([DEVICE_REMOTE_ERROR])), 502
         )
 
         # we also check that a successful device doesn't hide the exception
-        self.assertEquals(
+        self.assertEqual(
             self._request(
                 self._make_dummy_notification([DEVICE_ACCEPTED, DEVICE_REMOTE_ERROR])
             ),
             502,
         )
 
-        self.assertEquals(
+        self.assertEqual(
             self._request(
                 self._make_dummy_notification([DEVICE_REMOTE_ERROR, DEVICE_ACCEPTED])
             ),
