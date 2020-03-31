@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
-    "db": {"dbfile": "sygnal.db"},
+    "database": {"name": "sqlite3", "args": {"dbfile": "sygnal.db"}},
     "metrics": {
         "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
         "opentracing": {
@@ -75,6 +75,17 @@ class Sygnal(object):
 
         observer = twisted_log.PythonLoggingObserver()
         observer.start()
+
+        # Old format db config
+        if config.get("db") is not None:
+            logger.warning(
+                "Config includes the legacy 'db' option, please migrate"
+                " to 'database' instead"
+            )
+            config["database"] = {
+                "name": "sqlite3",
+                "args": {"dbfile": config["db"]["dbfile"]},
+            }
 
         sentrycfg = config["metrics"]["sentry"]
         if sentrycfg["enabled"] is True:
@@ -120,14 +131,27 @@ class Sygnal(object):
                 )
                 sys.exit(1)
 
-        self.database = ConnectionPool(
-            "sqlite3",
-            config["db"]["dbfile"],
-            cp_reactor=self.reactor,
-            cp_min=1,
-            cp_max=1,
-            check_same_thread=False,
-        )
+        db_name = config["database"]["name"]
+
+        if db_name == "psycopg2":
+            logger.info("Using postgresql database")
+            self.database_engine = "postgresql"
+            self.database = ConnectionPool(
+                "psycopg2", cp_reactor=self.reactor, **config["database"].get("args"),
+            )
+        elif db_name == "sqlite3":
+            logger.info("Using sqlite database")
+            self.database_engine = "sqlite"
+            self.database = ConnectionPool(
+                "sqlite3",
+                config["database"]["args"]["dbfile"],
+                cp_reactor=self.reactor,
+                cp_min=1,
+                cp_max=1,
+                check_same_thread=False,
+            )
+        else:
+            raise Exception("Unsupported database 'name'")
 
     async def _make_pushkin(self, app_name, app_config):
         """
@@ -235,7 +259,6 @@ def check_config(config):
     check_section(
         "access", {"file", "enabled", "x_forwarded_for"}, cfgpart=config["log"]
     )
-    check_section("db", {"dbfile"})
     check_section("metrics", {"opentracing", "sentry", "prometheus"})
     check_section(
         "opentracing",
@@ -246,6 +269,7 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
+    check_section("database", {"name", "args"})
 
 
 def merge_left_with_defaults(defaults, loaded_config):

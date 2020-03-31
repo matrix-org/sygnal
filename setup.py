@@ -46,6 +46,7 @@ setup(
         "sentry-sdk>=0.10.2",
         "zope.interface>=4.6.0",
         "idna>=2.8",
+        "psycopg2>=2.8.4",
         "importlib_metadata",
     ],
     long_description=read("README.rst"),
