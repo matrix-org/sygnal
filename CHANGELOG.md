@@ -1,3 +1,22 @@
+Sygnal 0.4.0 (2020-03-31)
+=========================
+
+**NOTE**: The config schema has changed. The `db` config section has been replaced
+by `database`. Example configuration can be found in `sygnal.yaml.sample`. `db` will
+continue to work, but the section is deprecated and may be removed in a future release.
+
+Features
+--------
+
+- Add support for PostgreSQL ([\#91](https://github.com/matrix-org/sygnal/issues/91))
+
+
+Internal Changes
+----------------
+
+- Replace occurances of 'assertEquals' with 'assertEqual' to reduce deprecation noise while running tests. ([\#93](https://github.com/matrix-org/sygnal/issues/93))
+
+
 Sygnal 0.3.0 (2020-03-24)
 =========================
 

@@ -1,1 +1,0 @@
-Replace occurances of 'assertEquals' with 'assertEqual' to reduce deprecation noise while running tests.
