@@ -78,9 +78,9 @@ class TestCase(unittest.TestCase):
             password=POSTGRES_PASSWORD,
             host=POSTGRES_HOST,
         )
+        conn.autocommit = True
         cur = conn.cursor()
         cur.execute("DROP DATABASE %s;" % (dbname,))
-        cur.commit()
         cur.close()
         conn.close()
 
