@@ -495,6 +495,7 @@ class CanonicalRegIdStore(object):
             mapping of registration ID to either its canonical registration ID,
             or `None` if there is no entry.
         """
+        parameterKey = "?" if self.engine == "sqlite" else "%s"
         rows = dict(
             await self.db.runQuery(
                 """
@@ -502,7 +503,7 @@ class CanonicalRegIdStore(object):
                 FROM gcm_canonical_reg_id
                 WHERE reg_id IN (%s)
                 """
-                % (",".join("%s" for _ in reg_ids)),
+                % (",".join(parameterKey for _ in reg_ids)),
                 reg_ids,
             )
         )
