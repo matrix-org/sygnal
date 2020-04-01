@@ -136,8 +136,10 @@ class Sygnal(object):
         if db_name == "psycopg2":
             logger.info("Using postgresql database")
             self.database_engine = "postgresql"
+            args = config["database"].get("args")
+            args.pop('dbfile', None)
             self.database = ConnectionPool(
-                "psycopg2", cp_reactor=self.reactor, **config["database"].get("args"),
+                "psycopg2", cp_reactor=self.reactor, **args,
             )
         elif db_name == "sqlite3":
             logger.info("Using sqlite database")
