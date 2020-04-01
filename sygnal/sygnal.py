@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 CONFIG_DEFAULTS = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
-    "database": {"name": "sqlite3", "args": {"dbfile": "sygnal.db"}},
     "metrics": {
         "prometheus": {"enabled": False, "address": "127.0.0.1", "port": 8000},
         "opentracing": {
@@ -85,6 +84,11 @@ class Sygnal(object):
             config["database"] = {
                 "name": "sqlite3",
                 "args": {"dbfile": config["db"]["dbfile"]},
+            }
+        elif config.get("database") is None:
+            config["database"] = {
+                "name": "sqlite3",
+                "args": {"dbfile": "sygnal.db"},
             }
 
         sentrycfg = config["metrics"]["sentry"]
