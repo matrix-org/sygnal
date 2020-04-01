@@ -502,7 +502,7 @@ class CanonicalRegIdStore(object):
                 FROM gcm_canonical_reg_id
                 WHERE reg_id IN (%s)
                 """
-                % (",".join(["?"] * len(reg_ids))),
+                % (",".join("%s" for _ in reg_ids)),
                 reg_ids,
             )
         )
