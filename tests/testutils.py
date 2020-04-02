@@ -78,9 +78,9 @@ class TestCase(unittest.TestCase):
             password=POSTGRES_PASSWORD,
             host=POSTGRES_HOST,
         )
+        conn.autocommit = True
         cur = conn.cursor()
         cur.execute("DROP DATABASE %s;" % (dbname,))
-        cur.commit()
         cur.close()
         conn.close()
 
@@ -88,10 +88,10 @@ class TestCase(unittest.TestCase):
         reactor = ExtendedMemoryReactorClock()
 
         config = {"apps": {}, "log": {"setup": {"version": 1}}}
-        config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
 
         self.config_setup(config)
 
+        config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
         if USE_POSTGRES:
             self._set_up_database(self.dbname)
 
