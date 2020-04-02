@@ -1,3 +1,12 @@
+Sygnal 0.4.1 (2020-04-02)
+=========================
+
+Bugfixes
+--------
+
+- Fix an issue where using PostgreSQL would cause Sygnal to crash ([\#95](https://github.com/matrix-org/sygnal/issues/95))
+
+
 Sygnal 0.4.0 (2020-03-31)
 =========================
 
