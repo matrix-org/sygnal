@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
-import base64
 import logging
 import os
 from uuid import uuid4
@@ -142,10 +141,8 @@ class ApnsPushkin(Pushkin):
         log.info(f"Sending as APNs-ID {notif_id}")
         span.set_tag("apns_id", notif_id)
 
-        device_token = base64.b64decode(device.pushkey).hex()
-
         request = NotificationRequest(
-            device_token=device_token,
+            device_token=device.pushkey,
             message=shaved_payload,
             priority=prio,
             notification_id=notif_id,
