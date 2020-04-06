@@ -50,6 +50,9 @@ CONFIG_DEFAULTS = {
         "sentry": {"enabled": False},
     },
     "apps": {},
+    # This is defined so the key is known to check_config, but it will not
+    # define a default value.
+    "database": None,
 }
 
 
@@ -155,7 +158,7 @@ class Sygnal(object):
                 check_same_thread=False,
             )
         else:
-            raise Exception("Unsupported database 'name'")
+            raise Exception("Unsupported database '%s'" % db_name)
 
     async def _make_pushkin(self, app_name, app_config):
         """
@@ -242,6 +245,7 @@ def check_config(config):
         config: The loaded configuration.
     """
     UNDERSTOOD_CONFIG_FIELDS = CONFIG_DEFAULTS.keys()
+    LEGACY_KEYS = ["db"]
 
     def check_section(section_name, known_keys, cfgpart=config):
         nonunderstood = set(cfgpart[section_name].keys()).difference(known_keys)
@@ -252,10 +256,24 @@ def check_config(config):
                 nonunderstood,
             )
 
-    nonunderstood = set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS)
+    nonunderstood = (
+        set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS).difference(LEGACY_KEYS)
+    )
+    legacykeys = (
+        set(config.keys())
+        .difference(UNDERSTOOD_CONFIG_FIELDS)
+        .intersection(LEGACY_KEYS)
+    )
     if len(nonunderstood) > 0:
         logger.warning(
             "The following configuration fields are not understood: %s", nonunderstood
+        )
+    if len(legacykeys) > 0:
+        logger.warning(
+            """
+            The following configuration fields will be removed in a future release: %s
+            """,
+            legacykeys,
         )
 
     check_section("http", {"port", "bind_addresses"})
@@ -275,7 +293,7 @@ def check_config(config):
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
 
     # If 'db' is defined, it will override the 'database' config.
-    if not config.get("db"): 
+    if config.get("db") is None:
         check_section("database", {"name", "args"})
 
 

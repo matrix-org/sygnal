@@ -1,0 +1,1 @@
+Fix issue where sygnal would not start with the legacy key 'db'
