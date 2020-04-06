@@ -273,7 +273,10 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
-    check_section("database", {"name", "args"})
+
+    # If 'db' is defined, it will override the 'database' config.
+    if not config.get("db"): 
+        check_section("database", {"name", "args"})
 
 
 def merge_left_with_defaults(defaults, loaded_config):
