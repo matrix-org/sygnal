@@ -27,6 +27,7 @@ from opentracing import logs, tags
 import OpenSSL
 from prometheus_client import Histogram, Counter, Gauge
 from twisted.internet.defer import Deferred
+from twisted.internet.task import LoopingCall
 
 from sygnal import apnstruncate
 from sygnal.exceptions import (
@@ -125,7 +126,6 @@ class ApnsPushkin(Pushkin):
                 client_cert=self._certfile, use_sandbox=self.use_sandbox
             )
 
-            # TODO Should this continually report.
             self._report_certificate_expiration()
         else:
             self.apns_client = APNs(
@@ -149,9 +149,13 @@ class ApnsPushkin(Pushkin):
             # Convert from a string to a datetime object.
             expiration_date = datetime.strptime(x509.get_notAfter(), "%Y%m%d%H%M%SZ")
 
-            seconds_left = int((expiration_date - datetime.utcnow()).total_seconds())
+            def report_expiry():
+                seconds_left = int((expiration_date - datetime.utcnow()).total_seconds())
+                CERTIFICATE_EXPIRATION_GAUGE.set(seconds_left)
 
-            CERTIFICATE_EXPIRATION_GAUGE.set(seconds_left)
+            # Report the metric every 60 seconds.
+            looper = LoopingCall(report_expiry)
+            looper.start(60, now=True)
 
     async def _dispatch_request(self, log, span, device, shaved_payload, prio):
         """
