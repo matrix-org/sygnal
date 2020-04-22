@@ -16,6 +16,7 @@
 # limitations under the License.
 import asyncio
 import base64
+from datetime import datetime
 import logging
 import os
 from uuid import uuid4
@@ -23,6 +24,7 @@ from uuid import uuid4
 import aioapns
 from aioapns import APNs, NotificationRequest
 from opentracing import logs, tags
+import OpenSSL
 from prometheus_client import Histogram, Counter, Gauge
 from twisted.internet.defer import Deferred
 
@@ -49,6 +51,12 @@ RESPONSE_STATUS_CODES_COUNTER = Counter(
     "sygnal_apns_status_codes",
     "Number of HTTP response status codes received from APNS",
     labelnames=["pushkin", "code"],
+)
+
+CERTIFICATE_EXPIRATION_GAUGE = Gauge(
+    "sygnal_time_to_certificate_expiration",
+    "The number of seconds until the client certificate expires",
+    labelnames=["pushkin"],
 )
 
 
@@ -87,17 +95,17 @@ class ApnsPushkin(Pushkin):
         else:
             raise PushkinSetupException(f"Invalid platform: {platform}")
 
-        certfile = self.get_config("certfile")
+        self._certfile = self.get_config("certfile")
         keyfile = self.get_config("keyfile")
-        if not certfile and not keyfile:
+        if not self._certfile and not keyfile:
             raise PushkinSetupException(
                 "You must provide a path to an APNs certificate, or an APNs token."
             )
 
-        if certfile:
-            if not os.path.exists(certfile):
+        if self._certfile:
+            if not os.path.exists(self._certfile):
                 raise PushkinSetupException(
-                    f"The APNs certificate '{certfile}' does not exist."
+                    f"The APNs certificate '{self._certfile}' does not exist."
                 )
         else:
             # keyfile
@@ -112,10 +120,13 @@ class ApnsPushkin(Pushkin):
             if not self.get_config("topic"):
                 raise PushkinSetupException("You must supply topic.")
 
-        if self.get_config("certfile") is not None:
+        if self._certfile is not None:
             self.apns_client = APNs(
-                client_cert=self.get_config("certfile"), use_sandbox=self.use_sandbox
+                client_cert=self._certfile, use_sandbox=self.use_sandbox
             )
+
+            # TODO Should this continually report.
+            self._report_certificate_expiration()
         else:
             self.apns_client = APNs(
                 key=self.get_config("keyfile"),
@@ -127,6 +138,20 @@ class ApnsPushkin(Pushkin):
 
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
+
+    def _report_certificate_expiration(self):
+        """Export the time until the certificate expires as a metric."""
+        if self._certfile is not None:
+            with open(self._certfile, "rb") as f:
+                cert = f.read()
+
+            x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+            # Convert from a string to a datetime object.
+            expiration_date = datetime.strptime(x509.get_notAfter(), "%Y%m%d%H%M%SZ")
+
+            seconds_left = int((expiration_date - datetime.utcnow()).total_seconds())
+
+            CERTIFICATE_EXPIRATION_GAUGE.set(seconds_left)
 
     async def _dispatch_request(self, log, span, device, shaved_payload, prio):
         """

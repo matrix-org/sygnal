@@ -34,6 +34,8 @@ class ApnsTestCase(testutils.TestCase):
 
         # pretend our certificate exists
         patch("os.path.exists", lambda x: x == TEST_CERTFILE_PATH).start()
+        # Since no certificate exists, don't try to read it.
+        patch("sygnal.apnspushkin.ApnsPushkin._report_certificate_expiration").start()
         self.addCleanup(patch.stopall)
 
         super(ApnsTestCase, self).setUp()
