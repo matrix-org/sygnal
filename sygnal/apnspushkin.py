@@ -96,17 +96,17 @@ class ApnsPushkin(Pushkin):
         else:
             raise PushkinSetupException(f"Invalid platform: {platform}")
 
-        self._certfile = self.get_config("certfile")
+        certfile = self.get_config("certfile")
         keyfile = self.get_config("keyfile")
-        if not self._certfile and not keyfile:
+        if not certfile and not keyfile:
             raise PushkinSetupException(
                 "You must provide a path to an APNs certificate, or an APNs token."
             )
 
-        if self._certfile:
-            if not os.path.exists(self._certfile):
+        if certfile:
+            if not os.path.exists(certfile):
                 raise PushkinSetupException(
-                    f"The APNs certificate '{self._certfile}' does not exist."
+                    f"The APNs certificate '{certfile}' does not exist."
                 )
         else:
             # keyfile
@@ -121,12 +121,10 @@ class ApnsPushkin(Pushkin):
             if not self.get_config("topic"):
                 raise PushkinSetupException("You must supply topic.")
 
-        if self._certfile is not None:
-            self.apns_client = APNs(
-                client_cert=self._certfile, use_sandbox=self.use_sandbox
-            )
+        if certfile is not None:
+            self.apns_client = APNs(client_cert=certfile, use_sandbox=self.use_sandbox)
 
-            self._report_certificate_expiration()
+            self._report_certificate_expiration(certfile)
         else:
             self.apns_client = APNs(
                 key=self.get_config("keyfile"),
@@ -139,23 +137,22 @@ class ApnsPushkin(Pushkin):
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
 
-    def _report_certificate_expiration(self):
+    def _report_certificate_expiration(self, certfile):
         """Export the time until the certificate expires as a metric."""
-        if self._certfile is not None:
-            with open(self._certfile, "rb") as f:
-                cert = f.read()
+        with open(certfile, "rb") as f:
+            cert = f.read()
 
-            x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
-            # Convert from a string to a datetime object.
-            expiration_date = datetime.strptime(x509.get_notAfter(), "%Y%m%d%H%M%SZ")
+        x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        # Convert from a string to a datetime object.
+        expiration_date = datetime.strptime(x509.get_notAfter(), "%Y%m%d%H%M%SZ")
 
-            def report_expiry():
-                seconds_left = int((expiration_date - datetime.utcnow()).total_seconds())
-                CERTIFICATE_EXPIRATION_GAUGE.set(seconds_left)
+        def report_expiry():
+            seconds_left = int((expiration_date - datetime.utcnow()).total_seconds())
+            CERTIFICATE_EXPIRATION_GAUGE.set(seconds_left)
 
-            # Report the metric every 60 seconds.
-            looper = LoopingCall(report_expiry)
-            looper.start(60, now=True)
+        # Report the metric every 60 seconds.
+        looper = LoopingCall(report_expiry)
+        looper.start(60, now=True)
 
     async def _dispatch_request(self, log, span, device, shaved_payload, prio):
         """
