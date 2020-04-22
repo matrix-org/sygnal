@@ -148,7 +148,7 @@ class ApnsPushkin(Pushkin):
 
         def report_expiry():
             seconds_left = int((expiration_date - datetime.utcnow()).total_seconds())
-            CERTIFICATE_EXPIRATION_GAUGE.set(seconds_left)
+            CERTIFICATE_EXPIRATION_GAUGE.labels(pushkin=self.name).set(seconds_left)
 
         # Report the metric every 60 seconds.
         looper = LoopingCall(report_expiry)
