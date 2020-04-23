@@ -144,7 +144,9 @@ class ApnsPushkin(Pushkin):
 
         x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
         # Convert from a string to a datetime object.
-        expiration_date = datetime.strptime(x509.get_notAfter(), "%Y%m%d%H%M%SZ")
+        expiration_date = datetime.strptime(
+            x509.get_notAfter().decode(), "%Y%m%d%H%M%SZ"
+        )
 
         def report_expiry():
             seconds_left = int((expiration_date - datetime.utcnow()).total_seconds())
