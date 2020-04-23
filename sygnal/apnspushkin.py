@@ -27,7 +27,6 @@ from opentracing import logs, tags
 import OpenSSL
 from prometheus_client import Histogram, Counter, Gauge
 from twisted.internet.defer import Deferred
-from twisted.internet.task import LoopingCall
 
 from sygnal import apnstruncate
 from sygnal.exceptions import (
@@ -56,7 +55,7 @@ RESPONSE_STATUS_CODES_COUNTER = Counter(
 
 CERTIFICATE_EXPIRATION_GAUGE = Gauge(
     "sygnal_time_to_certificate_expiration",
-    "The number of seconds until the client certificate expires",
+    "The expiry date of the client certificate in seconds since the epoch",
     labelnames=["pushkin"],
 )
 
@@ -138,7 +137,7 @@ class ApnsPushkin(Pushkin):
         self.apns_client.pool.max_connection_attempts = 3
 
     def _report_certificate_expiration(self, certfile):
-        """Export the time until the certificate expires as a metric."""
+        """Export the epoch time that the certificate expires as a metric."""
         with open(certfile, "rb") as f:
             cert = f.read()
 
@@ -147,14 +146,9 @@ class ApnsPushkin(Pushkin):
         expiration_date = datetime.strptime(
             x509.get_notAfter().decode(), "%Y%m%d%H%M%SZ"
         )
-
-        def report_expiry():
-            seconds_left = int((expiration_date - datetime.utcnow()).total_seconds())
-            CERTIFICATE_EXPIRATION_GAUGE.labels(pushkin=self.name).set(seconds_left)
-
-        # Report the metric every 60 seconds.
-        looper = LoopingCall(report_expiry)
-        looper.start(60, now=True)
+        # Convert the expiration time to seconds since the epoch.
+        epoch_time = int((expiration_date - datetime(1970, 1, 1)).total_seconds())
+        CERTIFICATE_EXPIRATION_GAUGE.labels(pushkin=self.name).set(epoch_time)
 
     async def _dispatch_request(self, log, span, device, shaved_payload, prio):
         """
