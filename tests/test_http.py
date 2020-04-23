@@ -108,7 +108,8 @@ class HttpTestCase(testutils.TestCase):
 
     def test_with_ambigious_appid(self):
         """
-        Tests the rejection case: An ambigious app id should be rejected without processing.
+        Tests the rejection case: An ambigious app id should be rejected without
+        processing.
         """
         # Arrange
         method = self.apns_pushkin_snotif
