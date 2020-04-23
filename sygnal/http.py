@@ -19,6 +19,7 @@ import logging
 import sys
 import time
 import traceback
+import re
 from uuid import uuid4
 
 from opentracing import Format, logs, tags
@@ -201,6 +202,27 @@ class V1NotifyHandler(Resource):
             if not root_span_accounted_for:
                 root_span.finish()
 
+    def find_pushkins(self, appid):
+        """
+        Finds matching pushkins in self.sygnal.pushkins according to the appid.
+        If finds a specific pushkin with the exact app id, immediately returns it (as a list).
+        Otherwise returns possible pushkins (as a list).
+
+        appid: app identifier to search in self.sygnal.pushkins.
+        """
+
+        # if found a specific appid, just return it as a list
+        if appid in self.sygnal.pushkins:
+            return [self.sygnal.pushkins[appid]]
+
+        result = []
+        for key, value in self.sygnal.pushkins.items():
+            # The ".+" symbol is used in place of "*" symbol
+            regex = key.replace("*", ".+")
+            if re.search(regex, appid):
+                result.append(value)
+        return result
+
     async def _handle_dispatch(self, root_span, request, log, notif, context):
         """
         Actually handle the dispatch of notifications to devices, sequentially
@@ -219,12 +241,18 @@ class V1NotifyHandler(Resource):
                 NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
 
                 appid = d.app_id
-                if appid not in self.sygnal.pushkins:
+                found_pushkins = self.find_pushkins(appid)
+                if len(found_pushkins) == 0:
                     log.warning("Got notification for unknown app ID %s", appid)
                     rejected.append(d.pushkey)
                     continue
 
-                pushkin = self.sygnal.pushkins[appid]
+                if len(found_pushkins) > 1:
+                    log.warning("Got notification for an ambigious app ID %s", appid)
+                    rejected.append(d.pushkey)
+                    continue
+
+                pushkin = found_pushkins[0]
                 log.debug(
                     "Sending push to pushkin %s for app ID %s", pushkin.name, appid
                 )
