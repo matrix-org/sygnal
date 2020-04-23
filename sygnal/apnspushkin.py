@@ -67,7 +67,15 @@ class ApnsPushkin(Pushkin):
     MAX_FIELD_LENGTH = 1024
     MAX_JSON_BODY_SIZE = 4096
 
-    UNDERSTOOD_CONFIG_FIELDS = {"type", "platform", "certfile", "team_id", "key_id", "keyfile", "topic"}
+    UNDERSTOOD_CONFIG_FIELDS = {
+        "type",
+        "platform",
+        "certfile",
+        "team_id",
+        "key_id",
+        "keyfile",
+        "topic",
+    }
 
     def __init__(self, name, sygnal, config):
         super().__init__(name, sygnal, config)

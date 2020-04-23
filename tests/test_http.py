@@ -25,13 +25,25 @@ PUSHKIN_ID_3 = "com.example.a*"
 TEST_CERTFILE_PATH = "/path/to/my/certfile.pem"
 
 # Specific app id
-DEVICE_EXAMPLE_SPECIFIC = {"app_id": "com.example.apns", "pushkey": "spqr", "pushkey_ts": 42}
+DEVICE_EXAMPLE_SPECIFIC = {
+    "app_id": "com.example.apns",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+}
 
 # Only one time matching app id (with PUSHKIN_ID_2)
-DEVICE_EXAMPLE_MATCHING = {"app_id": "com.example.bpns", "pushkey": "spqr", "pushkey_ts": 42}
+DEVICE_EXAMPLE_MATCHING = {
+    "app_id": "com.example.bpns",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+}
 
 # More than one times matching app id (with PUSHKIN_ID_2 and PUSHKIN_ID_3)
-DEVICE_EXAMPLE_AMBIGIOUS = {"app_id": "com.example.apns2", "pushkey": "spqr", "pushkey_ts": 42}
+DEVICE_EXAMPLE_AMBIGIOUS = {
+    "app_id": "com.example.apns2",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+}
 
 
 class HttpTestCase(testutils.TestCase):
