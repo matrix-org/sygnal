@@ -48,7 +48,7 @@ DEVICE_EXAMPLE_AMBIGIOUS = {
 
 class HttpTestCase(testutils.TestCase):
     def setUp(self):
-        self.apns_mock_class = patch("aioapns.APNs").start()
+        self.apns_mock_class = patch("sygnal.apnspushkin.APNs").start()
         self.apns_mock = MagicMock()
         self.apns_mock_class.return_value = self.apns_mock
 
