@@ -203,15 +203,15 @@ class V1NotifyHandler(Resource):
                 root_span.finish()
 
     def find_pushkins(self, appid):
-        """
-        Finds matching pushkins in self.sygnal.pushkins according to the appid.
-        If it finds a specific pushkin with the exact app id, immediately returns
-        it (as a list).
-        Otherwise returns possible pushkins (as a list).
+        """Finds matching pushkins in self.sygnal.pushkins according to the appid.
 
-        appid: app identifier to search in self.sygnal.pushkins.
+        Args:
+            appid (str): app identifier to search in self.sygnal.pushkins.
+        Returns:
+            list of `Pushkin`: If it finds a specific pushkin with
+                the exact app id, immediately returns it.
+                Otherwise returns possible pushkins.
         """
-
         # if found a specific appid, just return it as a list
         if appid in self.sygnal.pushkins:
             return [self.sygnal.pushkins[appid]]
