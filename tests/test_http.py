@@ -89,7 +89,7 @@ class HttpTestCase(testutils.TestCase):
 
     def test_with_matching_appid(self):
         """
-        Tests the matching case: A matching app (only one time) id must be processed.
+        Tests the matching case: A matching app id (only one time) must be processed.
         """
         # Arrange
         method = self.apns_pushkin_snotif
