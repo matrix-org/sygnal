@@ -205,7 +205,7 @@ class V1NotifyHandler(Resource):
     def find_pushkins(self, appid):
         """
         Finds matching pushkins in self.sygnal.pushkins according to the appid.
-        If finds a specific pushkin with the exact app id, immediately returns
+        If it finds a specific pushkin with the exact app id, immediately returns
         it (as a list).
         Otherwise returns possible pushkins (as a list).
 
