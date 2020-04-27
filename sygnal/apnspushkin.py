@@ -54,7 +54,7 @@ RESPONSE_STATUS_CODES_COUNTER = Counter(
 )
 
 CERTIFICATE_EXPIRATION_GAUGE = Gauge(
-    "sygnal_cert_expiry",
+    "sygnal_client_cert_expiry",
     "The expiry date of the client certificate in seconds since the epoch",
     labelnames=["pushkin"],
 )
