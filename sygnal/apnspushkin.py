@@ -16,15 +16,16 @@
 # limitations under the License.
 import asyncio
 import base64
-from datetime import datetime
+from datetime import timezone
 import logging
 import os
 from uuid import uuid4
 
 import aioapns
 from aioapns import APNs, NotificationRequest
+from cryptography.hazmat.backends import default_backend
+from cryptography.x509 import load_pem_x509_certificate
 from opentracing import logs, tags
-import OpenSSL
 from prometheus_client import Histogram, Counter, Gauge
 from twisted.internet.defer import Deferred
 
@@ -139,16 +140,12 @@ class ApnsPushkin(Pushkin):
     def _report_certificate_expiration(self, certfile):
         """Export the epoch time that the certificate expires as a metric."""
         with open(certfile, "rb") as f:
-            cert = f.read()
+            cert_bytes = f.read()
 
-        x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
-        # Convert from a string to a datetime object.
-        expiration_date = datetime.strptime(
-            x509.get_notAfter().decode(), "%Y%m%d%H%M%SZ"
-        )
-        # Report the expiration time as seconds since the epoch.
+        cert = load_pem_x509_certificate(cert_bytes, default_backend())
+        # Report the expiration time as seconds since the epoch (in UTC time).
         CERTIFICATE_EXPIRATION_GAUGE.labels(pushkin=self.name).set(
-            expiration_date.timestamp()
+            cert.not_valid_after.replace(tzinfo=timezone.utc).timestamp()
         )
 
     async def _dispatch_request(self, log, span, device, shaved_payload, prio):
