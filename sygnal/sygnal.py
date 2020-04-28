@@ -50,6 +50,7 @@ CONFIG_DEFAULTS = {
         "sentry": {"enabled": False},
     },
     "apps": {},
+    "database": {"name": "sqlite3", "args": {"dbfile": "sygnal.db"}},
 }
 
 
@@ -84,11 +85,6 @@ class Sygnal(object):
             config["database"] = {
                 "name": "sqlite3",
                 "args": {"dbfile": config["db"]["dbfile"]},
-            }
-        elif config.get("database") is None:
-            config["database"] = {
-                "name": "sqlite3",
-                "args": {"dbfile": "sygnal.db"},
             }
 
         sentrycfg = config["metrics"]["sentry"]
@@ -293,6 +289,14 @@ def merge_left_with_defaults(defaults, loaded_config):
 
     # copy defaults or override them
     for k, v in result.items():
+        if k == "database" and loaded_config.get("database"):
+            # If the provided configuration includes a database section, ignore
+            # defaults.
+            # This is because the args sub-section doesn't have the same attributes
+            # depending on the database engine, and the engine might complain if given
+            # an attribute it doesn't understand.
+            continue
+
         if isinstance(v, dict):
             if k in loaded_config:
                 result[k] = merge_left_with_defaults(v, loaded_config[k])
