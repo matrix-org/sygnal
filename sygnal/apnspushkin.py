@@ -146,9 +146,10 @@ class ApnsPushkin(Pushkin):
         expiration_date = datetime.strptime(
             x509.get_notAfter().decode(), "%Y%m%d%H%M%SZ"
         )
-        # Convert the expiration time to seconds since the epoch.
-        epoch_time = int((expiration_date - datetime(1970, 1, 1)).total_seconds())
-        CERTIFICATE_EXPIRATION_GAUGE.labels(pushkin=self.name).set(epoch_time)
+        # Report the expiration time as seconds since the epoch.
+        CERTIFICATE_EXPIRATION_GAUGE.labels(pushkin=self.name).set(
+            expiration_date.timestamp()
+        )
 
     async def _dispatch_request(self, log, span, device, shaved_payload, prio):
         """
