@@ -7,5 +7,6 @@ _trial_temp*
 
 /.idea
 /.eggs
+/*.egg-info
 /build
 /dist
