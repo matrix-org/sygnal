@@ -119,6 +119,7 @@ class TestCase(unittest.TestCase):
             "notification": {
                 "id": "$3957tyerfgewrf384",
                 "room_id": "!slw48wfj34rtnrf:example.com",
+                "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
                 "type": "m.room.message",
                 "sender": "@exampleuser:matrix.org",
                 "sender_display_name": "Major Tom",

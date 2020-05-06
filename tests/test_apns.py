@@ -57,7 +57,7 @@ class ApnsTestCase(testutils.TestCase):
         method.return_value = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
-        self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 200
+        self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 240
 
         # Act
         self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
@@ -67,7 +67,7 @@ class ApnsTestCase(testutils.TestCase):
         ((notification_req,), _kwargs) = method.call_args
         payload = notification_req.message
 
-        self.assertLessEqual(len(apnstruncate.json_encode(payload)), 200)
+        self.assertLessEqual(len(apnstruncate.json_encode(payload)), 240)
 
     def test_payload_truncation_test_validity(self):
         """
@@ -113,6 +113,7 @@ class ApnsTestCase(testutils.TestCase):
         self.assertEqual(
             {
                 "room_id": "!slw48wfj34rtnrf:example.com",
+                "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
                 "aps": {
                     "alert": {
                         "loc-key": "MSG_FROM_USER_IN_ROOM_WITH_CONTENT",
@@ -123,7 +124,7 @@ class ApnsTestCase(testutils.TestCase):
                         ],
                     },
                     "badge": 3,
-                    "content-available": 1,
+                    "mutable-content": 1,
                 },
             },
             notification_req.message,
