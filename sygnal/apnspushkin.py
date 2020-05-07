@@ -426,7 +426,7 @@ class ApnsPushkin(Pushkin):
             aps["badge"] = badge
 
         if loc_key:
-            aps["content-available"] = 1
+            aps["mutable-content"] = 1
 
         if loc_key is None and badge is None:
             log.info("Nothing to do for alert of type %s", n.type)
@@ -436,6 +436,8 @@ class ApnsPushkin(Pushkin):
 
         if loc_key and n.room_id:
             payload["room_id"] = n.room_id
+        if loc_key and n.event_id:
+            payload["event_id"] = n.event_id
 
         payload["aps"] = aps
 
