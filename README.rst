@@ -54,6 +54,11 @@ apns
     * the 'team_id' parameter
     * the 'topic' parameter
 
+  For either type:
+    It can accept:
+    
+    * the 'platform' parameter which determines whether the production or sandbox APNS environment is used. Valid values are 'production' or 'sandbox'. If not provided, 'production' is used.
+
 gcm
   This sends messages via Google/Firebase Cloud Messaging (GCM/FCM) and hence can be used
   to deliver notifications to Android apps. It expects the 'api_key' parameter
@@ -73,4 +78,3 @@ Sygnal's logging appends to files but does not use a rotating logger.
 The recommended configuration is therefore to use ``logrotate``.
 The log file will be automatically reopened if the log file changes, for example
 due to ``logrotate``.
-

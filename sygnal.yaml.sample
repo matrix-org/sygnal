@@ -22,7 +22,7 @@
 #database:
 #  name: sqlite3
 #  args:
-#    database: /path/to/database.db
+#    dbfile: /path/to/database.db
 #
 #
 # Example Postgres configuration:
@@ -40,7 +40,7 @@
 database:
   name: sqlite3
   args:
-    database: sygnal.db
+    dbfile: sygnal.db
 
 ## Logging #
 #

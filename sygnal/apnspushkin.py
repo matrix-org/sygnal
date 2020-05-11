@@ -16,12 +16,15 @@
 # limitations under the License.
 import asyncio
 import base64
+from datetime import timezone
 import logging
 import os
 from uuid import uuid4
 
 import aioapns
 from aioapns import APNs, NotificationRequest
+from cryptography.hazmat.backends import default_backend
+from cryptography.x509 import load_pem_x509_certificate
 from opentracing import logs, tags
 from prometheus_client import Histogram, Counter, Gauge
 from twisted.internet.defer import Deferred
@@ -51,6 +54,12 @@ RESPONSE_STATUS_CODES_COUNTER = Counter(
     labelnames=["pushkin", "code"],
 )
 
+CERTIFICATE_EXPIRATION_GAUGE = Gauge(
+    "sygnal_client_cert_expiry",
+    "The expiry date of the client certificate in seconds since the epoch",
+    labelnames=["pushkin"],
+)
+
 
 class ApnsPushkin(Pushkin):
     """
@@ -67,7 +76,15 @@ class ApnsPushkin(Pushkin):
     MAX_FIELD_LENGTH = 1024
     MAX_JSON_BODY_SIZE = 4096
 
-    UNDERSTOOD_CONFIG_FIELDS = {"type", "platform", "certfile"}
+    UNDERSTOOD_CONFIG_FIELDS = {
+        "type",
+        "platform",
+        "certfile",
+        "team_id",
+        "key_id",
+        "keyfile",
+        "topic",
+    }
 
     def __init__(self, name, sygnal, config):
         super().__init__(name, sygnal, config)
@@ -112,10 +129,10 @@ class ApnsPushkin(Pushkin):
             if not self.get_config("topic"):
                 raise PushkinSetupException("You must supply topic.")
 
-        if self.get_config("certfile") is not None:
-            self.apns_client = APNs(
-                client_cert=self.get_config("certfile"), use_sandbox=self.use_sandbox
-            )
+        if certfile is not None:
+            self.apns_client = APNs(client_cert=certfile, use_sandbox=self.use_sandbox)
+
+            self._report_certificate_expiration(certfile)
         else:
             self.apns_client = APNs(
                 key=self.get_config("keyfile"),
@@ -127,6 +144,17 @@ class ApnsPushkin(Pushkin):
 
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
+
+    def _report_certificate_expiration(self, certfile):
+        """Export the epoch time that the certificate expires as a metric."""
+        with open(certfile, "rb") as f:
+            cert_bytes = f.read()
+
+        cert = load_pem_x509_certificate(cert_bytes, default_backend())
+        # Report the expiration time as seconds since the epoch (in UTC time).
+        CERTIFICATE_EXPIRATION_GAUGE.labels(pushkin=self.name).set(
+            cert.not_valid_after.replace(tzinfo=timezone.utc).timestamp()
+        )
 
     async def _dispatch_request(self, log, span, device, shaved_payload, prio):
         """
@@ -398,7 +426,7 @@ class ApnsPushkin(Pushkin):
             aps["badge"] = badge
 
         if loc_key:
-            aps["content-available"] = 1
+            aps["mutable-content"] = 1
 
         if loc_key is None and badge is None:
             log.info("Nothing to do for alert of type %s", n.type)
@@ -408,6 +436,8 @@ class ApnsPushkin(Pushkin):
 
         if loc_key and n.room_id:
             payload["room_id"] = n.room_id
+        if loc_key and n.event_id:
+            payload["event_id"] = n.event_id
 
         payload["aps"] = aps
 

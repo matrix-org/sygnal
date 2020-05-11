@@ -256,11 +256,7 @@ def check_config(config):
             )
 
     nonunderstood = (
-        set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS).difference(LEGACY_KEYS)
-    )
-    legacykeys = (
-        set(config.keys())
-        .intersection(LEGACY_KEYS)
+        set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS)
     )
     if len(nonunderstood) > 0:
         logger.warning(
