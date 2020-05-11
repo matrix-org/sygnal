@@ -245,7 +245,6 @@ def check_config(config):
         config: The loaded configuration.
     """
     UNDERSTOOD_CONFIG_FIELDS = CONFIG_DEFAULTS.keys()
-    LEGACY_KEYS = ["db"]
 
     def check_section(section_name, known_keys, cfgpart=config):
         nonunderstood = set(cfgpart[section_name].keys()).difference(known_keys)
@@ -261,19 +260,11 @@ def check_config(config):
     )
     legacykeys = (
         set(config.keys())
-        .difference(UNDERSTOOD_CONFIG_FIELDS)
         .intersection(LEGACY_KEYS)
     )
     if len(nonunderstood) > 0:
         logger.warning(
             "The following configuration fields are not understood: %s", nonunderstood
-        )
-    if len(legacykeys) > 0:
-        logger.warning(
-            """
-            The following configuration fields will be removed in a future release: %s
-            """,
-            legacykeys,
         )
 
     check_section("http", {"port", "bind_addresses"})
@@ -293,7 +284,12 @@ def check_config(config):
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
 
     # If 'db' is defined, it will override the 'database' config.
-    if config.get("db") is None:
+    if 'db' in config:
+        logger.warning(
+            """The 'db' config field has been replaced by 'database'.
+See the sample config for help."""
+        )
+    else:
         check_section("database", {"name", "args"})
 
 
