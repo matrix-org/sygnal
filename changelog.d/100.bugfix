@@ -1,1 +1,1 @@
-Fix issue where sygnal would not start with the legacy key 'db'
+Sygnal will no longer warn about the 'database' config field being not understood.
