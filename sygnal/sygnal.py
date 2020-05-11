@@ -255,9 +255,7 @@ def check_config(config):
                 nonunderstood,
             )
 
-    nonunderstood = (
-        set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS)
-    )
+    nonunderstood = set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS)
     if len(nonunderstood) > 0:
         logger.warning(
             "The following configuration fields are not understood: %s", nonunderstood
@@ -280,7 +278,7 @@ def check_config(config):
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
 
     # If 'db' is defined, it will override the 'database' config.
-    if 'db' in config:
+    if "db" in config:
         logger.warning(
             """The 'db' config field has been replaced by 'database'.
 See the sample config for help."""
