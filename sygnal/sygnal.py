@@ -28,9 +28,10 @@ import prometheus_client
 import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.enterprise.adbapi import ConnectionPool
-from twisted.internet import asyncioreactor
+from twisted.internet import asyncioreactor, defer
 from twisted.internet.defer import ensureDeferred
 from twisted.python import log as twisted_log
+from twisted.python.failure import Failure
 
 from sygnal.http import PushGatewayApiServer
 
@@ -130,10 +131,9 @@ class Sygnal(object):
                     )
                     raise
             else:
-                logger.error(
+                raise RuntimeError(
                     "Unknown OpenTracing implementation: %s.", tracecfg["impl"]
                 )
-                sys.exit(1)
 
         db_name = config["database"]["name"]
 
@@ -187,14 +187,14 @@ class Sygnal(object):
             try:
                 self.pushkins[app_id] = await self._make_pushkin(app_id, app_cfg)
             except Exception:
-                logger.exception(
+                raise RuntimeError(
                     "Failed to load and create pushkin for kind %s", app_cfg["type"]
                 )
-                sys.exit(1)
 
         if len(self.pushkins) == 0:
-            logger.error("No app IDs are configured. Edit sygnal.yaml to define some.")
-            sys.exit(1)
+            raise RuntimeError(
+                "No app IDs are configured. Edit sygnal.yaml to define some."
+            )
 
         logger.info("Configured with app IDs: %r", self.pushkins.keys())
 
@@ -210,9 +210,25 @@ class Sygnal(object):
         bind_addresses = self.config["http"]["bind_addresses"]
         pushgateway_api = PushGatewayApiServer(self)
 
-        ensureDeferred(
-            self._make_pushkins_then_start(port, bind_addresses, pushgateway_api)
-        )
+        @defer.inlineCallbacks
+        def start():
+            try:
+                yield ensureDeferred(
+                    self._make_pushkins_then_start(
+                        port, bind_addresses, pushgateway_api
+                    )
+                )
+            except Exception:
+                # Print the exception and bail out.
+                print("Error during startup:", file=sys.stderr)
+
+                # this gives better tracebacks than traceback.print_exc()
+                Failure().printTraceback(file=sys.stderr)
+
+                if self.reactor.running:
+                    self.reactor.stop()
+
+        self.reactor.callWhenRunning(start)
         self.reactor.run()
 
 
