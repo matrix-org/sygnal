@@ -1,3 +1,32 @@
+Sygnal 0.6.0 (2020-05-12)
+=========================
+
+Features
+--------
+
+- Report the APNS certificate expiry as a prometheus metric. ([\#106](https://github.com/matrix-org/sygnal/issues/106), [\#112](https://github.com/matrix-org/sygnal/issues/112))
+- Change APNS payload to be mutable and include the `event_id` in payload. ([\#114](https://github.com/matrix-org/sygnal/issues/114))
+
+
+Bugfixes
+--------
+
+- Sygnal will no longer warn about the `database` config field being not understood. ([\#100](https://github.com/matrix-org/sygnal/issues/100))
+- Log errors during start-up and fix the sample logging config. ([\#122](https://github.com/matrix-org/sygnal/issues/122))
+
+
+Improved Documentation
+----------------------
+
+- Document platform value for APNS apps ([\#110](https://github.com/matrix-org/sygnal/issues/110))
+
+
+Internal Changes
+----------------
+
+- Add Dockerfile. ([\#63](https://github.com/matrix-org/sygnal/issues/63))
+
+
 Sygnal 0.5.0 (2020-04-24)
 =========================
 
