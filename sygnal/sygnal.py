@@ -50,6 +50,9 @@ CONFIG_DEFAULTS = {
         "sentry": {"enabled": False},
     },
     "apps": {},
+    # This is defined so the key is known to check_config, but it will not
+    # define a default value.
+    "database": None,
 }
 
 
@@ -155,7 +158,7 @@ class Sygnal(object):
                 check_same_thread=False,
             )
         else:
-            raise Exception("Unsupported database 'name'")
+            raise Exception("Unsupported database '%s'" % db_name)
 
     async def _make_pushkin(self, app_name, app_config):
         """
@@ -273,7 +276,15 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
-    check_section("database", {"name", "args"})
+
+    # If 'db' is defined, it will override the 'database' config.
+    if "db" in config:
+        logger.warning(
+            """The 'db' config field has been replaced by 'database'.
+See the sample config for help."""
+        )
+    else:
+        check_section("database", {"name", "args"})
 
 
 def merge_left_with_defaults(defaults, loaded_config):
