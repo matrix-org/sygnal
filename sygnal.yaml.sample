@@ -97,6 +97,8 @@ log:
       handlers: ["stderr"]
       level: "INFO"
 
+    disable_existing_loggers: false
+
 
   access:
     # Specify whether or not to trust the IP address in the `X-Forwarded-For`
