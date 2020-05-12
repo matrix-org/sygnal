@@ -17,6 +17,9 @@ To change this, set the ``SYGNAL_CONF`` environment variable to the path to your
 A sample configuration file is provided in this repository;
 see ``sygnal.yaml.sample``.
 
+Sygnal supports using either SQLite3 or PostgreSQL as a database backend. See the ``sygnal.yaml.sample``
+for more information on how to configure.
+
 The `apps:` section is where you set up different apps that are to be handled.
 Each app should be given its own subsection, with the key of that subsection being the app's ``app_id``.
 Keys in this section take the form of the ``app_id``, as specified when setting up a Matrix pusher
@@ -51,6 +54,11 @@ apns
     * the 'team_id' parameter
     * the 'topic' parameter
 
+  For either type:
+    It can accept:
+    
+    * the 'platform' parameter which determines whether the production or sandbox APNS environment is used. Valid values are 'production' or 'sandbox'. If not provided, 'production' is used.
+
 gcm
   This sends messages via Google/Firebase Cloud Messaging (GCM/FCM) and hence can be used
   to deliver notifications to Android apps. It expects the 'api_key' parameter
@@ -70,4 +78,3 @@ Sygnal's logging appends to files but does not use a rotating logger.
 The recommended configuration is therefore to use ``logrotate``.
 The log file will be automatically reopened if the log file changes, for example
 due to ``logrotate``.
-

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright 2014 Leon Handreke
 # Copyright 2017 New Vector Ltd
-# Copyright 2019 The Matrix.org Foundation C.I.C.
+# Copyright 2019-2020 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,22 +21,35 @@ from io import BytesIO
 from json import JSONDecodeError
 
 from opentracing import logs, tags
-from prometheus_client import Histogram, Counter
+from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import DeferredSemaphore
-from twisted.web.client import HTTPConnectionPool, Agent, FileBodyProducer, readBody
+from twisted.web.client import Agent, FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 
 from sygnal.exceptions import (
-    TemporaryNotificationDispatchException,
     NotificationDispatchException,
+    TemporaryNotificationDispatchException,
 )
-from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
+from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
+
 from .exceptions import PushkinSetupException
 from .notifications import Pushkin
 
+QUEUE_TIME_HISTOGRAM = Histogram(
+    "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"
+)
+
 SEND_TIME_HISTOGRAM = Histogram(
     "sygnal_gcm_request_time", "Time taken to send HTTP request to GCM"
+)
+
+PENDING_REQUESTS_GAUGE = Gauge(
+    "sygnal_pending_gcm_requests", "Number of GCM requests waiting for a connection"
+)
+
+ACTIVE_REQUESTS_GAUGE = Gauge(
+    "sygnal_active_gcm_requests", "Number of GCM requests in flight"
 )
 
 RESPONSE_STATUS_CODES_COUNTER = Counter(
@@ -124,7 +137,7 @@ class GcmPushkin(Pushkin):
         """
         logger.debug("About to set up CanonicalRegId Store")
         canonical_reg_id_store = CanonicalRegIdStore()
-        await canonical_reg_id_store.setup(sygnal.database)
+        await canonical_reg_id_store.setup(sygnal.database, sygnal.database_engine)
         logger.debug("Finished setting up CanonicalRegId Store")
 
         return cls(name, sygnal, config, canonical_reg_id_store)
@@ -145,12 +158,20 @@ class GcmPushkin(Pushkin):
         # we use the semaphore to actually limit the number of concurrent
         # requests, since the HTTPConnectionPool will actually just lead to more
         # requests being created but not pooled – it does not perform limiting.
-        await self.connection_semaphore.acquire()
+        with QUEUE_TIME_HISTOGRAM.time():
+            with PENDING_REQUESTS_GAUGE.track_inprogress():
+                await self.connection_semaphore.acquire()
+
         try:
-            response = await self.http_agent.request(
-                b"POST", GCM_URL, headers=Headers(headers), bodyProducer=body_producer
-            )
-            response_text = (await readBody(response)).decode()
+            with SEND_TIME_HISTOGRAM.time():
+                with ACTIVE_REQUESTS_GAUGE.track_inprogress():
+                    response = await self.http_agent.request(
+                        b"POST",
+                        GCM_URL,
+                        headers=Headers(headers),
+                        bodyProducer=body_producer,
+                    )
+                    response_text = (await readBody(response)).decode()
         except Exception as exception:
             raise TemporaryNotificationDispatchException(
                 "GCM request failure"
@@ -164,8 +185,7 @@ class GcmPushkin(Pushkin):
 
         failed = []
 
-        with SEND_TIME_HISTOGRAM.time():
-            response, response_text = await self._perform_http_request(body, headers)
+        response, response_text = await self._perform_http_request(body, headers)
 
         RESPONSE_STATUS_CODES_COUNTER.labels(
             pushkin=self.name, code=response.code
@@ -423,7 +443,7 @@ class CanonicalRegIdStore(object):
     def __init__(self):
         self.db = None
 
-    async def setup(self, db):
+    async def setup(self, db, engine):
         """
         Prepares, if necessary, the database for storing canonical registration IDs.
 
@@ -432,11 +452,14 @@ class CanonicalRegIdStore(object):
 
         Args:
             db (adbapi.ConnectionPool): database to prepare
+            engine (str):
+                Database engine to use. Shoud be either "sqlite" or "postgresql".
 
         """
         self.db = db
+        self.engine = engine
 
-        await self.db.runQuery(self.TABLE_CREATE_QUERY)
+        await self.db.runOperation(self.TABLE_CREATE_QUERY)
 
     async def set_canonical_id(self, reg_id, canonical_reg_id):
         """
@@ -445,10 +468,20 @@ class CanonicalRegIdStore(object):
             reg_id (str): a registration ID
             canonical_reg_id (str): the canonical registration ID for `reg_id`
         """
-        await self.db.runQuery(
-            "INSERT OR REPLACE INTO gcm_canonical_reg_id VALUES (?, ?);",
-            (reg_id, canonical_reg_id),
-        )
+        if self.engine == "sqlite":
+            await self.db.runOperation(
+                "INSERT OR REPLACE INTO gcm_canonical_reg_id VALUES (?, ?);",
+                (reg_id, canonical_reg_id),
+            )
+        else:
+            await self.db.runOperation(
+                """
+                INSERT INTO gcm_canonical_reg_id VALUES (%s, %s)
+                ON CONFLICT (reg_id) DO UPDATE
+                    SET canonical_reg_id = EXCLUDED.canonical_reg_id;
+                """,
+                (reg_id, canonical_reg_id),
+            )
 
     async def get_canonical_ids(self, reg_ids):
         """
@@ -462,23 +495,16 @@ class CanonicalRegIdStore(object):
             mapping of registration ID to either its canonical registration ID,
             or `None` if there is no entry.
         """
-        return {reg_id: await self.get_canonical_id(reg_id) for reg_id in reg_ids}
-
-    async def get_canonical_id(self, reg_id):
-        """
-        Retrieves the canonical registration ID for one registration ID.
-
-        Args:
-            reg_id (str): registration ID to retrieve the canonical registration
-                ID for.
-
-        Returns (dict):
-            its canonical registration ID, or `None` if there is no entry.
-        """
-        rows = await self.db.runQuery(
-            "SELECT canonical_reg_id FROM gcm_canonical_reg_id WHERE reg_id = ?",
-            (reg_id,),
+        parameter_key = "?" if self.engine == "sqlite" else "%s"
+        rows = dict(
+            await self.db.runQuery(
+                """
+                SELECT reg_id, canonical_reg_id
+                FROM gcm_canonical_reg_id
+                WHERE reg_id IN (%s)
+                """
+                % (",".join(parameter_key for _ in reg_ids)),
+                reg_ids,
+            )
         )
-
-        if rows:
-            return rows[0][0]
+        return {reg_id: dict(rows).get(reg_id) for reg_id in reg_ids}

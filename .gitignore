@@ -1,10 +1,12 @@
 *.pyc
-sygnal.conf
 sygnal.yaml
-gunicorn_config.py
 var/
 sygnal.pid
 sygnal.db
-/_trial_temp*
+_trial_temp*
+
 /.idea
-*.egg-info
+/.eggs
+/*.egg-info
+/build
+/dist

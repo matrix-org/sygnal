@@ -19,22 +19,24 @@ import logging
 import sys
 import time
 import traceback
+import re
 from uuid import uuid4
 
-from opentracing import Format, tags, logs
-from prometheus_client import Counter, Histogram
+from opentracing import Format, logs, tags
+from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import ensureDeferred
 from twisted.web import server
 from twisted.web.http import (
-    proxiedLogFormatter,
-    datetimeToLogString,
     combinedLogFormatter,
+    datetimeToLogString,
+    proxiedLogFormatter,
 )
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from sygnal.notifications import NotificationContext
 from sygnal.utils import NotificationLoggerAdapter
+
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
 
@@ -64,6 +66,12 @@ NOTIFY_HANDLE_HISTOGRAM = Histogram(
     "sygnal_notify_time",
     "Time taken to handle /notify push gateway request",
     labelnames=["code"],
+)
+
+REQUESTS_IN_FLIGHT_GUAGE = Gauge(
+    "sygnal_requests_in_flight",
+    "Number of HTTP requests in flight",
+    labelnames=["resource"],
 )
 
 
@@ -164,9 +172,13 @@ class V1NotifyHandler(Resource):
 
             root_span_accounted_for = True
 
-            ensureDeferred(
-                self._handle_dispatch(root_span, request, log, notif, context)
-            )
+            async def cb():
+                with REQUESTS_IN_FLIGHT_GUAGE.labels(
+                    self.__class__.__name__
+                ).track_inprogress():
+                    await self._handle_dispatch(root_span, request, log, notif, context)
+
+            ensureDeferred(cb())
 
             # we have to try and send the notifications first,
             # so we can find out which ones to reject
@@ -190,6 +202,30 @@ class V1NotifyHandler(Resource):
             if not root_span_accounted_for:
                 root_span.finish()
 
+    def find_pushkins(self, appid):
+        """Finds matching pushkins in self.sygnal.pushkins according to the appid.
+
+
+        Args:
+            appid (str): app identifier to search in self.sygnal.pushkins.
+
+        Returns:
+            list of `Pushkin`: If it finds a specific pushkin with
+                the exact app id, immediately returns it.
+                Otherwise returns possible pushkins.
+        """
+        # if found a specific appid, just return it as a list
+        if appid in self.sygnal.pushkins:
+            return [self.sygnal.pushkins[appid]]
+
+        result = []
+        for key, value in self.sygnal.pushkins.items():
+            # The ".+" symbol is used in place of "*" symbol
+            regex = key.replace("*", ".+")
+            if re.search(regex, appid):
+                result.append(value)
+        return result
+
     async def _handle_dispatch(self, root_span, request, log, notif, context):
         """
         Actually handle the dispatch of notifications to devices, sequentially
@@ -208,12 +244,18 @@ class V1NotifyHandler(Resource):
                 NOTIFS_RECEIVED_DEVICE_PUSH_COUNTER.inc()
 
                 appid = d.app_id
-                if appid not in self.sygnal.pushkins:
+                found_pushkins = self.find_pushkins(appid)
+                if len(found_pushkins) == 0:
                     log.warning("Got notification for unknown app ID %s", appid)
                     rejected.append(d.pushkey)
                     continue
 
-                pushkin = self.sygnal.pushkins[appid]
+                if len(found_pushkins) > 1:
+                    log.warning("Got notification for an ambigious app ID %s", appid)
+                    rejected.append(d.pushkey)
+                    continue
+
+                pushkin = found_pushkins[0]
                 log.debug(
                     "Sending push to pushkin %s for app ID %s", pushkin.name, appid
                 )
@@ -240,7 +282,9 @@ class V1NotifyHandler(Resource):
             request.setResponseCode(500)
             log.error("Exception whilst dispatching notification.", exc_info=True)
         finally:
-            request.finish()
+            if not request._disconnected:
+                request.finish()
+
             PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
             root_span.set_tag(tags.HTTP_STATUS_CODE, request.code)
 
@@ -268,16 +312,18 @@ class SygnalLoggedSite(server.Site):
     Sygnal.
     """
 
-    def __init__(self, *args, reactor, log_formatter, **kwargs):
-        super().__init__(*args, reactor=reactor, **kwargs)
+    def __init__(self, *args, log_formatter, **kwargs):
+        super().__init__(*args, **kwargs)
         self.log_formatter = log_formatter
-        self.reactor = reactor
         self.logger = logging.getLogger("sygnal.access")
 
     def log(self, request):
-        log_date_time = datetimeToLogString(self.reactor.seconds())
+        """Log this request. Called by request.finish."""
+        # this also works around a bug in twisted.web.http.HTTPFactory which uses a
+        # monotonic time as an epoch time.
+        log_date_time = datetimeToLogString()
         line = self.log_formatter(log_date_time, request)
-        self.logger.info("%s", line)
+        self.logger.info("Handled request: %s", line)
 
 
 class PushGatewayApiServer(object):

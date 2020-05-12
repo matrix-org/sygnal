@@ -31,13 +31,15 @@ def read(fname):
 
 setup(
     name="matrix-sygnal",
-    version=read("VERSION").strip(),
     packages=find_packages(exclude=["tests", "tests.*"]),
     description="Reference Push Gateway for Matrix Notifications",
+    use_scm_version=True,
+    setup_requires=["setuptools_scm"],
     install_requires=[
         "Twisted>=19.2.1",
         "prometheus_client>=0.7.0,<0.8",
         "aioapns>=1.7",
+        "cryptography>=2.1.4",
         "pyyaml>=5.1.1",
         "service_identity>=18.1.0",
         "jaeger-client>=4.0.0",
@@ -45,6 +47,8 @@ setup(
         "sentry-sdk>=0.10.2",
         "zope.interface>=4.6.0",
         "idna>=2.8",
+        "psycopg2>=2.8.4",
+        "importlib_metadata",
     ],
     long_description=read("README.rst"),
 )

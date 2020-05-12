@@ -68,12 +68,10 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
-        resp = self._collect_request(req)
-
-        self.assertEquals(resp, {"rejected": []})
-        self.assertEquals(gcm.num_requests, 1)
+        self.assertEqual(resp, {"rejected": []})
+        self.assertEqual(gcm.num_requests, 1)
 
     def test_rejected(self):
         """
@@ -85,12 +83,10 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"registration_id": "spqr", "error": "NotRegistered"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
-        resp = self._collect_request(req)
-
-        self.assertEquals(resp, {"rejected": ["spqr"]})
-        self.assertEquals(gcm.num_requests, 1)
+        self.assertEqual(resp, {"rejected": ["spqr"]})
+        self.assertEqual(gcm.num_requests, 1)
 
     def test_regenerated_id(self):
         """
@@ -103,24 +99,20 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg42"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
-        resp = self._collect_request(req)
-
-        self.assertEquals(resp, {"rejected": []})
+        self.assertEqual(resp, {"rejected": []})
 
         gcm.preload_with_response(
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg43"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
-        resp = self._collect_request(req)
+        self.assertEqual(gcm.last_request_body["to"], "spqr_new")
 
-        self.assertEquals(gcm.last_request_body["to"], "spqr_new")
-
-        self.assertEquals(resp, {"rejected": []})
-        self.assertEquals(gcm.num_requests, 2)
+        self.assertEqual(resp, {"rejected": []})
+        self.assertEqual(gcm.num_requests, 2)
 
     def test_batching(self):
         """
@@ -138,15 +130,13 @@ class GcmTestCase(testutils.TestCase):
             },
         )
 
-        req = self._make_request(
+        resp = self._request(
             self._make_dummy_notification([DEVICE_EXAMPLE, DEVICE_EXAMPLE2])
         )
 
-        resp = self._collect_request(req)
-
-        self.assertEquals(resp, {"rejected": []})
-        self.assertEquals(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
-        self.assertEquals(gcm.num_requests, 1)
+        self.assertEqual(resp, {"rejected": []})
+        self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
+        self.assertEqual(gcm.num_requests, 1)
 
     def test_batching_individual_failure(self):
         """
@@ -166,15 +156,13 @@ class GcmTestCase(testutils.TestCase):
             },
         )
 
-        req = self._make_request(
+        resp = self._request(
             self._make_dummy_notification([DEVICE_EXAMPLE, DEVICE_EXAMPLE2])
         )
 
-        resp = self._collect_request(req)
-
-        self.assertEquals(resp, {"rejected": ["spqr2"]})
-        self.assertEquals(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
-        self.assertEquals(gcm.num_requests, 1)
+        self.assertEqual(resp, {"rejected": ["spqr2"]})
+        self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
+        self.assertEqual(gcm.num_requests, 1)
 
     def test_regenerated_failure(self):
         """
@@ -188,11 +176,9 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg42"}]}
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
-        resp = self._collect_request(req)
-
-        self.assertEquals(resp, {"rejected": []})
+        self.assertEqual(resp, {"rejected": []})
 
         # imagine there is some non-negligible time between these two,
         # and the device in question is unregistered
@@ -202,13 +188,11 @@ class GcmTestCase(testutils.TestCase):
             {"results": [{"registration_id": "spqr_new", "error": "NotRegistered"}]},
         )
 
-        req = self._make_request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
-        resp = self._collect_request(req)
-
-        self.assertEquals(gcm.last_request_body["to"], "spqr_new")
+        self.assertEqual(gcm.last_request_body["to"], "spqr_new")
 
         # the ID translation needs to be transparent as the homeserver will not
         # make sense of it otherwise.
-        self.assertEquals(resp, {"rejected": ["spqr"]})
-        self.assertEquals(gcm.num_requests, 2)
+        self.assertEqual(resp, {"rejected": ["spqr"]})
+        self.assertEqual(gcm.num_requests, 2)
