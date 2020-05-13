@@ -190,9 +190,10 @@ class Sygnal(object):
             try:
                 self.pushkins[app_id] = await self._make_pushkin(app_id, app_cfg)
             except Exception:
-                raise RuntimeError(
-                    "Failed to load and create pushkin for kind %s", app_cfg["type"]
+                logger.error(
+                    "Failed to load and create pushkin for kind '%s'" % app_cfg["type"]
                 )
+                raise
 
         if len(self.pushkins) == 0:
             raise RuntimeError(
