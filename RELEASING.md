@@ -22,6 +22,8 @@
    ```sh
    git push origin tag v$ver
    ```
+   Pushing a tag on GitHub will automatically trigger a build in Docker Hub and
+   the resulting image will be published using the same tag as git.
 1. Create release on GH project page:
    ```sh
    xdg-open https://github.com/matrix-org/sygnal/releases/edit/v$ver
