@@ -24,6 +24,12 @@ PUSHKIN_ID = "com.example.apns"
 TEST_CERTFILE_PATH = "/path/to/my/certfile.pem"
 
 DEVICE_EXAMPLE = {"app_id": "com.example.apns", "pushkey": "spqr", "pushkey_ts": 42}
+DEVICE_EXAMPLE_FALLBACK = {
+    "app_id": "com.example.apns",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+    "data": {"fallback_content": True},
+}
 
 
 class ApnsTestCase(testutils.TestCase):
@@ -124,6 +130,41 @@ class ApnsTestCase(testutils.TestCase):
                         ],
                     },
                     "badge": 3,
+                    "mutable-content": 1,
+                },
+            },
+            notification_req.message,
+        )
+
+        self.assertEqual({"rejected": []}, resp)
+
+    def test_expected_fallback(self):
+        """
+        Tests the expected fallback case: a good response from APNS means we pass on
+        a good response to the homeserver.
+        """
+        # Arrange
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(
+            NotificationResult("notID", "200")
+        )
+
+        # Act
+        resp = self._request(
+            self._make_dummy_notification_event_id_only([DEVICE_EXAMPLE_FALLBACK])
+        )
+
+        # Assert
+        self.assertEqual(1, method.call_count)
+        ((notification_req,), _kwargs) = method.call_args
+
+        self.assertEqual(
+            {
+                "room_id": "!slw48wfj34rtnrf:example.com",
+                "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
+                "unread_count": 2,
+                "aps": {
+                    "alert": {"loc-key": "SINGLE_UNREAD", "loc-args": []},
                     "mutable-content": 1,
                 },
             },
