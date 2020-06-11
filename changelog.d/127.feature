@@ -1,1 +1,1 @@
-Add fallback_content handling from push data.
+Add fallback_content check to include alert field in the APNS payload.
