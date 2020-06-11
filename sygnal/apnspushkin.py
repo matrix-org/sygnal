@@ -226,7 +226,7 @@ class ApnsPushkin(Pushkin):
         ) as span_parent:
 
             if n.event_id and not n.type:
-                payload = self._get_payload_event_id_only(n)
+                payload = self._get_payload_event_id_only(n, device)
             else:
                 payload = self._get_payload_full(n, log)
 
@@ -278,7 +278,7 @@ class ApnsPushkin(Pushkin):
                             retry_delay, twisted_reactor=self.sygnal.reactor
                         )
 
-    def _get_payload_event_id_only(self, n):
+    def _get_payload_event_id_only(self, n, device):
         """
         Constructs a payload for a notification where we know only the event ID.
         Args:
@@ -301,8 +301,8 @@ class ApnsPushkin(Pushkin):
 
         payload["aps"] = {"mutable-content": 1}
         if (
-            n.devices[0].data["fallback_content"] is not None
-            and n.devices[0].data["fallback_content"]
+            device.data["fallback_content"] is not None
+            and device.data["fallback_content"]
         ):
             payload["aps"]["alert"] = {"loc-key": "SINGLE_UNREAD", "loc-args": []}
 
