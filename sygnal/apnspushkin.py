@@ -283,6 +283,8 @@ class ApnsPushkin(Pushkin):
         Constructs a payload for a notification where we know only the event ID.
         Args:
             n: The notification to construct a payload for.
+            device (Device): Device information to which the constructed payload
+            will be sent.
 
         Returns:
             The APNs payload as a nested dicts.
