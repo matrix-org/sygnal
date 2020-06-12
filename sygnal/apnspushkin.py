@@ -301,11 +301,11 @@ class ApnsPushkin(Pushkin):
         if n.counts.missed_calls is not None:
             payload["missed_calls"] = n.counts.missed_calls
 
-        payload["aps"] = {"mutable-content": 1}
         if (
             device.data["fallback_content"] is not None
             and device.data["fallback_content"]
         ):
+            payload["aps"] = {"mutable-content": 1}
             payload["aps"]["alert"] = {"loc-key": "SINGLE_UNREAD", "loc-args": []}
 
         return payload
