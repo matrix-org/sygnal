@@ -1,1 +1,1 @@
-Add fallback_content check to include alert field in the APNS payload.
+Use default_payload from device data for both APNS and GCM payloads.
