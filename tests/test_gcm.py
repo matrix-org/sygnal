@@ -34,6 +34,7 @@ DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD = {
     },
 }
 
+
 class TestGcmPushkin(GcmPushkin):
     """
     A GCM pushkin with the ability to make HTTP requests removed and instead
@@ -95,7 +96,9 @@ class GcmTestCase(testutils.TestCase):
             200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
         )
 
-        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD]))
+        resp = self._request(
+            self._make_dummy_notification([DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD])
+        )
 
         self.assertEqual(resp, {"rejected": []})
         self.assertEqual(gcm.num_requests, 1)
