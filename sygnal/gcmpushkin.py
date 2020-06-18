@@ -323,7 +323,7 @@ class GcmPushkin(Pushkin):
 
             inverse_reg_id_mappings = {v: k for (k, v) in reg_id_mappings.items()}
 
-            data = GcmPushkin._build_data(n)
+            data = GcmPushkin._build_data(n, device)
             headers = {
                 b"User-Agent": ["sygnal"],
                 b"Content-Type": ["application/json"],
@@ -393,16 +393,22 @@ class GcmPushkin(Pushkin):
             return failed
 
     @staticmethod
-    def _build_data(n):
+    def _build_data(n, device):
         """
         Build the payload data to be sent.
         Args:
             n: Notification to build the payload for.
+            device (Device): Device information to which the constructed payload
+            will be sent.
 
         Returns:
             JSON-compatible dict
         """
         data = {}
+
+        if device.data is not None and device.data["default_payload"] is not None:
+            data = device.data["default_payload"]
+
         for attr in [
             "event_id",
             "type",

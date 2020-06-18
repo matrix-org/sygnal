@@ -20,7 +20,19 @@ from tests.testutils import DummyResponse
 
 DEVICE_EXAMPLE = {"app_id": "com.example.gcm", "pushkey": "spqr", "pushkey_ts": 42}
 DEVICE_EXAMPLE2 = {"app_id": "com.example.gcm", "pushkey": "spqr2", "pushkey_ts": 42}
-
+DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD = {
+    "app_id": "com.example.gcm",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+    "data": {
+        "default_payload": {
+            "aps": {
+                "mutable-content": 1,
+                "alert": {"loc-key": "SINGLE_UNREAD", "loc-args": []},
+            }
+        }
+    },
+}
 
 class TestGcmPushkin(GcmPushkin):
     """
@@ -69,6 +81,21 @@ class GcmTestCase(testutils.TestCase):
         )
 
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
+
+        self.assertEqual(resp, {"rejected": []})
+        self.assertEqual(gcm.num_requests, 1)
+
+    def test_expected_with_default_payload(self):
+        """
+        Tests the expected case: a good response from GCM leads to a good
+        response from Sygnal.
+        """
+        gcm = self.sygnal.pushkins["com.example.gcm"]
+        gcm.preload_with_response(
+            200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
+        )
+
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD]))
 
         self.assertEqual(resp, {"rejected": []})
         self.assertEqual(gcm.num_requests, 1)
