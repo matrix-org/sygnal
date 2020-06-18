@@ -228,7 +228,7 @@ class ApnsPushkin(Pushkin):
             if n.event_id and not n.type:
                 payload = self._get_payload_event_id_only(n, device)
             else:
-                payload = self._get_payload_full(n, log)
+                payload = self._get_payload_full(n, device, log)
 
             if payload is None:
                 # Nothing to do
@@ -291,6 +291,9 @@ class ApnsPushkin(Pushkin):
         """
         payload = {}
 
+        if device.data is not None and device.data["default_payload"] is not None:
+            payload = device.data["default_payload"]
+
         if n.room_id:
             payload["room_id"] = n.room_id
         if n.event_id:
@@ -301,20 +304,15 @@ class ApnsPushkin(Pushkin):
         if n.counts.missed_calls is not None:
             payload["missed_calls"] = n.counts.missed_calls
 
-        if (
-            device.data["fallback_content"] is not None
-            and device.data["fallback_content"]
-        ):
-            payload["aps"] = {"mutable-content": 1}
-            payload["aps"]["alert"] = {"loc-key": "SINGLE_UNREAD", "loc-args": []}
-
         return payload
 
-    def _get_payload_full(self, n, log):
+    def _get_payload_full(self, n, device, log):
         """
         Constructs a payload for a notification.
         Args:
             n: The notification to construct a payload for.
+            device (Device): Device information to which the constructed payload
+            will be sent.
             log: A logger.
 
         Returns:
@@ -416,13 +414,6 @@ class ApnsPushkin(Pushkin):
             loc_key = "MSG_FROM_USER"
             loc_args = [from_display]
 
-        aps = {}
-        if loc_key:
-            aps["alert"] = {"loc-key": loc_key}
-
-        if loc_args:
-            aps["alert"]["loc-args"] = loc_args
-
         badge = None
         if n.counts.unread is not None:
             badge = n.counts.unread
@@ -431,24 +422,35 @@ class ApnsPushkin(Pushkin):
                 badge = 0
             badge += n.counts.missed_calls
 
-        if badge is not None:
-            aps["badge"] = badge
-
-        if loc_key:
-            aps["mutable-content"] = 1
-
         if loc_key is None and badge is None:
             log.info("Nothing to do for alert of type %s", n.type)
             return None
 
         payload = {}
 
+        if device.data is not None and device.data["default_payload"] is not None:
+            payload = device.data["default_payload"]
+
+        if "aps" not in payload:
+            payload["aps"] = {}
+
+        if loc_key:
+            if "alert" not in payload["aps"]:
+                payload["aps"]["alert"] = {}
+            payload["aps"]["alert"]["loc-key"] = loc_key
+
+        if loc_args:
+            if "alert" not in payload["aps"]:
+                payload["aps"]["alert"] = {}
+            payload["aps"]["alert"]["loc-args"] = loc_args
+
+        if badge is not None:
+            payload["aps"]["badge"] = badge
+
         if loc_key and n.room_id:
             payload["room_id"] = n.room_id
         if loc_key and n.event_id:
             payload["event_id"] = n.event_id
-
-        payload["aps"] = aps
 
         return payload
 
