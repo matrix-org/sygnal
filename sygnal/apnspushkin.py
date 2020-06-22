@@ -428,7 +428,11 @@ class ApnsPushkin(Pushkin):
 
         payload = {}
 
-        if device.data is not None and device.data["default_payload"] is not None:
+        if (
+            n.type is not None
+            and device.data is not None
+            and device.data["default_payload"] is not None
+        ):
             payload = device.data["default_payload"]
 
         if "aps" not in payload:

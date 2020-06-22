@@ -181,6 +181,34 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertEqual({"rejected": []}, resp)
 
+    def test_expected_badge_only_with_default_payload(self):
+        """
+        Tests the expected fallback case: a good response from APNS means we pass on
+        a good response to the homeserver.
+        """
+        # Arrange
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(
+            NotificationResult("notID", "200")
+        )
+
+        # Act
+        resp = self._request(
+            self._make_dummy_notification_badge_only(
+                [DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD]
+            )
+        )
+
+        # Assert
+        self.assertEqual(1, method.call_count)
+        ((notification_req,), _kwargs) = method.call_args
+
+        self.assertEqual(
+            {"aps": {"badge": 2}}, notification_req.message,
+        )
+
+        self.assertEqual({"rejected": []}, resp)
+
     def test_expected_full_with_default_payload(self):
         """
         Tests the expected fallback case: a good response from APNS means we pass on
