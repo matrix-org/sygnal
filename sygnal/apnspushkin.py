@@ -291,8 +291,8 @@ class ApnsPushkin(Pushkin):
         """
         payload = {}
 
-        if device.data is not None and device.data["default_payload"] is not None:
-            payload = device.data["default_payload"]
+        if device.data:
+            payload.update(device.data.get("default_payload", {}))
 
         if n.room_id:
             payload["room_id"] = n.room_id
