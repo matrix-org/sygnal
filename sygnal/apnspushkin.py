@@ -16,6 +16,7 @@
 # limitations under the License.
 import asyncio
 import base64
+import copy
 from datetime import timezone
 import logging
 import os
