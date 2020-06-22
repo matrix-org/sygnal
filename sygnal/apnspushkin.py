@@ -430,7 +430,7 @@ class ApnsPushkin(Pushkin):
         payload = {}
 
         if n.type and device.data:
-            payload = copy.deepcopy(device.data.get("default_payload",{}))
+            payload = copy.deepcopy(device.data.get("default_payload", {}))
 
         payload.setdefault("aps", {})
 
