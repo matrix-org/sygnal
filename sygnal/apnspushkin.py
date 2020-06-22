@@ -437,9 +437,7 @@ class ApnsPushkin(Pushkin):
             payload["aps"].setdefault("alert", {})["loc-key"] = loc_key
 
         if loc_args:
-            if "alert" not in payload["aps"]:
-                payload["aps"]["alert"] = {}
-            payload["aps"]["alert"]["loc-args"] = loc_args
+            payload["aps"].setdefault("alert", {})["loc-args"] = loc_args
 
         if badge is not None:
             payload["aps"]["badge"] = badge
