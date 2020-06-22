@@ -406,8 +406,8 @@ class GcmPushkin(Pushkin):
         """
         data = {}
 
-        if device.data is not None and device.data["default_payload"] is not None:
-            data = device.data["default_payload"]
+        if device.data:
+            data.update(device.data.get("default_payload", {}))
 
         for attr in [
             "event_id",
