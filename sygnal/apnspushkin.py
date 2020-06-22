@@ -431,8 +431,7 @@ class ApnsPushkin(Pushkin):
         if n.type and device.data:
             payload = copy.deepcopy(device.data.get("default_payload",{}))
 
-        if "aps" not in payload:
-            payload["aps"] = {}
+        payload.setdefault("aps", {})
 
         if loc_key:
             if "alert" not in payload["aps"]:
