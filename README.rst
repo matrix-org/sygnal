@@ -68,12 +68,14 @@ gcm
 Pusher `data` configuration
 =======
 
-When calling https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-pushers-set, clients
-can provide a ``default_payload`` data dictionary in ``PusherData``, which will be passed to Sygnal.
-This will be used by Sygnal to have a default data dictionary in the push payload, for both APNS and
-GCM pushers, if provided. Upon the default payload dictionary, Sygnal will make incremental changes.
-This is useful for clients to decide default push payload content. For instance, iOS clients will have
-freedom to use silent/mutable notifications and be able to set some default alert/sound/badge fields.
+The following parameters can be specified in the `data` dictionary which is given when configuring the pusher
+via [POST /_matrix/client/r0/pushers/set](<https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set>) :
+
+* ``default_payload``: a dictionary which defines the basic payload to be sent to the notification service.
+  Sygnal will merge information specific to the push event into this dictionary. If unset, the empty dictionary is used.
+
+  This can be useful for clients to specify default push payload content. For instance, iOS clients will have
+  freedom to use silent/mutable notifications and be able to set some default alert/sound/badge fields.
 
 Running
 =======
