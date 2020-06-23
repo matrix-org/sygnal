@@ -65,7 +65,7 @@ gcm
   to contain the 'Server key', which can be acquired from Firebase Console at:
   ``https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/``
 
-PusherData Configurations
+Pusher `data` configuration
 =======
 
 When calling https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-pushers-set, clients
