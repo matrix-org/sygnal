@@ -65,6 +65,16 @@ gcm
   to contain the 'Server key', which can be acquired from Firebase Console at:
   ``https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/``
 
+PusherData Configurations
+=======
+
+When calling https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-pushers-set, clients
+can provide a ``default_payload`` data dictionary in ``PusherData``, which will be passed to Sygnal.
+This will be used by Sygnal to have a default data dictionary in the push payload, for both APNS and
+GCM pushers, if provided. Upon the default payload dictionary, Sygnal will make incremental changes.
+This is useful for clients to decide default push payload content. For instance, iOS clients will have
+freedom to use silent/mutable notifications and be able to set some default alert/sound/badge fields.
+
 Running
 =======
 
