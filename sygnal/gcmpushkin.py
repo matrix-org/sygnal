@@ -23,7 +23,7 @@ from json import JSONDecodeError
 from opentracing import logs, tags
 from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import DeferredSemaphore
-from twisted.web.client import Agent, FileBodyProducer, HTTPConnectionPool, readBody
+from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 
 from sygnal.exceptions import (
@@ -121,7 +121,9 @@ class GcmPushkin(Pushkin):
         if proxycfg.get("enabled", False):
             http_proxy_url = proxycfg.get("address")
             if http_proxy_url is None:
-                raise PushkinSetupException("HTTP Proxy enabled for FCM but no URL specified.")
+                raise PushkinSetupException(
+                    "HTTP Proxy enabled for FCM but no URL specified."
+                )
             else:
                 logger.info("Using HTTP proxy for FCM")
                 # the HTTP proxy code expects a bytestring
@@ -132,7 +134,7 @@ class GcmPushkin(Pushkin):
             pool=self.http_pool,
             contextFactory=tls_client_options_factory,
             http_proxy=http_proxy_url,
-            https_proxy=http_proxy_url
+            https_proxy=http_proxy_url,
         )
 
         self.db = sygnal.database
