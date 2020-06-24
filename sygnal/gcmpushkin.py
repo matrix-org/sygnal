@@ -34,6 +34,7 @@ from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 from .exceptions import PushkinSetupException
+from .helper.proxyagent import ProxyAgent
 from .notifications import Pushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(
@@ -112,10 +113,26 @@ class GcmPushkin(Pushkin):
 
         tls_client_options_factory = ClientTLSOptionsFactory()
 
-        self.http_agent = Agent(
+        http_proxy_url = None
+
+        # use the Sygnal global proxy configuration
+        proxycfg = sygnal.config["proxy"]
+
+        if proxycfg.get("enabled", False):
+            http_proxy_url = proxycfg.get("address")
+            if http_proxy_url is None:
+                raise PushkinSetupException("HTTP Proxy enabled for FCM but no URL specified.")
+            else:
+                logger.info("Using HTTP proxy for FCM")
+                # the HTTP proxy code expects a bytestring
+                http_proxy_url = http_proxy_url.encode()
+
+        self.http_agent = ProxyAgent(
             reactor=sygnal.reactor,
             pool=self.http_pool,
             contextFactory=tls_client_options_factory,
+            http_proxy=http_proxy_url,
+            https_proxy=http_proxy_url
         )
 
         self.db = sygnal.database
