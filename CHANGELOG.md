@@ -1,3 +1,24 @@
+Sygnal 0.7.0 (2020-06-24)
+=========================
+
+Features
+--------
+
+- Use `default_payload` from the device data for both APNS and GCM payloads. ([\#127](https://github.com/matrix-org/sygnal/issues/127))
+
+
+Improved Documentation
+----------------------
+
+- Note information about Docker files in release instructions. ([\#126](https://github.com/matrix-org/sygnal/issues/126))
+
+
+Internal Changes
+----------------
+
+- Improve logging if a pushkin cannot be created. ([\#125](https://github.com/matrix-org/sygnal/issues/125))
+
+
 Sygnal 0.6.0 (2020-05-12)
 =========================
 
