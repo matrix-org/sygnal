@@ -123,6 +123,18 @@ http:
   #
   port: 5000
 
+## Proxying for outgoing connections #
+#
+proxy:
+  # Specify whether or not to use a proxy.
+  # Currently only HTTP proxies with CONNECT capability are supported.
+  #
+  enabled: false
+
+  # Specify an address and port to use for connecting to the HTTP proxy.
+  #
+  address: '127.0.0.1:8080'
+
 ## Metrics #
 #
 metrics:

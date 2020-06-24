@@ -50,6 +50,9 @@ CONFIG_DEFAULTS = {
         },
         "sentry": {"enabled": False},
     },
+    "proxy": {
+        "enabled": False,
+    },
     "apps": {},
     # This is defined so the key is known to check_config, but it will not
     # define a default value.
@@ -293,6 +296,7 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
+    check_section("proxy", {"enabled", "address"})
 
     # If 'db' is defined, it will override the 'database' config.
     if "db" in config:
