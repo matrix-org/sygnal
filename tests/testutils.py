@@ -135,6 +135,27 @@ class TestCase(unittest.TestCase):
             }
         }
 
+    def _make_dummy_notification_event_id_only(self, devices):
+        return {
+            "notification": {
+                "room_id": "!slw48wfj34rtnrf:example.com",
+                "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
+                "counts": {"unread": 2},
+                "devices": devices,
+            }
+        }
+
+    def _make_dummy_notification_badge_only(self, devices):
+        return {
+            "notification": {
+                "id": "",
+                "type": None,
+                "sender": "",
+                "counts": {"unread": 2},
+                "devices": devices,
+            }
+        }
+
     def _request(self, payload) -> Union[dict, int]:
         """
         Make a dummy request to the notify endpoint with the specified payload

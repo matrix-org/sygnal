@@ -16,6 +16,7 @@
 # limitations under the License.
 import asyncio
 import base64
+import copy
 from datetime import timezone
 import logging
 import os
@@ -226,9 +227,9 @@ class ApnsPushkin(Pushkin):
         ) as span_parent:
 
             if n.event_id and not n.type:
-                payload = self._get_payload_event_id_only(n)
+                payload = self._get_payload_event_id_only(n, device)
             else:
-                payload = self._get_payload_full(n, log)
+                payload = self._get_payload_full(n, device, log)
 
             if payload is None:
                 # Nothing to do
@@ -278,16 +279,21 @@ class ApnsPushkin(Pushkin):
                             retry_delay, twisted_reactor=self.sygnal.reactor
                         )
 
-    def _get_payload_event_id_only(self, n):
+    def _get_payload_event_id_only(self, n, device):
         """
         Constructs a payload for a notification where we know only the event ID.
         Args:
             n: The notification to construct a payload for.
+            device (Device): Device information to which the constructed payload
+            will be sent.
 
         Returns:
             The APNs payload as a nested dicts.
         """
         payload = {}
+
+        if device.data:
+            payload.update(device.data.get("default_payload", {}))
 
         if n.room_id:
             payload["room_id"] = n.room_id
@@ -301,11 +307,13 @@ class ApnsPushkin(Pushkin):
 
         return payload
 
-    def _get_payload_full(self, n, log):
+    def _get_payload_full(self, n, device, log):
         """
         Constructs a payload for a notification.
         Args:
             n: The notification to construct a payload for.
+            device (Device): Device information to which the constructed payload
+            will be sent.
             log: A logger.
 
         Returns:
@@ -407,13 +415,6 @@ class ApnsPushkin(Pushkin):
             loc_key = "MSG_FROM_USER"
             loc_args = [from_display]
 
-        aps = {}
-        if loc_key:
-            aps["alert"] = {"loc-key": loc_key}
-
-        if loc_args:
-            aps["alert"]["loc-args"] = loc_args
-
         badge = None
         if n.counts.unread is not None:
             badge = n.counts.unread
@@ -422,24 +423,30 @@ class ApnsPushkin(Pushkin):
                 badge = 0
             badge += n.counts.missed_calls
 
-        if badge is not None:
-            aps["badge"] = badge
-
-        if loc_key:
-            aps["mutable-content"] = 1
-
         if loc_key is None and badge is None:
             log.info("Nothing to do for alert of type %s", n.type)
             return None
 
         payload = {}
 
+        if n.type and device.data:
+            payload = copy.deepcopy(device.data.get("default_payload", {}))
+
+        payload.setdefault("aps", {})
+
+        if loc_key:
+            payload["aps"].setdefault("alert", {})["loc-key"] = loc_key
+
+        if loc_args:
+            payload["aps"].setdefault("alert", {})["loc-args"] = loc_args
+
+        if badge is not None:
+            payload["aps"]["badge"] = badge
+
         if loc_key and n.room_id:
             payload["room_id"] = n.room_id
         if loc_key and n.event_id:
             payload["event_id"] = n.event_id
-
-        payload["aps"] = aps
 
         return payload
 
