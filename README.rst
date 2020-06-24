@@ -69,7 +69,7 @@ Pusher `data` configuration
 =======
 
 The following parameters can be specified in the `data` dictionary which is given when configuring the pusher
-via [POST /_matrix/client/r0/pushers/set](<https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set>) :
+via `POST /_matrix/client/r0/pushers/set <https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set>`_ :
 
 * ``default_payload``: a dictionary which defines the basic payload to be sent to the notification service.
   Sygnal will merge information specific to the push event into this dictionary. If unset, the empty dictionary is used.
