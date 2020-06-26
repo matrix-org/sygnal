@@ -50,7 +50,7 @@ CONFIG_DEFAULTS = {
         },
         "sentry": {"enabled": False},
     },
-    "proxy": {"enabled": False},
+    "proxy": {"enabled": False, "user": None, "password": None},
     "apps": {},
     # This is defined so the key is known to check_config, but it will not
     # define a default value.
@@ -276,7 +276,7 @@ def check_config(config):
     nonunderstood = set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS)
     if len(nonunderstood) > 0:
         logger.warning(
-            "The following configuration fields are not understood: %s", nonunderstood
+            "The following configuration sections are not understood: %s", nonunderstood
         )
 
     check_section("http", {"port", "bind_addresses"})
@@ -294,7 +294,7 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
-    check_section("proxy", {"enabled", "address"})
+    check_section("proxy", {"enabled", "address", "username", "password"})
 
     # If 'db' is defined, it will override the 'database' config.
     if "db" in config:
