@@ -17,6 +17,7 @@
 # https://github.com/matrix-org/synapse/blob/6920e58136671f086536332bdd6844dff0d4b429/synapse/http/connectproxyclient.py
 
 import logging
+from base64 import urlsafe_b64encode
 
 from zope.interface import implementer
 
@@ -175,14 +176,22 @@ class HTTPConnectSetupClient(http.HTTPClient):
         port (int): The port to send in the CONNECT message
     """
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, basic_proxy_auth):
         self.host = host
         self.port = port
+        self.basic_proxy_auth = basic_proxy_auth
         self.on_connected = defer.Deferred()
 
     def connectionMade(self):
         logger.debug("Connected to proxy, sending CONNECT")
         self.sendCommand(b"CONNECT", b"%s:%d" % (self.host, self.port))
+        if self.basic_proxy_auth is not None:
+            # a credential pair is a urlsafe-base64-encoded pair separated by colon
+            (user, password) = self.basic_proxy_auth
+            encoded_credentials = urlsafe_b64encode(f"{user}:{password}")
+            self.sendHeader(
+                b"Proxy-Authorization", f"basic {encoded_credentials}\r\n".encode()
+            )
         self.endHeaders()
 
     def handleStatus(self, version, status, message):

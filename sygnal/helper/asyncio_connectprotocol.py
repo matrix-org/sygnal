@@ -77,7 +77,7 @@ class HttpConnectProtocol(asyncio.Protocol):
         transport.write(f"CONNECT {self.target_address} HTTP/1.1\r\n".encode())
         transport.write(f"Host: {self.proxy_address}\r\n".encode())
         if self.basic_proxy_auth is not None:
-            # a credential pair is a urlsafe-base64-encoded
+            # a credential pair is a urlsafe-base64-encoded pair separated by colon
             (user, password) = self.basic_proxy_auth
             encoded_credentials = urlsafe_b64encode(f"{user}:{password}")
             transport.write(
