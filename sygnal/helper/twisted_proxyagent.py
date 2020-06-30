@@ -66,6 +66,7 @@ class ProxyAgent(_AgentBase):
         pool=None,
         http_proxy=None,
         https_proxy=None,
+        proxy_basic_auth=None,
     ):
         _AgentBase.__init__(self, reactor, pool)
 
@@ -82,6 +83,8 @@ class ProxyAgent(_AgentBase):
         self.https_proxy_endpoint = _http_proxy_endpoint(
             https_proxy, reactor, **self._endpoint_kwargs
         )
+
+        self.proxy_basic_auth = proxy_basic_auth
 
         self._policy_for_https = contextFactory
         self._reactor = reactor
@@ -133,6 +136,7 @@ class ProxyAgent(_AgentBase):
                 self.https_proxy_endpoint,
                 parsed_uri.host,
                 parsed_uri.port,
+                self.proxy_basic_auth,
             )
         else:
             # not using a proxy

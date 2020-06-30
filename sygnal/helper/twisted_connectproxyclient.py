@@ -22,16 +22,13 @@ from base64 import urlsafe_b64encode
 from zope.interface import implementer
 
 from twisted.internet import defer, protocol
-from twisted.internet.error import ConnectError
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import connectionDone
 from twisted.web import http
 
+from sygnal.exceptions import ProxyConnectError
+
 logger = logging.getLogger(__name__)
-
-
-class ProxyConnectError(ConnectError):
-    pass
 
 
 @implementer(IStreamClientEndpoint)
@@ -53,17 +50,20 @@ class HTTPConnectProxyEndpoint(object):
         port (int): port that we want to connect to
     """
 
-    def __init__(self, reactor, proxy_endpoint, host, port):
+    def __init__(self, reactor, proxy_endpoint, host, port, basic_auth):
         self._reactor = reactor
         self._proxy_endpoint = proxy_endpoint
         self._host = host
         self._port = port
+        self._basic_auth = basic_auth
 
     def __repr__(self):
         return "<HTTPConnectProxyEndpoint %s>" % (self._proxy_endpoint,)
 
     def connect(self, protocolFactory):
-        f = HTTPProxiedClientFactory(self._host, self._port, protocolFactory)
+        f = HTTPProxiedClientFactory(
+            self._host, self._port, self._basic_auth, protocolFactory
+        )
         d = self._proxy_endpoint.connect(f)
         # once the tcp socket connects successfully, we need to wait for the
         # CONNECT to complete.
@@ -83,9 +83,10 @@ class HTTPProxiedClientFactory(protocol.ClientFactory):
         wrapped_factory (protocol.ClientFactory): The original Factory
     """
 
-    def __init__(self, dst_host, dst_port, wrapped_factory):
+    def __init__(self, dst_host, dst_port, proxy_basic_auth, wrapped_factory):
         self.dst_host = dst_host
         self.dst_port = dst_port
+        self.proxy_basic_auth = proxy_basic_auth
         self.wrapped_factory = wrapped_factory
         self.on_connection = defer.Deferred()
 
@@ -96,7 +97,11 @@ class HTTPProxiedClientFactory(protocol.ClientFactory):
         wrapped_protocol = self.wrapped_factory.buildProtocol(addr)
 
         return HTTPConnectProtocol(
-            self.dst_host, self.dst_port, wrapped_protocol, self.on_connection
+            self.dst_host,
+            self.dst_port,
+            self.proxy_basic_auth,
+            wrapped_protocol,
+            self.on_connection,
         )
 
     def clientConnectionFailed(self, connector, reason):
@@ -128,12 +133,16 @@ class HTTPConnectProtocol(protocol.Protocol):
             wrapped_protocol when the CONNECT completes
     """
 
-    def __init__(self, host, port, wrapped_protocol, connected_deferred):
+    def __init__(
+        self, host, port, basic_proxy_auth, wrapped_protocol, connected_deferred
+    ):
         self.host = host
         self.port = port
         self.wrapped_protocol = wrapped_protocol
         self.connected_deferred = connected_deferred
-        self.http_setup_client = HTTPConnectSetupClient(self.host, self.port)
+        self.http_setup_client = HTTPConnectSetupClient(
+            self.host, self.port, basic_proxy_auth
+        )
         self.http_setup_client.on_connected.addCallback(self.proxyConnected)
 
     def connectionMade(self):
@@ -188,10 +197,8 @@ class HTTPConnectSetupClient(http.HTTPClient):
         if self.basic_proxy_auth is not None:
             # a credential pair is a urlsafe-base64-encoded pair separated by colon
             (user, password) = self.basic_proxy_auth
-            encoded_credentials = urlsafe_b64encode(f"{user}:{password}")
-            self.sendHeader(
-                b"Proxy-Authorization", f"basic {encoded_credentials}\r\n".encode()
-            )
+            encoded_credentials = urlsafe_b64encode(f"{user}:{password}".encode())
+            self.sendHeader(b"Proxy-Authorization", b"basic " + encoded_credentials)
         self.endHeaders()
 
     def handleStatus(self, version, status, message):
