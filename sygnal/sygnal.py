@@ -50,7 +50,7 @@ CONFIG_DEFAULTS = {
         },
         "sentry": {"enabled": False},
     },
-    "proxy": {"enabled": False, "user": None, "password": None},
+    "proxy": {"enabled": False, "username": None, "password": None},
     "apps": {},
     # This is defined so the key is known to check_config, but it will not
     # define a default value.
@@ -91,10 +91,7 @@ class Sygnal(object):
                 "args": {"dbfile": config["db"]["dbfile"]},
             }
         elif config.get("database") is None:
-            config["database"] = {
-                "name": "sqlite3",
-                "args": {"dbfile": "sygnal.db"},
-            }
+            config["database"] = {"name": "sqlite3", "args": {"dbfile": "sygnal.db"}}
 
         sentrycfg = config["metrics"]["sentry"]
         if sentrycfg["enabled"] is True:
@@ -145,7 +142,7 @@ class Sygnal(object):
             logger.info("Using postgresql database")
             self.database_engine = "postgresql"
             self.database = ConnectionPool(
-                "psycopg2", cp_reactor=self.reactor, **config["database"].get("args"),
+                "psycopg2", cp_reactor=self.reactor, **config["database"].get("args")
             )
         elif db_name == "sqlite3":
             logger.info("Using sqlite database")
@@ -244,6 +241,7 @@ def parse_config():
         A loaded configuration.
     """
     config_path = os.getenv("SYGNAL_CONF", "sygnal.yaml")
+    print("Using configuration file: %s" % config_path, file=sys.stderr)
     try:
         with open(config_path) as file_handle:
             return yaml.safe_load(file_handle)

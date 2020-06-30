@@ -135,6 +135,12 @@ proxy:
   #
   address: '127.0.0.1:8080'
 
+  # If your proxy uses HTTP proxy basic authentication, specify the username
+  # and password here.
+  #
+  #username:
+  #password:
+
 ## Metrics #
 #
 metrics:
