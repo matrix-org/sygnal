@@ -129,7 +129,6 @@ class GcmPushkin(Pushkin):
                 logger.info("Using HTTP proxy for FCM")
                 # the HTTP proxy code expects a bytestring
                 http_proxy_url = http_proxy_url.encode()
-                print(proxycfg)
                 if proxycfg.get("username") and proxycfg.get("password"):
                     logger.info("Using HTTP Proxy Basic Auth")
                     http_proxy_creds = (proxycfg["username"], proxycfg["password"])

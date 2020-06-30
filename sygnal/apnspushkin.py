@@ -151,7 +151,6 @@ class ApnsPushkin(Pushkin):
             else:
                 logger.info("Using HTTP proxy for APNs")
                 # the HTTP proxy code expects a bytestring
-                print(proxycfg)
                 if proxycfg.get("username") and proxycfg.get("password"):
                     logger.info("Using HTTP Proxy Basic Auth")
                     http_proxy_creds = (proxycfg["username"], proxycfg["password"])
