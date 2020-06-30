@@ -114,6 +114,7 @@ class GcmPushkin(Pushkin):
         tls_client_options_factory = ClientTLSOptionsFactory()
 
         http_proxy_url = None
+        http_proxy_creds = None
 
         # use the Sygnal global proxy configuration
         proxycfg = sygnal.config["proxy"]
@@ -128,6 +129,12 @@ class GcmPushkin(Pushkin):
                 logger.info("Using HTTP proxy for FCM")
                 # the HTTP proxy code expects a bytestring
                 http_proxy_url = http_proxy_url.encode()
+                print(proxycfg)
+                if proxycfg.get("username") and proxycfg.get("password"):
+                    logger.info("Using HTTP Proxy Basic Auth")
+                    http_proxy_creds = (proxycfg["username"], proxycfg["password"])
+                else:
+                    logger.info("No HTTP Proxy credentials configured")
 
         self.http_agent = ProxyAgent(
             reactor=sygnal.reactor,
@@ -135,6 +142,7 @@ class GcmPushkin(Pushkin):
             contextFactory=tls_client_options_factory,
             http_proxy=http_proxy_url,
             https_proxy=http_proxy_url,
+            proxy_basic_auth=http_proxy_creds,
         )
 
         self.db = sygnal.database
@@ -317,6 +325,8 @@ class GcmPushkin(Pushkin):
         pushkeys = [
             device.pushkey for device in n.devices if device.app_id == self.name
         ]
+        total_pushkey_count = len(pushkeys)
+
         # Resolve canonical IDs for all pushkeys
 
         if pushkeys[0] != device.pushkey:
@@ -407,6 +417,10 @@ class GcmPushkin(Pushkin):
 
             if len(pushkeys) > 0:
                 log.info("Gave up retrying reg IDs: %r", pushkeys)
+                if len(pushkeys) == total_pushkey_count:
+                    # if every single device failed, we should properly declare
+                    # this a failure
+                    raise NotificationDispatchException("Gave up retrying FCM.")
             # Count the number of failed devices.
             span_parent.set_tag("gcm_num_failed", len(failed))
             return failed
