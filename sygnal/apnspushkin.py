@@ -17,7 +17,6 @@
 import asyncio
 import base64
 import copy
-from datetime import timezone
 import logging
 import os
 from asyncio.futures import Future
@@ -502,6 +501,7 @@ class ProxyingEventLoopWrapper:
     Note that this may only work against aioapns and perhaps not in a wider
     setting.
     """
+
     def __init__(
         self,
         wrapped_loop: asyncio.AbstractEventLoop,
@@ -541,6 +541,7 @@ class ProxyingEventLoopWrapper:
 
         def make_protocol():
             if ssl:
+
                 def make_ssl():
                     context = None
                     if isinstance(ssl, SSLContext):
@@ -559,6 +560,7 @@ class ProxyingEventLoopWrapper:
 
                 onconnect_protocol_factory = make_ssl
             else:
+
                 def onconnect_protocol_factory():
                     tls_waiter.set_result(None)  # no TLS to wait for
                     return protocol_factory, protocol_factory
