@@ -20,15 +20,21 @@ import copy
 from datetime import timezone
 import logging
 import os
+from asyncio.futures import Future
+from datetime import timezone
+from ssl import SSLContext
+from typing import Tuple, Optional, Callable
 from uuid import uuid4
 
 import aioapns
 from aioapns import APNs, NotificationRequest
+from asyncio.sslproto import SSLProtocol
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509 import load_pem_x509_certificate
 from opentracing import logs, tags
 from prometheus_client import Histogram, Counter, Gauge
 from twisted.internet.defer import Deferred
+from urllib3.util import parse_url
 
 from sygnal import apnstruncate
 from sygnal.exceptions import (
@@ -36,6 +42,7 @@ from sygnal.exceptions import (
     TemporaryNotificationDispatchException,
     NotificationDispatchException,
 )
+from sygnal.helper.asyncio_connectprotocol import HttpConnectProtocol
 from sygnal.notifications import Pushkin
 from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
 
@@ -130,8 +137,37 @@ class ApnsPushkin(Pushkin):
             if not self.get_config("topic"):
                 raise PushkinSetupException("You must supply topic.")
 
+        http_proxy_url = None
+        http_proxy_creds = None
+
+        # use the Sygnal global proxy configuration
+        proxycfg = sygnal.config["proxy"]
+
+        if proxycfg.get("enabled", False):
+            http_proxy_url = "http://" + proxycfg.get("address")
+            if http_proxy_url is None:
+                raise PushkinSetupException(
+                    "HTTP Proxy enabled for APNs but no URL specified."
+                )
+            else:
+                logger.info("Using HTTP proxy for APNs")
+                # the HTTP proxy code expects a bytestring
+                print(proxycfg)
+                if proxycfg.get("username") and proxycfg.get("password"):
+                    logger.info("Using HTTP Proxy Basic Auth")
+                    http_proxy_creds = (proxycfg["username"], proxycfg["password"])
+                else:
+                    logger.info("No HTTP Proxy credentials configured")
+
+        loop = asyncio.get_event_loop()
+        if http_proxy_url:
+            # this overrides the create_connection method to use a HTTP proxy
+            loop = ProxyingEventLoopWrapper(loop, http_proxy_url, http_proxy_creds)
+
         if certfile is not None:
-            self.apns_client = APNs(client_cert=certfile, use_sandbox=self.use_sandbox)
+            self.apns_client = APNs(
+                client_cert=certfile, use_sandbox=self.use_sandbox, loop=loop
+            )
 
             self._report_certificate_expiration(certfile)
         else:
@@ -141,6 +177,7 @@ class ApnsPushkin(Pushkin):
                 team_id=self.get_config("team_id"),
                 topic=self.get_config("topic"),
                 use_sandbox=self.use_sandbox,
+                loop=loop,
             )
 
         # without this, aioapns will retry every second forever.
@@ -454,3 +491,98 @@ class ApnsPushkin(Pushkin):
         return await Deferred.fromFuture(
             asyncio.ensure_future(self.apns_client.send_notification(request))
         )
+
+
+class ProxyingEventLoopWrapper:
+    """
+    This is a wrapper for an asyncio.AbstractEventLoop which intercepts calls to
+    create_connection and transparently tunnels them through an HTTP CONNECT
+    proxy.
+
+    Note that this may only work against aioapns and perhaps not in a wider
+    setting.
+    """
+    def __init__(
+        self,
+        wrapped_loop: asyncio.AbstractEventLoop,
+        proxy_address: str,
+        proxy_basic_auth: Optional[Tuple[str, str]],
+    ):
+        """
+        Args:
+            wrapped_loop:
+                the underlying Event Loop to wrap
+            proxy_address (str):
+                The address of the HTTP proxy to use.
+                Used to connect to the proxy, as well as in
+                the `Host` request header to the proxy.
+                Examples: '127.0.3.200:8080' or `prox:8080`
+            proxy_basic_auth ((str, str) or None):
+                Pass a pair of (username, password) credentials if your HTTP
+                proxy requires Proxy Basic Authentication (using a
+                Proxy-Authorization: basic ... header).
+        """
+        self._wrapped_loop = wrapped_loop
+        self.proxy_address = proxy_address
+        self.proxy_basic_auth = proxy_basic_auth
+
+    async def create_connection(
+        self,
+        protocol_factory: Callable[[], asyncio.Protocol],
+        host: str,
+        port: int,
+        ssl=False,
+    ):
+        proxy_url = parse_url(self.proxy_address)
+
+        # MUST await on this to receive TLS alerts
+        # in the event of no TLS, it will be marked as complete unconditionally
+        tls_waiter = Future()
+
+        def make_protocol():
+            if ssl:
+                def make_ssl():
+                    context = None
+                    if isinstance(ssl, SSLContext):
+                        context = ssl
+
+                    top_protocol = protocol_factory()
+                    ssl_protocol = SSLProtocol(
+                        loop=self._wrapped_loop,
+                        app_protocol=top_protocol,
+                        sslcontext=context,
+                        waiter=tls_waiter,
+                        server_side=False,
+                        server_hostname=proxy_url.host,
+                    )
+                    return ssl_protocol, top_protocol
+
+                onconnect_protocol_factory = make_ssl
+            else:
+                def onconnect_protocol_factory():
+                    tls_waiter.set_result(None)  # no TLS to wait for
+                    return protocol_factory, protocol_factory
+
+            proxy_setup_protocol = HttpConnectProtocol(
+                self.proxy_address,
+                f"{host}:{port}",
+                onconnect_protocol_factory,
+                self.proxy_basic_auth,
+            )
+            return proxy_setup_protocol
+
+        tcp_transport, connect_protocol = await self._wrapped_loop.create_connection(
+            make_protocol, proxy_url.host, proxy_url.port
+        )
+
+        protocol = await connect_protocol.wait_for_establishment
+
+        await tls_waiter  # detects TLS exceptions and waits for TLS handshake
+
+        return None, protocol
+
+    def __getattr__(self, item):
+        """
+        We use this to delegate other method calls to the real EventLoop.
+        """
+        return getattr(self._wrapped_loop, item)
