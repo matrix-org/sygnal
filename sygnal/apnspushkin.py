@@ -20,6 +20,7 @@ import copy
 from datetime import timezone
 import logging
 import os
+from typing import Dict, Union
 from uuid import uuid4
 
 import aioapns
@@ -220,7 +221,7 @@ class ApnsPushkin(Pushkin):
         # The pushkey is kind of secret because you can use it to send push
         # to someone.
         # span_tags = {"pushkey": device.pushkey}
-        span_tags = {}
+        span_tags: Dict[str, Union[str, int]] = {}
 
         with self.sygnal.tracer.start_span(
             "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
