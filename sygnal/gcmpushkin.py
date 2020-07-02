@@ -19,7 +19,6 @@ import logging
 import time
 from io import BytesIO
 from json import JSONDecodeError
-from typing import Any
 
 from opentracing import logs, tags
 from prometheus_client import Counter, Gauge, Histogram
