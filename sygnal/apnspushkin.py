@@ -221,7 +221,7 @@ class ApnsPushkin(Pushkin):
         # The pushkey is kind of secret because you can use it to send push
         # to someone.
         # span_tags = {"pushkey": device.pushkey}
-        span_tags: Dict[str, Union[str, int]] = {}
+        span_tags: Dict[str, int] = {}
 
         with self.sygnal.tracer.start_span(
             "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
