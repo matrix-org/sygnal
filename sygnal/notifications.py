@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from .exceptions import InvalidNotificationException
 
@@ -70,7 +70,7 @@ class Notification:
         self.prio: Optional[str] = notif.get("prio")
         self.membership: Optional[str] = notif.get("membership")
         self.sender_display_name: Optional[str] = notif.get("sender_display_name")
-        self.content = notif.get("content")
+        self.content: Optional[Dict[str, Any]] = notif.get("content")
         self.event_id: Optional[str] = notif.get("event_id")
         self.room_id: Optional[str] = notif.get("room_id")
         self.user_is_target: Optional[bool] = notif.get("user_is_target")
