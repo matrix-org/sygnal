@@ -20,7 +20,7 @@
 import string
 import unittest
 
-from sygnal.apnstruncate import truncate, json_encode
+from sygnal.apnstruncate import json_encode, truncate
 
 
 def simplestring(length, offset=0):

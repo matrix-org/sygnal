@@ -17,9 +17,9 @@
 import asyncio
 import base64
 import copy
-from datetime import timezone
 import logging
 import os
+from datetime import timezone
 from typing import Dict
 from uuid import uuid4
 
@@ -28,17 +28,17 @@ from aioapns import APNs, NotificationRequest
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509 import load_pem_x509_certificate
 from opentracing import logs, tags
-from prometheus_client import Histogram, Counter, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import Deferred
 
 from sygnal import apnstruncate
 from sygnal.exceptions import (
+    NotificationDispatchException,
     PushkinSetupException,
     TemporaryNotificationDispatchException,
-    NotificationDispatchException,
 )
 from sygnal.notifications import Pushkin
-from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
+from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 logger = logging.getLogger(__name__)
 

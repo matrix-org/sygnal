@@ -13,20 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-from os import environ
-from time import time_ns
 from io import BytesIO
+from os import environ
 from threading import Condition
+from time import time_ns
 from typing import BinaryIO, Optional, Union
 
 import attr
+import psycopg2
 from twisted.internet.defer import ensureDeferred
 from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial import unittest
 from twisted.web.http_headers import Headers
 from twisted.web.server import Request
-
-import psycopg2
 
 from sygnal.http import PushGatewayApiServer
 from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults

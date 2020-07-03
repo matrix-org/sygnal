@@ -15,7 +15,7 @@
 # Copied and adapted from
 # https://raw.githubusercontent.com/matrix-org/pushbaby/master/pushbaby/truncate.py
 import json
-from typing import List, Union, Tuple
+from typing import List, Tuple, Union
 
 
 def json_encode(payload):
