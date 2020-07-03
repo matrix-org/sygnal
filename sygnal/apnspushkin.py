@@ -20,7 +20,7 @@ import copy
 from datetime import timezone
 import logging
 import os
-from typing import Dict, Union
+from typing import Dict
 from uuid import uuid4
 
 import aioapns
