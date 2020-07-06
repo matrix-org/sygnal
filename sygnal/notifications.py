@@ -14,6 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Any, Dict, Optional
 
 from .exceptions import InvalidNotificationException
 
@@ -63,24 +64,18 @@ class Counts:
 
 class Notification:
     def __init__(self, notif):
-        optional_attrs = [
-            "room_name",
-            "room_alias",
-            "prio",
-            "membership",
-            "sender_display_name",
-            "content",
-            "event_id",
-            "room_id",
-            "user_is_target",
-            "type",
-            "sender",
-        ]
-        for a in optional_attrs:
-            if a in notif:
-                self.__dict__[a] = notif[a]
-            else:
-                self.__dict__[a] = None
+        # optional attributes
+        self.room_name: Optional[str] = notif.get("room_name")
+        self.room_alias: Optional[str] = notif.get("room_alias")
+        self.prio: Optional[str] = notif.get("prio")
+        self.membership: Optional[str] = notif.get("membership")
+        self.sender_display_name: Optional[str] = notif.get("sender_display_name")
+        self.content: Optional[Dict[str, Any]] = notif.get("content")
+        self.event_id: Optional[str] = notif.get("event_id")
+        self.room_id: Optional[str] = notif.get("room_id")
+        self.user_is_target: Optional[bool] = notif.get("user_is_target")
+        self.type: Optional[str] = notif.get("type")
+        self.sender: Optional[str] = notif.get("sender")
 
         if "devices" not in notif or not isinstance(notif["devices"], list):
             raise InvalidNotificationException("Expected list in 'devices' key")

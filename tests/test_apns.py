@@ -12,11 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from aioapns.common import NotificationResult
 
 from sygnal import apnstruncate
+
 from tests import testutils
 
 PUSHKIN_ID = "com.example.apns"
