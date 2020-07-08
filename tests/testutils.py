@@ -86,7 +86,35 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         reactor = ExtendedMemoryReactorClock()
 
-        config = {"apps": {}, "log": {"setup": {"version": 1}}}
+        logging_config = {
+            "setup": {
+                "formatters": {
+                    "normal": {
+                        "format": "%(asctime)s [%(process)d] "
+                        "%(levelname)-5s %(name)s %(message)s"
+                    }
+                },
+                "handlers": {
+                    "stderr": {
+                        "class": "logging.StreamHandler",
+                        "formatter": "normal",
+                        "stream": "ext://sys.stderr",
+                    },
+                },
+                "loggers": {
+                    "sygnal": {"handlers": ["stderr"], "propagate": False},
+                    "sygnal.access": {
+                        "handlers": ["stderr"],
+                        "level": "INFO",
+                        "propagate": False,
+                    },
+                },
+                "root": {"handlers": ["stderr"], "level": "DEBUG"},
+                "version": 1,
+            }
+        }
+
+        config = {"apps": {}, "log": logging_config}
 
         self.config_setup(config)
 
