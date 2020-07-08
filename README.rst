@@ -80,7 +80,11 @@ via `POST /_matrix/client/r0/pushers/set <https://matrix.org/docs/spec/client_se
 Running
 =======
 
-``python -m sygnal.sygnal``
+With default configuration file name of ``sygnal.yaml``:
+    ``python -m sygnal.sygnal``
+
+With custom configuration file name:
+    ``SYGNAL_CONF=/path/to/custom_sygnal.conf python -m sygnal.sygnal``
 
 Python 3.7 or higher is required.
 
