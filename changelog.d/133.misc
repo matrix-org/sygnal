@@ -1,0 +1,1 @@
+Don't try an aioapns connection 4 times per APNS dispatch attempt; do the same as GCM.

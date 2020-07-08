@@ -132,7 +132,11 @@ class ApnsPushkin(Pushkin):
                 raise PushkinSetupException("You must supply topic.")
 
         if certfile is not None:
-            self.apns_client = APNs(client_cert=certfile, use_sandbox=self.use_sandbox)
+            self.apns_client = APNs(
+                client_cert=certfile,
+                use_sandbox=self.use_sandbox,
+                max_connection_attempts=0,
+            )
 
             self._report_certificate_expiration(certfile)
         else:
@@ -142,6 +146,7 @@ class ApnsPushkin(Pushkin):
                 team_id=self.get_config("team_id"),
                 topic=self.get_config("topic"),
                 use_sandbox=self.use_sandbox,
+                max_connection_attempts=0,
             )
 
         # without this, aioapns will retry every second forever.
