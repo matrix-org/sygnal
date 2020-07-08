@@ -14,7 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import logging
 import typing
 from typing import Any, Dict, List, Optional
 
@@ -164,7 +163,6 @@ class ConcurrencyLimitedPushkin(Pushkin):
         try:
             return await self._dispatch_notification_unlimited(n, device, context)
         finally:
-            logging.info("dec")  # XXX
             self._concurrent_now -= 1
 
     async def _dispatch_notification_unlimited(

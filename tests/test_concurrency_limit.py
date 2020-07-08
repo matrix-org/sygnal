@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import logging
 
 from sygnal.notifications import ConcurrencyLimitedPushkin
 from sygnal.utils import twisted_sleep
@@ -35,8 +34,6 @@ DEVICE_APNS_EXAMPLE = {
     "pushkey_ts": 42,
 }
 
-logger = logging.getLogger(__name__)
-
 
 class SlowConcurrencyLimitedDummyPushkin(ConcurrencyLimitedPushkin):
     async def _dispatch_notification_unlimited(self, n, device, context):
@@ -44,9 +41,7 @@ class SlowConcurrencyLimitedDummyPushkin(ConcurrencyLimitedPushkin):
         We will deliver the notification to the mighty nobody
         and we will take one second to do it, because we are slow!
         """
-        logger.info("starting push sleep")
         await twisted_sleep(1.0, self.sygnal.reactor)
-        logger.info("finished push sleep")
         return []
 
 
