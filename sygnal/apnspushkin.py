@@ -37,7 +37,7 @@ from sygnal.exceptions import (
     PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
-from sygnal.notifications import Pushkin
+from sygnal.notifications import ConcurrencyLimitedPushkin
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ CERTIFICATE_EXPIRATION_GAUGE = Gauge(
 )
 
 
-class ApnsPushkin(Pushkin):
+class ApnsPushkin(ConcurrencyLimitedPushkin):
     """
     Relays notifications to the Apple Push Notification Service.
     """
@@ -86,7 +86,7 @@ class ApnsPushkin(Pushkin):
         "key_id",
         "keyfile",
         "topic",
-    }
+    } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config):
         super().__init__(name, sygnal, config)
@@ -215,7 +215,7 @@ class ApnsPushkin(Pushkin):
                         f"{response.status} {response.description}"
                     )
 
-    async def dispatch_notification(self, n, device, context):
+    async def _dispatch_notification_unlimited(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
         # The pushkey is kind of secret because you can use it to send push
