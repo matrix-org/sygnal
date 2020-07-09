@@ -1,0 +1,1 @@
+Fixed MyPy errors so it can be enabled in CI and gradually be increased in coverage.

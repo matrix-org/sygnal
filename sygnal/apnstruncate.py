@@ -15,6 +15,7 @@
 # Copied and adapted from
 # https://raw.githubusercontent.com/matrix-org/pushbaby/master/pushbaby/truncate.py
 import json
+from typing import List, Tuple, Union
 
 
 def json_encode(payload):
@@ -85,7 +86,7 @@ def truncate(payload, max_length=2048):
 
 
 def _choppables_for_aps(aps):
-    ret = []
+    ret: List[Union[Tuple[str], Tuple[str, int]]] = []
     if "alert" not in aps:
         return ret
 

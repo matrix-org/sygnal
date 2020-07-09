@@ -16,10 +16,10 @@
 # limitations under the License.
 import json
 import logging
+import re
 import sys
 import time
 import traceback
-import re
 from uuid import uuid4
 
 from opentracing import Format, logs, tags

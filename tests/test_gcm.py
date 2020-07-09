@@ -15,6 +15,7 @@
 import json
 
 from sygnal.gcmpushkin import GcmPushkin
+
 from tests import testutils
 from tests.testutils import DummyResponse
 

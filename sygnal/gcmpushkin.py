@@ -22,6 +22,7 @@ from json import JSONDecodeError
 
 from opentracing import logs, tags
 from prometheus_client import Counter, Gauge, Histogram
+from twisted.enterprise.adbapi import ConnectionPool
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
@@ -479,7 +480,8 @@ class CanonicalRegIdStore(object):
         """
 
     def __init__(self):
-        self.db = None
+        self.db: ConnectionPool = None
+        self.engine = None
 
     async def setup(self, db, engine):
         """

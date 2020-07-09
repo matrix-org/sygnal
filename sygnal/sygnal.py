@@ -24,7 +24,6 @@ from urllib.parse import urlparse
 
 import opentracing
 import prometheus_client
-# import twisted.internet.reactor
 import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.enterprise.adbapi import ConnectionPool

@@ -23,6 +23,7 @@ from asyncio.futures import Future
 from datetime import timezone
 from ssl import SSLContext
 from typing import Tuple, Optional, Callable
+from typing import Dict
 from uuid import uuid4
 
 import aioapns
@@ -31,19 +32,19 @@ from asyncio.sslproto import SSLProtocol
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509 import load_pem_x509_certificate
 from opentracing import logs, tags
-from prometheus_client import Histogram, Counter, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import Deferred
 from urllib3.util import parse_url
 
 from sygnal import apnstruncate
 from sygnal.exceptions import (
+    NotificationDispatchException,
     PushkinSetupException,
     TemporaryNotificationDispatchException,
-    NotificationDispatchException,
 )
 from sygnal.helper.asyncio_connectprotocol import HttpConnectProtocol
 from sygnal.notifications import Pushkin
-from sygnal.utils import twisted_sleep, NotificationLoggerAdapter
+from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -255,7 +256,7 @@ class ApnsPushkin(Pushkin):
         # The pushkey is kind of secret because you can use it to send push
         # to someone.
         # span_tags = {"pushkey": device.pushkey}
-        span_tags = {}
+        span_tags: Dict[str, int] = {}
 
         with self.sygnal.tracer.start_span(
             "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
