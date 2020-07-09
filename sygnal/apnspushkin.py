@@ -24,6 +24,7 @@ from datetime import timezone
 from ssl import SSLContext
 from typing import Tuple, Optional, Callable
 from typing import Dict
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import aioapns
@@ -34,7 +35,6 @@ from cryptography.x509 import load_pem_x509_certificate
 from opentracing import logs, tags
 from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import Deferred
-from urllib3.util import parse_url
 
 from sygnal import apnstruncate
 from sygnal.exceptions import (
@@ -533,7 +533,7 @@ class ProxyingEventLoopWrapper:
         port: int,
         ssl=False,
     ):
-        proxy_url = parse_url(self.proxy_address)
+        proxy_url = urlparse(self.proxy_address)
 
         # MUST await on this to receive TLS alerts
         # in the event of no TLS, it will be marked as complete unconditionally
@@ -554,7 +554,7 @@ class ProxyingEventLoopWrapper:
                         sslcontext=context,
                         waiter=tls_waiter,
                         server_side=False,
-                        server_hostname=proxy_url.host,
+                        server_hostname=proxy_url.hostname,
                     )
                     return ssl_protocol, top_protocol
 
@@ -574,7 +574,7 @@ class ProxyingEventLoopWrapper:
             return proxy_setup_protocol
 
         tcp_transport, connect_protocol = await self._wrapped_loop.create_connection(
-            make_protocol, proxy_url.host, proxy_url.port
+            make_protocol, proxy_url.hostname, proxy_url.port
         )
 
         protocol = await connect_protocol.wait_for_establishment
