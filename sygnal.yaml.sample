@@ -126,10 +126,17 @@ http:
 ## Proxying for outgoing connections #
 #
 proxy:
-  # Specify whether or not to use a proxy.
+  # Specify whether or not to use a proxy for outbound connections.
   # Currently only HTTP proxies with CONNECT capability are supported.
+  # Specify:
+  # - `true` to use the settings here
+  # - `env` to automatically detect the settings from the de facto standard
+  #   `HTTPS_PROXY`/`https_proxy` environment variables.
+  # - `false` to be strict about not using one, not even from the environment.
   #
-  enabled: false
+  # Default is `env`.
+  #
+  enabled: env
 
   # Specify an address and port to use for connecting to the HTTP proxy.
   #
