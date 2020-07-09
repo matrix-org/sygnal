@@ -87,21 +87,21 @@ class Sygnal(object):
             proxy_url_lower = os.getenv("https_proxy")
             if (
                 proxy_url_lower and proxy_url_upper
-            ) and proxy_url_lower != proxy_url_lower:
+            ) and proxy_url_lower != proxy_url_upper:
                 logger.warning(
                     "Both https_proxy and HTTPS_PROXY environment variables"
-                    " defined but with different variables! Check this."
+                    " defined but with different values! Check this."
                 )
 
             if proxy_url_upper:
                 logger.info("Using HTTPS_PROXY (uppercase) for proxy.")
-                self._setup_proxy_from_url(proxy_url_upper, proxy_config)
+                self._setup_proxy_from_url(proxy_url_upper)
             elif proxy_url_lower:
                 logger.info("Using https_proxy (lowercase) for proxy.")
-                self._setup_proxy_from_url(proxy_url_lower, proxy_config)
+                self._setup_proxy_from_url(proxy_url_lower)
             else:
                 logger.info(
-                    "Neither HTTPS_PROXY nor https_proxy found;" " not using a proxy."
+                    "Neither HTTPS_PROXY nor https_proxy found; not using a proxy."
                 )
                 proxy_config["enabled"] = False
 
@@ -272,7 +272,7 @@ class Sygnal(object):
             )
 
         proxy_config = self.config["proxy"]
-        proxy_config["url"] = f"{url.hostname}:{url.port or 80}"
+        proxy_config["address"] = f"{url.hostname}:{url.port or 80}"
 
         proxy_config["username"] = url.username
         proxy_config["password"] = url.password
