@@ -20,10 +20,10 @@ import logging
 import logging.config
 import os
 import sys
+from urllib.parse import urlparse
 
 import opentracing
 import prometheus_client
-
 # import twisted.internet.reactor
 import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
@@ -50,7 +50,7 @@ CONFIG_DEFAULTS = {
         },
         "sentry": {"enabled": False},
     },
-    "proxy": {"enabled": False, "username": None, "password": None},
+    "proxy": {"enabled": "env", "username": None, "password": None},
     "apps": {},
     # This is defined so the key is known to check_config, but it will not
     # define a default value.
@@ -79,6 +79,32 @@ class Sygnal(object):
 
         observer = twisted_log.PythonLoggingObserver()
         observer.start()
+
+        proxy_config = config["proxy"]
+        if proxy_config["enabled"].lower() == "env":
+            # Neither casing seems 100% ubiquitous so we will accept either
+            logger.info("Will use proxy configuration from environment if available.")
+            proxy_url_upper = os.getenv("HTTPS_PROXY")
+            proxy_url_lower = os.getenv("https_proxy")
+            if (
+                proxy_url_lower and proxy_url_upper
+            ) and proxy_url_lower != proxy_url_lower:
+                logger.warning(
+                    "Both https_proxy and HTTPS_PROXY environment variables"
+                    " defined but with different variables! Check this."
+                )
+
+            if proxy_url_upper:
+                logger.info("Using HTTPS_PROXY (uppercase) for proxy.")
+                self._setup_proxy_from_url(proxy_url_upper, proxy_config)
+            elif proxy_url_lower:
+                logger.info("Using https_proxy (lowercase) for proxy.")
+                self._setup_proxy_from_url(proxy_url_lower, proxy_config)
+            else:
+                logger.info(
+                    "Neither HTTPS_PROXY nor https_proxy found;" " not using a proxy."
+                )
+                proxy_config["enabled"] = False
 
         # Old format db config
         if config.get("db") is not None:
@@ -232,6 +258,25 @@ class Sygnal(object):
 
         self.reactor.callWhenRunning(start)
         self.reactor.run()
+
+    def _setup_proxy_from_url(self, proxy_url):
+        url = urlparse(proxy_url, scheme="http")
+
+        if not url.hostname:
+            raise RuntimeError(
+                "Proxy URL did not contain a hostname! Please specify one."
+            )
+
+        if url.scheme != "http":
+            raise RuntimeError(
+                f"Unknown proxy scheme {url.scheme};" f" only 'http' is supported."
+            )
+
+        proxy_config = self.config["proxy"]
+        proxy_config["url"] = f"{url.hostname}:{url.port or 80}"
+
+        proxy_config["username"] = url.username
+        proxy_config["password"] = url.password
 
 
 def parse_config():
