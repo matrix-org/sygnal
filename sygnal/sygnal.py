@@ -241,26 +241,6 @@ class Sygnal(object):
         self.reactor.callWhenRunning(start)
         self.reactor.run()
 
-    def _setup_proxy_from_url(self, proxy_url):
-        url = urlparse(proxy_url, scheme="http")
-
-        if not url.hostname:
-            raise RuntimeError(
-                "Proxy URL did not contain a hostname! Please specify one."
-            )
-
-        if url.scheme != "http":
-            raise RuntimeError(
-                f"Unknown proxy scheme {url.scheme};" f" only 'http' is supported."
-            )
-
-        proxy_config = self.config["proxy"]
-        proxy_config["address"] = f"{url.hostname}:{url.port or 80}"
-
-        proxy_config["username"] = url.username
-        proxy_config["password"] = url.password
-
-
 def parse_config():
     """
     Find and load Sygnal's configuration file.
