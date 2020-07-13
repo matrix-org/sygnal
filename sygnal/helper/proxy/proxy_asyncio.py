@@ -1,9 +1,11 @@
 import asyncio
 import logging
-from asyncio import Transport
 from asyncio.futures import Future
+from asyncio.transports import Transport
 from base64 import urlsafe_b64encode
-from typing import Optional, Tuple, Callable
+from ssl import SSLContext
+from typing import Optional, Tuple, Callable, Union
+from urllib.parse import urlparse
 
 from sygnal.exceptions import ProxyConnectError
 
@@ -155,3 +157,77 @@ class HttpConnectProtocol(asyncio.Protocol):
 
         # now we wait ...
         self.transport = transport
+
+
+class ProxyingEventLoopWrapper:
+    """
+    This is a wrapper for an asyncio.AbstractEventLoop which intercepts calls to
+    create_connection and transparently tunnels them through an HTTP CONNECT
+    proxy.
+    """
+
+    def __init__(
+        self,
+        wrapped_loop: asyncio.AbstractEventLoop,
+        proxy_address: str,
+        proxy_basic_auth: Optional[Tuple[str, str]],
+    ):
+        """
+        Args:
+            wrapped_loop:
+                the underlying Event Loop to wrap
+            proxy_address (str):
+                The address of the HTTP proxy to use.
+                Used to connect to the proxy, as well as in
+                the `Host` request header to the proxy.
+                Examples: '127.0.3.200:8080' or `prox:8080`
+            proxy_basic_auth ((str, str) or None):
+                Pass a pair of (username, password) credentials if your HTTP
+                proxy requires Proxy Basic Authentication (using a
+                Proxy-Authorization: basic ... header).
+        """
+        self._wrapped_loop = wrapped_loop
+        self.proxy_address = proxy_address
+        self.proxy_basic_auth = proxy_basic_auth
+
+    async def create_connection(
+        self,
+        protocol_factory: Callable[[], asyncio.Protocol],
+        host: str,
+        port: int,
+        ssl: Union[bool, SSLContext] = False,
+    ):
+        proxy_url = urlparse(self.proxy_address)
+
+        def make_protocol():
+            proxy_setup_protocol = HttpConnectProtocol(
+                self.proxy_address,
+                f"{host}:{port}",
+                self.proxy_basic_auth,
+            )
+            return proxy_setup_protocol
+
+        transport, connect_protocol = await self._wrapped_loop.create_connection(
+            make_protocol, proxy_url.hostname, proxy_url.port
+        )
+
+        transport = await connect_protocol.wait_for_establishment
+
+        # tcp_transport should never be used again
+        if ssl:
+            if isinstance(ssl, SSLContext):
+                sslcontext = ssl
+            else:
+                sslcontext = SSLContext()
+            transport = await self._wrapped_loop.start_tls(transport, connect_protocol, sslcontext)
+
+        new_protocol = protocol_factory()
+        transport.set_protocol(new_protocol)
+        new_protocol.connection_made(transport)
+        return transport, new_protocol
+
+    def __getattr__(self, item):
+        """
+        We use this to delegate other method calls to the real EventLoop.
+        """
+        return getattr(self._wrapped_loop, item)
