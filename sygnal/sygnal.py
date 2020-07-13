@@ -49,7 +49,7 @@ CONFIG_DEFAULTS = {
         },
         "sentry": {"enabled": False},
     },
-    "proxy": {"enabled": "env", "username": None, "password": None},
+    "proxy": {"url": None},
     "apps": {},
     # This is defined so the key is known to check_config, but it will not
     # define a default value.

@@ -126,27 +126,16 @@ http:
 ## Proxying for outgoing connections #
 #
 proxy:
-  # Specify whether or not to use a proxy for outbound connections.
+  # Specify the URL of a proxy to use for outgoing traffic
+  # (e.g. to Apple & Google) if desired.
   # Currently only HTTP proxies with CONNECT capability are supported.
-  # Specify:
-  # - `true` to use the settings here
-  # - `env` to automatically detect the settings from the de facto standard
-  #   `HTTPS_PROXY`/`https_proxy` environment variables.
-  # - `false` to be strict about not using one, not even from the environment.
   #
-  # Default is `env`.
+  # If you do not specify a value, the `HTTPS_PROXY` environment variable will
+  # be used if present. Otherwise, no proxy will be used.
   #
-  enabled: env
-
-  # Specify an address and port to use for connecting to the HTTP proxy.
+  # Default is unspecified.
   #
-  address: '127.0.0.1:8080'
-
-  # If your proxy uses HTTP proxy basic authentication, specify the username
-  # and password here.
-  #
-  #username:
-  #password:
+  #url: 'http://user:secret@prox:8080'
 
 ## Metrics #
 #
