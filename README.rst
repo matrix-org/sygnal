@@ -80,7 +80,7 @@ via `POST /_matrix/client/r0/pushers/set <https://matrix.org/docs/spec/client_se
 Using an HTTP Proxy for outbound traffic
 ----------------------------------------
 
-Sygnal will, by default, automatically detect a ``HTTPS_PROXY`` or ``HTTP_PROXY``
+Sygnal will, by default, automatically detect an ``HTTPS_PROXY``
 environment variable on start-up.
 
 If one is present, it will be used for outbound traffic to APNs and GCM/FCM.
