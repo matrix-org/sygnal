@@ -79,31 +79,14 @@ class Sygnal(object):
         observer = twisted_log.PythonLoggingObserver()
         observer.start()
 
-        proxy_config = config["proxy"]
-        if proxy_config["enabled"].lower() == "env":
-            # Neither casing seems 100% ubiquitous so we will accept either
-            logger.info("Will use proxy configuration from environment if available.")
-            proxy_url_upper = os.getenv("HTTPS_PROXY")
-            proxy_url_lower = os.getenv("https_proxy")
-            if (
-                proxy_url_lower and proxy_url_upper
-            ) and proxy_url_lower != proxy_url_upper:
-                logger.warning(
-                    "Both https_proxy and HTTPS_PROXY environment variables"
-                    " defined but with different values! Check this."
-                )
-
-            if proxy_url_upper:
-                logger.info("Using HTTPS_PROXY (uppercase) for proxy.")
-                self._setup_proxy_from_url(proxy_url_upper)
-            elif proxy_url_lower:
-                logger.info("Using https_proxy (lowercase) for proxy.")
-                self._setup_proxy_from_url(proxy_url_lower)
-            else:
-                logger.info(
-                    "Neither HTTPS_PROXY nor https_proxy found; not using a proxy."
-                )
-                proxy_config["enabled"] = False
+        proxy_url = config["proxy"].get("url")
+        if proxy_url is not None:
+            logger.info("Using proxy configuration from Sygnal configuration file")
+        else:
+            proxy_url = os.getenv("HTTPS_PROXY")
+            if proxy_url:
+                logger.info("Using proxy configuration from HTTPS_PROXY environment variable.")
+                config["proxy"]["url"] = proxy_url
 
         # Old format db config
         if config.get("db") is not None:
