@@ -531,7 +531,7 @@ class ProxyingEventLoopWrapper:
         protocol_factory: Callable[[], asyncio.Protocol],
         host: str,
         port: int,
-        ssl=False,
+        ssl: Union[bool, SSLContext]=False,
     ):
         proxy_url = urlparse(self.proxy_address)
 
