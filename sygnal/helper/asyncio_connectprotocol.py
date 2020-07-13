@@ -14,67 +14,46 @@ class HttpConnectProtocol(asyncio.Protocol):
     """
     This is for use with asyncio's Protocol and Transport API.
 
-    It performs the setup of a HTTP CONNECT proxy connection, then hands over
-    to another asyncio.Protocol.
+    It performs the setup of a HTTP CONNECT proxy connection, then the calling
+     code is responsible for handing over to another asyncio.Protocol.
 
     For Twisted, see twisted_connectproxyclient.py instead.
+
+    The intended usage of this class is to use it in a protocol factory in
+    `AbstractEventLoop.create_connection`, then await `wait_for_establishment`
+    and hand the transport over to another protocol, potentially wrapping it in
+    TLS with `AbstractEventLoop.start_tls`.
+
+    Once the connection is made, the `HttpConnectProtocol` is redundant and can
+    be forgotten about; the protocol stack might look like:
+
+                before                           after
+                                                 +------------------+
+                                                 |  HTTP Protocol   |
+                +---------------------+          +------------------+
+                | HTTP Proxy Protocol |   ===>   | SSL/TLS Protocol |
+                +---------------------+----------+------------------+
+                |              Underlying TCP Transport             |
+                +---------------------------------------------------+
+        (assuming a proxied HTTPS connection is what you were after)
     """
 
     def __init__(
         self,
-        proxy_address: str,
-        target_address: str,
-        protocol_factory: Callable[[], Tuple[asyncio.Protocol, asyncio.Protocol]],
+        proxy_hostport: str,
+        target_hostport: str,
         basic_proxy_auth: Optional[Tuple[str, str]],
     ):
         """
         Args:
-            proxy_address (str):
-                The address of the HTTP proxy.
+            proxy_hostport (str):
+                The host & port of the HTTP proxy.
                 Used in the `Host` request header to the proxy.
                 Examples: '127.0.3.200:8080' or `prox:8080`
-            target_address (str):
-                The address of the destination that the proxy should connect to
-                on your behalf. Must include a port number.
+            target_hostport (str):
+                The host & port of the destination that the proxy should connect
+                to on your behalf. Must include a port number.
                 Examples: 'example.org:443'
-            protocol_factory (() -> (Protocol, Protocol)):
-                A factory which should return a (bottom, top) pair of Protocols,
-                where the bottom and top are the bottom and top of a protocol
-                stack that will replace this HTTP Connect Proxy Protocol once
-                a tunnel is established.
-                (They may be the same if your protocol stack is 1-tall.)
-                Why? Well, you may wish to open a TLS-wrapped HTTP connection
-                in this proxy connection, which means your factory will need
-                to create a HttpProtocol (say) and an SSLProtocol to wrap it in.
-                The stack will change according to this diagram:
-
-                                                 +------------------+
-                                                 |  HTTP Protocol   |(a)
-                +---------------------+          +------------------+
-                | HTTP Proxy Protocol |   ===>   | SSL/TLS Protocol |(b)
-                +---------------------+----------+------------------+
-                |              Underlying TCP Transport             |
-                +---------------------------------------------------+
-
-                It's clear that this HTTP Proxy Protocol needs to know about the
-                SSL Protocol (b) so that it can switch the underlying transport's
-                protocol over.
-                However, the user of this class presumably wanted the HTTP
-                Protocol (a) for a reason, so we have to pass it back somehow
-                (via the `wait_for_establishment` Future in this case).
-
-                That's why the factory needs to return both the top and bottom
-                protocol of the stack (even if it is an unfortunately ugly
-                design).
-
-                Pseudo-example:
-                ```
-                def factory():
-                    http = HttpProtocol(...)
-                    ssl = SSLProtocol(app_protocol=http, ...)
-                    return (ssl, http)
-                ```
-
             basic_proxy_auth ((str, str) or None):
                 Pass a pair of (username, password) credentials if your HTTP
                 proxy requires Proxy Basic Authentication (using a
@@ -82,11 +61,13 @@ class HttpConnectProtocol(asyncio.Protocol):
         """
         self.basic_proxy_auth = basic_proxy_auth
         self.completed = False
-        self.proxy_address = proxy_address
-        self.target_address = target_address
-        self.protocol_factory = protocol_factory
+        self.proxy_hostport = proxy_hostport
+        self.target_hostport = target_hostport
         self.buffer = b""
         self.transport = None
+
+        # This future is completed when it is safe to take back control of the
+        # transport (which is also returned to indicate this).
         self.wait_for_establishment = Future()
 
     def data_received(self, data: bytes) -> None:
@@ -142,12 +123,10 @@ class HttpConnectProtocol(asyncio.Protocol):
                         "; aborting connection."
                     )
 
-                logger.debug("Switching over protocol")
-                new_protocol, top_protocol = self.protocol_factory()
-                self.transport.set_protocol(new_protocol)
-                new_protocol.connection_made(self.transport)
+                logger.debug("Ready to switch over protocol")
+
                 self.buffer = None
-                self.wait_for_establishment.set_result(top_protocol)
+                self.wait_for_establishment.set_result(self.transport)
             except Exception as exc:
                 logger.error("HTTP CONNECT failed.", exc_info=True)
                 self.wait_for_establishment.set_exception(exc)
@@ -158,10 +137,10 @@ class HttpConnectProtocol(asyncio.Protocol):
     def connection_made(self, transport: Transport) -> None:
         super().connection_made(transport)
         # when we get a TCP connection to the HTTP proxy, we invoke the CONNECT
-        # method on it to open a tunneled TCP connection through the proxy to
+        # method on it to open a tunnelled TCP connection through the proxy to
         # the other side
-        transport.write(f"CONNECT {self.target_address} HTTP/1.1\r\n".encode())
-        transport.write(f"Host: {self.proxy_address}\r\n".encode())
+        transport.write(f"CONNECT {self.target_hostport} HTTP/1.1\r\n".encode())
+        transport.write(f"Host: {self.proxy_hostport}\r\n".encode())
         if self.basic_proxy_auth is not None:
             # a credential pair is a urlsafe-base64-encoded pair separated by colon
             (user, password) = self.basic_proxy_auth

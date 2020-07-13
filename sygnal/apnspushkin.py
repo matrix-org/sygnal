@@ -22,7 +22,7 @@ import os
 from asyncio.futures import Future
 from datetime import timezone
 from ssl import SSLContext
-from typing import Tuple, Optional, Callable
+from typing import Tuple, Optional, Callable, Union
 from typing import Dict
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -531,57 +531,36 @@ class ProxyingEventLoopWrapper:
         protocol_factory: Callable[[], asyncio.Protocol],
         host: str,
         port: int,
-        ssl: Union[bool, SSLContext]=False,
+        ssl: Union[bool, SSLContext] = False,
     ):
         proxy_url = urlparse(self.proxy_address)
 
-        # MUST await on this to receive TLS alerts
-        # in the event of no TLS, it will be marked as complete unconditionally
-        tls_waiter = Future()
-
         def make_protocol():
-            if ssl:
-
-                def make_ssl():
-                    context = None
-                    if isinstance(ssl, SSLContext):
-                        context = ssl
-
-                    top_protocol = protocol_factory()
-                    ssl_protocol = SSLProtocol(
-                        loop=self._wrapped_loop,
-                        app_protocol=top_protocol,
-                        sslcontext=context,
-                        waiter=tls_waiter,
-                        server_side=False,
-                        server_hostname=proxy_url.hostname,
-                    )
-                    return ssl_protocol, top_protocol
-
-                onconnect_protocol_factory = make_ssl
-            else:
-
-                def onconnect_protocol_factory():
-                    tls_waiter.set_result(None)  # no TLS to wait for
-                    return protocol_factory, protocol_factory
-
             proxy_setup_protocol = HttpConnectProtocol(
                 self.proxy_address,
                 f"{host}:{port}",
-                onconnect_protocol_factory,
                 self.proxy_basic_auth,
             )
             return proxy_setup_protocol
 
-        tcp_transport, connect_protocol = await self._wrapped_loop.create_connection(
+        transport, connect_protocol = await self._wrapped_loop.create_connection(
             make_protocol, proxy_url.hostname, proxy_url.port
         )
 
-        protocol = await connect_protocol.wait_for_establishment
+        transport = await connect_protocol.wait_for_establishment
 
-        await tls_waiter  # detects TLS exceptions and waits for TLS handshake
+        # tcp_transport should never be used again
+        if ssl:
+            if isinstance(ssl, SSLContext):
+                sslcontext = ssl
+            else:
+                sslcontext = SSLContext()
+            transport = await self._wrapped_loop.start_tls(transport, connect_protocol, sslcontext)
 
-        return None, protocol
+        new_protocol = protocol_factory()
+        transport.set_protocol(new_protocol)
+        new_protocol.connection_made(transport)
+        return transport, new_protocol
 
     def __getattr__(self, item):
         """
