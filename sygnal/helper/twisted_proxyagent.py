@@ -20,15 +20,14 @@ import logging
 import re
 from typing import Optional
 
-from twisted.internet.base import ReactorBase
-from zope.interface import implementer
-
 from twisted.internet import defer
+from twisted.internet.base import ReactorBase
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.python.failure import Failure
 from twisted.web.client import URI, BrowserLikePolicyForHTTPS, _AgentBase
 from twisted.web.error import SchemeNotSupported
 from twisted.web.iweb import IAgent
+from zope.interface import implementer
 
 from sygnal.helper.proxy import decompose_http_proxy_url
 from sygnal.helper.twisted_connectproxyclient import HTTPConnectProxyEndpoint
@@ -117,7 +116,7 @@ class ProxyAgent(_AgentBase):
             raise ValueError("Invalid URI {!r}".format(uri))
 
         parsed_uri = URI.fromBytes(uri)
-        pool_key = (parsed_uri.scheme, parsed_uri.host, parsed_uri.port)
+        pool_key: tuple = (parsed_uri.scheme, parsed_uri.host, parsed_uri.port)
         request_path = parsed_uri.originForm
 
         if parsed_uri.scheme == b"http" and self.proxy_endpoint:
@@ -132,7 +131,7 @@ class ProxyAgent(_AgentBase):
                 self.proxy_endpoint,
                 parsed_uri.host,
                 parsed_uri.port,
-                self._proxy_url
+                self._proxy_url,
             )
         else:
             # not using a proxy
@@ -178,4 +177,6 @@ def _http_proxy_endpoint(proxy_url: Optional[str], reactor: ReactorBase, **kwarg
 
     parsed_url = decompose_http_proxy_url(proxy_url)
 
-    return HostnameEndpoint(reactor, parsed_url.hostname, parsed_url.port or 80, **kwargs)
+    return HostnameEndpoint(
+        reactor, parsed_url.hostname, parsed_url.port or 80, **kwargs
+    )

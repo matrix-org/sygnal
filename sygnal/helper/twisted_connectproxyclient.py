@@ -19,12 +19,11 @@
 import logging
 from base64 import urlsafe_b64encode
 
-from zope.interface import implementer
-
 from twisted.internet import defer, protocol
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import connectionDone
 from twisted.web import http
+from zope.interface import implementer
 
 from sygnal.exceptions import ProxyConnectError
 
@@ -133,16 +132,12 @@ class HTTPConnectProtocol(protocol.Protocol):
             wrapped_protocol when the CONNECT completes
     """
 
-    def __init__(
-        self, host, port, proxy_url, wrapped_protocol, connected_deferred
-    ):
+    def __init__(self, host, port, proxy_url, wrapped_protocol, connected_deferred):
         self.host = host
         self.port = port
         self.wrapped_protocol = wrapped_protocol
         self.connected_deferred = connected_deferred
-        self.http_setup_client = HTTPConnectSetupClient(
-            self.host, self.port, proxy_url
-        )
+        self.http_setup_client = HTTPConnectSetupClient(self.host, self.port, proxy_url)
         self.http_setup_client.on_connected.addCallback(self.proxyConnected)
 
     def connectionMade(self):
@@ -196,7 +191,9 @@ class HTTPConnectSetupClient(http.HTTPClient):
         self.sendCommand(b"CONNECT", b"%s:%d" % (self.host, self.port))
         if self.proxy_url.username is not None and self.proxy_url.password is not None:
             # a credential pair is a urlsafe-base64-encoded pair separated by colon
-            encoded_credentials = urlsafe_b64encode(f"{self.proxy_url.username}:{self.proxy_url.password}".encode())
+            encoded_credentials = urlsafe_b64encode(
+                f"{self.proxy_url.username}:{self.proxy_url.password}".encode()
+            )
             self.sendHeader(b"Proxy-Authorization", b"basic " + encoded_credentials)
         self.endHeaders()
 

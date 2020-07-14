@@ -19,12 +19,8 @@ import base64
 import copy
 import logging
 import os
-from asyncio.futures import Future
 from datetime import timezone
-from ssl import SSLContext
-from typing import Tuple, Optional, Callable, Union
 from typing import Dict
-from urllib.parse import urlparse
 from uuid import uuid4
 
 import aioapns
@@ -41,7 +37,7 @@ from sygnal.exceptions import (
     PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
-from sygnal.helper.proxy.proxy_asyncio import HttpConnectProtocol, ProxyingEventLoopWrapper
+from sygnal.helper.proxy.proxy_asyncio import ProxyingEventLoopWrapper
 from sygnal.notifications import Pushkin
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
@@ -136,31 +132,13 @@ class ApnsPushkin(Pushkin):
             if not self.get_config("topic"):
                 raise PushkinSetupException("You must supply topic.")
 
-        http_proxy_url = None
-        http_proxy_creds = None
-
         # use the Sygnal global proxy configuration
-        proxycfg = sygnal.config["proxy"]
-
-        if proxycfg.get("enabled", False):
-            http_proxy_url = "http://" + proxycfg.get("address")
-            if http_proxy_url is None:
-                raise PushkinSetupException(
-                    "HTTP Proxy enabled for APNs but no URL specified."
-                )
-            else:
-                logger.info("Using HTTP proxy for APNs")
-                # the HTTP proxy code expects a bytestring
-                if proxycfg.get("username") and proxycfg.get("password"):
-                    logger.info("Using HTTP Proxy Basic Auth")
-                    http_proxy_creds = (proxycfg["username"], proxycfg["password"])
-                else:
-                    logger.info("No HTTP Proxy credentials configured")
+        proxy_url = sygnal.config["proxy"].get("url")
 
         loop = asyncio.get_event_loop()
-        if http_proxy_url:
+        if proxy_url:
             # this overrides the create_connection method to use a HTTP proxy
-            loop = ProxyingEventLoopWrapper(loop, http_proxy_url, http_proxy_creds)
+            loop = ProxyingEventLoopWrapper(loop, proxy_url)  # type: ignore
 
         if certfile is not None:
             self.apns_client = APNs(

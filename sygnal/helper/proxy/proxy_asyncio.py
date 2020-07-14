@@ -1,13 +1,14 @@
 import asyncio
 import logging
+from asyncio import BaseTransport
 from asyncio.futures import Future
 from asyncio.transports import Transport
 from base64 import urlsafe_b64encode
 from ssl import SSLContext
-from typing import Optional, Tuple, Callable, Union
-from urllib.parse import urlparse
+from typing import Callable, Optional, Union
 
 from sygnal.exceptions import ProxyConnectError
+from sygnal.helper.proxy import decompose_http_proxy_url
 
 logger = logging.getLogger(__name__)
 
@@ -41,36 +42,29 @@ class HttpConnectProtocol(asyncio.Protocol):
     """
 
     def __init__(
-        self,
-        proxy_hostport: str,
-        target_hostport: str,
-        basic_proxy_auth: Optional[Tuple[str, str]],
+        self, proxy_url, target_hostport: str,
     ):
         """
         Args:
-            proxy_hostport (str):
-                The host & port of the HTTP proxy.
-                Used in the `Host` request header to the proxy.
-                Examples: '127.0.3.200:8080' or `prox:8080`
+            proxy_url (ParseResult):
+                The URL of the HTTP proxy after being parsed by urlparse.
+                Used in the `Host` request header to the proxy, and for the
+                extraction of basic authentication credentials (if required).
+
             target_hostport (str):
                 The host & port of the destination that the proxy should connect
                 to on your behalf. Must include a port number.
                 Examples: 'example.org:443'
-            basic_proxy_auth ((str, str) or None):
-                Pass a pair of (username, password) credentials if your HTTP
-                proxy requires Proxy Basic Authentication (using a
-                Proxy-Authorization: basic ... header).
         """
-        self.basic_proxy_auth = basic_proxy_auth
         self.completed = False
-        self.proxy_hostport = proxy_hostport
         self.target_hostport = target_hostport
         self.buffer = b""
-        self.transport = None
+        self.transport: Transport = None  # type: ignore
+        self.proxy_url = proxy_url
 
         # This future is completed when it is safe to take back control of the
         # transport (which is also returned to indicate this).
-        self.wait_for_establishment = Future()
+        self.wait_for_establishment: Future[Transport] = Future()
 
     def data_received(self, data: bytes) -> None:
         super().data_received(data)
@@ -121,13 +115,13 @@ class HttpConnectProtocol(asyncio.Protocol):
                     self.transport.close()
                     raise ProxyConnectError(
                         "Error from HTTP Proxy"
-                        f" whilst attempting CONNECT: {status} ({reason_phrase})"
-                        "; aborting connection."
+                        f" whilst attempting CONNECT: {status.decode()}"
+                        f" ({reason_phrase.decode()}); aborting connection."
                     )
 
                 logger.debug("Ready to switch over protocol")
 
-                self.buffer = None
+                self.buffer = None  # type: ignore
                 self.wait_for_establishment.set_result(self.transport)
             except Exception as exc:
                 logger.error("HTTP CONNECT failed.", exc_info=True)
@@ -136,17 +130,23 @@ class HttpConnectProtocol(asyncio.Protocol):
     def eof_received(self) -> Optional[bool]:
         return super().eof_received()
 
-    def connection_made(self, transport: Transport) -> None:
+    def connection_made(self, transport: BaseTransport) -> None:
+        if not isinstance(transport, Transport):
+            raise ValueError("transport must be a proper Transport")
+
         super().connection_made(transport)
         # when we get a TCP connection to the HTTP proxy, we invoke the CONNECT
         # method on it to open a tunnelled TCP connection through the proxy to
         # the other side
         transport.write(f"CONNECT {self.target_hostport} HTTP/1.1\r\n".encode())
-        transport.write(f"Host: {self.proxy_hostport}\r\n".encode())
-        if self.basic_proxy_auth is not None:
+        transport.write(
+            f"Host: {self.proxy_url.hostname}:{self.proxy_url.port or 80}\r\n".encode()
+        )
+        if self.proxy_url.username is not None and self.proxy_url.password is not None:
             # a credential pair is a urlsafe-base64-encoded pair separated by colon
-            (user, password) = self.basic_proxy_auth
-            encoded_credentials = urlsafe_b64encode(f"{user}:{password}".encode())
+            encoded_credentials = urlsafe_b64encode(
+                f"{self.proxy_url.username}:{self.proxy_url.password}".encode()
+            )
             transport.write(
                 b"Proxy-Authorization: basic " + encoded_credentials + b"\r\n"
             )
@@ -167,28 +167,27 @@ class ProxyingEventLoopWrapper:
     """
 
     def __init__(
-        self,
-        wrapped_loop: asyncio.AbstractEventLoop,
-        proxy_address: str,
-        proxy_basic_auth: Optional[Tuple[str, str]],
+        self, wrapped_loop: asyncio.AbstractEventLoop, proxy_url: str,
     ):
         """
         Args:
             wrapped_loop:
                 the underlying Event Loop to wrap
-            proxy_address (str):
+            proxy_url (str):
                 The address of the HTTP proxy to use.
-                Used to connect to the proxy, as well as in
-                the `Host` request header to the proxy.
-                Examples: '127.0.3.200:8080' or `prox:8080`
+                Used to connect to the proxy, as well as in the `Host` request
+                header to the proxy, and for the extraction of basic
+                authentication credentials (if required).
+
+                Examples: 'http://127.0.3.200:8080'
+                       or 'http://user:secret@prox:8080'
             proxy_basic_auth ((str, str) or None):
                 Pass a pair of (username, password) credentials if your HTTP
                 proxy requires Proxy Basic Authentication (using a
                 Proxy-Authorization: basic ... header).
         """
         self._wrapped_loop = wrapped_loop
-        self.proxy_address = proxy_address
-        self.proxy_basic_auth = proxy_basic_auth
+        self.proxy_url = proxy_url
 
     async def create_connection(
         self,
@@ -197,33 +196,47 @@ class ProxyingEventLoopWrapper:
         port: int,
         ssl: Union[bool, SSLContext] = False,
     ):
-        proxy_url = urlparse(self.proxy_address)
+        proxy_url = decompose_http_proxy_url(self.proxy_address)
 
         def make_protocol():
             proxy_setup_protocol = HttpConnectProtocol(
-                self.proxy_address,
-                f"{host}:{port}",
-                self.proxy_basic_auth,
+                self.proxy_address, self.proxy_url
             )
             return proxy_setup_protocol
 
+        # create a raw TCP connection to the proxy
+        # (N.B. if we want to ever use TLS to the proxy [e.g. to protect the proxy
+        # credentials], we can ask this to give us a TLS connection).
         transport, connect_protocol = await self._wrapped_loop.create_connection(
             make_protocol, proxy_url.hostname, proxy_url.port
         )
 
+        assert isinstance(connect_protocol, HttpConnectProtocol)
+
+        # wait for the HTTP Proxy CONNECT sequence to complete
         transport = await connect_protocol.wait_for_establishment
 
-        # tcp_transport should never be used again
         if ssl:
             if isinstance(ssl, SSLContext):
                 sslcontext = ssl
             else:
                 sslcontext = SSLContext()
-            transport = await self._wrapped_loop.start_tls(transport, connect_protocol, sslcontext)
 
+            # be careful not to use the `transport` ever again after passing it
+            # to start_tls — we overwrite our variable with the TLS-wrapped
+            # transport to avoid that!
+            transport = await self._wrapped_loop.start_tls(
+                transport, connect_protocol, sslcontext
+            )
+
+        # construct the desired protocol and hand over the transport to it
         new_protocol = protocol_factory()
+        # wire up transport to call `data_received` etc. on the new transport
         transport.set_protocol(new_protocol)
+        # let the protocol know it has been connected to the transport
         new_protocol.connection_made(transport)
+        # fulfil our contract and hand back the user's protocol and the
+        # underlying transport
         return transport, new_protocol
 
     def __getattr__(self, item):

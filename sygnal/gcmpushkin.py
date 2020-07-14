@@ -114,9 +114,6 @@ class GcmPushkin(Pushkin):
 
         tls_client_options_factory = ClientTLSOptionsFactory()
 
-        http_proxy_url = None
-        http_proxy_creds = None
-
         # use the Sygnal global proxy configuration
         proxy_url = sygnal.config["proxy"].get("url")
 

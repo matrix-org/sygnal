@@ -20,7 +20,6 @@ import logging
 import logging.config
 import os
 import sys
-from urllib.parse import urlparse
 
 import opentracing
 import prometheus_client
@@ -85,7 +84,9 @@ class Sygnal(object):
         else:
             proxy_url = os.getenv("HTTPS_PROXY")
             if proxy_url:
-                logger.info("Using proxy configuration from HTTPS_PROXY environment variable.")
+                logger.info(
+                    "Using proxy configuration from HTTPS_PROXY environment variable."
+                )
                 config["proxy"]["url"] = proxy_url
 
         # Old format db config
@@ -240,6 +241,7 @@ class Sygnal(object):
 
         self.reactor.callWhenRunning(start)
         self.reactor.run()
+
 
 def parse_config():
     """
