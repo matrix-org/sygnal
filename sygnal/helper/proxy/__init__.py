@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 
 
-def decompose_http_proxy_url(self, proxy_url):
+def decompose_http_proxy_url(proxy_url):
     url = urlparse(proxy_url, scheme="http")
 
     if not url.hostname:
@@ -13,4 +13,6 @@ def decompose_http_proxy_url(self, proxy_url):
         raise RuntimeError(
             f"Unknown proxy scheme {url.scheme};" f" only 'http' is supported."
         )
+
+    return url
 
