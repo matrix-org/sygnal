@@ -10,3 +10,4 @@ _trial_temp*
 /*.egg-info
 /build
 /dist
+/.tox
