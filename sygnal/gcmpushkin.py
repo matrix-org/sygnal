@@ -118,31 +118,13 @@ class GcmPushkin(Pushkin):
         http_proxy_creds = None
 
         # use the Sygnal global proxy configuration
-        proxycfg = sygnal.config["proxy"]
-
-        if proxycfg.get("enabled", False):
-            http_proxy_url = proxycfg.get("address")
-            if http_proxy_url is None:
-                raise PushkinSetupException(
-                    "HTTP Proxy enabled for FCM but no URL specified."
-                )
-            else:
-                logger.info("Using HTTP proxy for FCM")
-                # the HTTP proxy code expects a bytestring
-                http_proxy_url = http_proxy_url.encode()
-                if proxycfg.get("username") and proxycfg.get("password"):
-                    logger.info("Using HTTP Proxy Basic Auth")
-                    http_proxy_creds = (proxycfg["username"], proxycfg["password"])
-                else:
-                    logger.info("No HTTP Proxy credentials configured")
+        proxy_url = sygnal.config["proxy"].get("url")
 
         self.http_agent = ProxyAgent(
             reactor=sygnal.reactor,
             pool=self.http_pool,
             contextFactory=tls_client_options_factory,
-            http_proxy=http_proxy_url,
-            https_proxy=http_proxy_url,
-            proxy_basic_auth=http_proxy_creds,
+            proxy_url=proxy_url,
         )
 
         self.db = sygnal.database

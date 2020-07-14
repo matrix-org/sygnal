@@ -18,7 +18,9 @@
 
 import logging
 import re
+from typing import Optional
 
+from twisted.internet.base import ReactorBase
 from zope.interface import implementer
 
 from twisted.internet import defer
@@ -28,6 +30,7 @@ from twisted.web.client import URI, BrowserLikePolicyForHTTPS, _AgentBase
 from twisted.web.error import SchemeNotSupported
 from twisted.web.iweb import IAgent
 
+from sygnal.helper.proxy import decompose_http_proxy_url
 from sygnal.helper.twisted_connectproxyclient import HTTPConnectProxyEndpoint
 
 logger = logging.getLogger(__name__)
@@ -64,9 +67,7 @@ class ProxyAgent(_AgentBase):
         connectTimeout=None,
         bindAddress=None,
         pool=None,
-        http_proxy=None,
-        https_proxy=None,
-        proxy_basic_auth=None,
+        proxy_url: str = None,
     ):
         _AgentBase.__init__(self, reactor, pool)
 
@@ -76,15 +77,10 @@ class ProxyAgent(_AgentBase):
         if bindAddress is not None:
             self._endpoint_kwargs["bindAddress"] = bindAddress
 
-        self.http_proxy_endpoint = _http_proxy_endpoint(
-            http_proxy, reactor, **self._endpoint_kwargs
+        self.proxy_endpoint = _http_proxy_endpoint(
+            proxy_url, reactor, **self._endpoint_kwargs
         )
-
-        self.https_proxy_endpoint = _http_proxy_endpoint(
-            https_proxy, reactor, **self._endpoint_kwargs
-        )
-
-        self.proxy_basic_auth = proxy_basic_auth
+        self._proxy_url = proxy_url
 
         self._policy_for_https = contextFactory
         self._reactor = reactor
@@ -124,19 +120,19 @@ class ProxyAgent(_AgentBase):
         pool_key = (parsed_uri.scheme, parsed_uri.host, parsed_uri.port)
         request_path = parsed_uri.originForm
 
-        if parsed_uri.scheme == b"http" and self.http_proxy_endpoint:
+        if parsed_uri.scheme == b"http" and self.proxy_endpoint:
             # Cache *all* connections under the same key, since we are only
             # connecting to a single destination, the proxy:
-            pool_key = ("http-proxy", self.http_proxy_endpoint)
-            endpoint = self.http_proxy_endpoint
+            pool_key = ("http-proxy", self.proxy_endpoint)
+            endpoint = self.proxy_endpoint
             request_path = uri
         elif parsed_uri.scheme == b"https" and self.https_proxy_endpoint:
             endpoint = HTTPConnectProxyEndpoint(
                 self._reactor,
-                self.https_proxy_endpoint,
+                self.proxy_endpoint,
                 parsed_uri.host,
                 parsed_uri.port,
-                self.proxy_basic_auth,
+                self._proxy_url
             )
         else:
             # not using a proxy
@@ -165,11 +161,11 @@ class ProxyAgent(_AgentBase):
         )
 
 
-def _http_proxy_endpoint(proxy, reactor, **kwargs):
+def _http_proxy_endpoint(proxy_url: Optional[str], reactor: ReactorBase, **kwargs):
     """Parses an http proxy setting and returns an endpoint for the proxy
 
     Args:
-        proxy (bytes|None):  the proxy setting
+        proxy_url (str): the proxy setting
         reactor: reactor to be used to connect to the proxy
         kwargs: other args to be passed to HostnameEndpoint
 
@@ -177,27 +173,9 @@ def _http_proxy_endpoint(proxy, reactor, **kwargs):
         interfaces.IStreamClientEndpoint|None: endpoint to use to connect to the proxy,
             or None
     """
-    if proxy is None:
+    if proxy_url is None:
         return None
 
-    # currently we only support hostname:port. Some apps also support
-    # protocol://<host>[:port], which allows a way of requiring a TLS connection to the
-    # proxy.
+    parsed_url = decompose_http_proxy_url(proxy_url)
 
-    host, port = parse_host_port(proxy, default_port=1080)
-    return HostnameEndpoint(reactor, host, port, **kwargs)
-
-
-def parse_host_port(hostport, default_port=None):
-    # could have sworn we had one of these somewhere else...
-    if b":" in hostport:
-        host, port = hostport.rsplit(b":", 1)
-        try:
-            port = int(port)
-            return host, port
-        except ValueError:
-            # the thing after the : wasn't a valid port; presumably this is an
-            # IPv6 address.
-            pass
-
-    return hostport, default_port
+    return HostnameEndpoint(reactor, parsed_url.hostname, parsed_url.port or 80, **kwargs)
