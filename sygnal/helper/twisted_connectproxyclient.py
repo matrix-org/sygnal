@@ -47,21 +47,22 @@ class HTTPConnectProxyEndpoint(object):
             proxy
         host (bytes): hostname that we want to CONNECT to
         port (int): port that we want to connect to
+        proxy_url_parts: The URL of the HTTP proxy after being parsed by urlparse.
     """
 
-    def __init__(self, reactor, proxy_endpoint, host, port, proxy_url):
+    def __init__(self, reactor, proxy_endpoint, host, port, proxy_url_parts):
         self._reactor = reactor
         self._proxy_endpoint = proxy_endpoint
         self._host = host
         self._port = port
-        self._proxy_url = proxy_url
+        self._proxy_url_parts = proxy_url_parts
 
     def __repr__(self):
         return "<HTTPConnectProxyEndpoint %s>" % (self._proxy_endpoint,)
 
     def connect(self, protocolFactory):
         f = HTTPProxiedClientFactory(
-            self._host, self._port, self._proxy_url, protocolFactory
+            self._host, self._port, self._proxy_url_parts, protocolFactory
         )
         d = self._proxy_endpoint.connect(f)
         # once the tcp socket connects successfully, we need to wait for the
@@ -82,10 +83,10 @@ class HTTPProxiedClientFactory(protocol.ClientFactory):
         wrapped_factory (protocol.ClientFactory): The original Factory
     """
 
-    def __init__(self, dst_host, dst_port, proxy_url, wrapped_factory):
+    def __init__(self, dst_host, dst_port, proxy_url_parts, wrapped_factory):
         self.dst_host = dst_host
         self.dst_port = dst_port
-        self.proxy_url = proxy_url
+        self.proxy_url_parts = proxy_url_parts
         self.wrapped_factory = wrapped_factory
         self.on_connection = defer.Deferred()
 
@@ -98,7 +99,7 @@ class HTTPProxiedClientFactory(protocol.ClientFactory):
         return HTTPConnectProtocol(
             self.dst_host,
             self.dst_port,
-            self.proxy_url,
+            self.proxy_url_parts,
             wrapped_protocol,
             self.on_connection,
         )
@@ -132,12 +133,16 @@ class HTTPConnectProtocol(protocol.Protocol):
             wrapped_protocol when the CONNECT completes
     """
 
-    def __init__(self, host, port, proxy_url, wrapped_protocol, connected_deferred):
+    def __init__(
+        self, host, port, proxy_url_parts, wrapped_protocol, connected_deferred
+    ):
         self.host = host
         self.port = port
         self.wrapped_protocol = wrapped_protocol
         self.connected_deferred = connected_deferred
-        self.http_setup_client = HTTPConnectSetupClient(self.host, self.port, proxy_url)
+        self.http_setup_client = HTTPConnectSetupClient(
+            self.host, self.port, proxy_url_parts
+        )
         self.http_setup_client.on_connected.addCallback(self.proxyConnected)
 
     def connectionMade(self):
@@ -180,10 +185,10 @@ class HTTPConnectSetupClient(http.HTTPClient):
         port (int): The port to send in the CONNECT message
     """
 
-    def __init__(self, host, port, proxy_url):
+    def __init__(self, host, port, proxy_url_parts):
         self.host = host
         self.port = port
-        self.proxy_url = proxy_url
+        self.proxy_url = proxy_url_parts
         self.on_connected = defer.Deferred()
 
     def connectionMade(self):

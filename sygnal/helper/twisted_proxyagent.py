@@ -66,7 +66,7 @@ class ProxyAgent(_AgentBase):
         connectTimeout=None,
         bindAddress=None,
         pool=None,
-        proxy_url: str = None,
+        proxy_url_str: str = None,
     ):
         _AgentBase.__init__(self, reactor, pool)
 
@@ -77,9 +77,10 @@ class ProxyAgent(_AgentBase):
             self._endpoint_kwargs["bindAddress"] = bindAddress
 
         self.proxy_endpoint = _http_proxy_endpoint(
-            proxy_url, reactor, **self._endpoint_kwargs
+            proxy_url_str, reactor, **self._endpoint_kwargs
         )
-        self._proxy_url = proxy_url
+        if proxy_url_str is not None:
+            self._proxy_url_parts = decompose_http_proxy_url(proxy_url_str)
 
         self._policy_for_https = contextFactory
         self._reactor = reactor
@@ -125,13 +126,13 @@ class ProxyAgent(_AgentBase):
             pool_key = ("http-proxy", self.proxy_endpoint)
             endpoint = self.proxy_endpoint
             request_path = uri
-        elif parsed_uri.scheme == b"https" and self.https_proxy_endpoint:
+        elif parsed_uri.scheme == b"https" and self.proxy_endpoint:
             endpoint = HTTPConnectProxyEndpoint(
                 self._reactor,
                 self.proxy_endpoint,
                 parsed_uri.host,
                 parsed_uri.port,
-                self._proxy_url,
+                self._proxy_url_parts,
             )
         else:
             # not using a proxy

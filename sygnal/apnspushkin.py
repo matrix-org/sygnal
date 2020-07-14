@@ -133,12 +133,12 @@ class ApnsPushkin(Pushkin):
                 raise PushkinSetupException("You must supply topic.")
 
         # use the Sygnal global proxy configuration
-        proxy_url = sygnal.config["proxy"].get("url")
+        proxy_url_str = sygnal.config["proxy"].get("url")
 
         loop = asyncio.get_event_loop()
-        if proxy_url:
+        if proxy_url_str:
             # this overrides the create_connection method to use a HTTP proxy
-            loop = ProxyingEventLoopWrapper(loop, proxy_url)  # type: ignore
+            loop = ProxyingEventLoopWrapper(loop, proxy_url_str)  # type: ignore
 
         if certfile is not None:
             self.apns_client = APNs(

@@ -42,11 +42,11 @@ class HttpConnectProtocol(asyncio.Protocol):
     """
 
     def __init__(
-        self, proxy_url, target_hostport: str,
+        self, proxy_url_parts, target_hostport: str,
     ):
         """
         Args:
-            proxy_url (ParseResult):
+            proxy_url_parts (ParseResult):
                 The URL of the HTTP proxy after being parsed by urlparse.
                 Used in the `Host` request header to the proxy, and for the
                 extraction of basic authentication credentials (if required).
@@ -60,7 +60,7 @@ class HttpConnectProtocol(asyncio.Protocol):
         self.target_hostport = target_hostport
         self.buffer = b""
         self.transport: Transport = None  # type: ignore
-        self.proxy_url = proxy_url
+        self.proxy_url_parts = proxy_url_parts
 
         # This future is completed when it is safe to take back control of the
         # transport (which is also returned to indicate this).
@@ -139,13 +139,12 @@ class HttpConnectProtocol(asyncio.Protocol):
         # method on it to open a tunnelled TCP connection through the proxy to
         # the other side
         transport.write(f"CONNECT {self.target_hostport} HTTP/1.1\r\n".encode())
-        transport.write(
-            f"Host: {self.proxy_url.hostname}:{self.proxy_url.port or 80}\r\n".encode()
-        )
-        if self.proxy_url.username is not None and self.proxy_url.password is not None:
+        parts = self.proxy_url_parts
+        transport.write(f"Host: {parts.hostname}:{parts.port or 80}\r\n".encode())
+        if parts.username is not None and parts.password is not None:
             # a credential pair is a urlsafe-base64-encoded pair separated by colon
             encoded_credentials = urlsafe_b64encode(
-                f"{self.proxy_url.username}:{self.proxy_url.password}".encode()
+                f"{parts.username}:{parts.password}".encode()
             )
             transport.write(
                 b"Proxy-Authorization: basic " + encoded_credentials + b"\r\n"
@@ -167,13 +166,13 @@ class ProxyingEventLoopWrapper:
     """
 
     def __init__(
-        self, wrapped_loop: asyncio.AbstractEventLoop, proxy_url: str,
+        self, wrapped_loop: asyncio.AbstractEventLoop, proxy_url_str: str,
     ):
         """
         Args:
             wrapped_loop:
                 the underlying Event Loop to wrap
-            proxy_url (str):
+            proxy_url_str (str):
                 The address of the HTTP proxy to use.
                 Used to connect to the proxy, as well as in the `Host` request
                 header to the proxy, and for the extraction of basic
@@ -181,13 +180,9 @@ class ProxyingEventLoopWrapper:
 
                 Examples: 'http://127.0.3.200:8080'
                        or 'http://user:secret@prox:8080'
-            proxy_basic_auth ((str, str) or None):
-                Pass a pair of (username, password) credentials if your HTTP
-                proxy requires Proxy Basic Authentication (using a
-                Proxy-Authorization: basic ... header).
         """
         self._wrapped_loop = wrapped_loop
-        self.proxy_url = proxy_url
+        self.proxy_url_str = proxy_url_str
 
     async def create_connection(
         self,
@@ -196,11 +191,11 @@ class ProxyingEventLoopWrapper:
         port: int,
         ssl: Union[bool, SSLContext] = False,
     ):
-        proxy_url = decompose_http_proxy_url(self.proxy_address)
+        proxy_url_parts = decompose_http_proxy_url(self.proxy_url_str)
 
         def make_protocol():
             proxy_setup_protocol = HttpConnectProtocol(
-                self.proxy_address, self.proxy_url
+                proxy_url_parts, f"{host}:{port}"
             )
             return proxy_setup_protocol
 
@@ -208,7 +203,7 @@ class ProxyingEventLoopWrapper:
         # (N.B. if we want to ever use TLS to the proxy [e.g. to protect the proxy
         # credentials], we can ask this to give us a TLS connection).
         transport, connect_protocol = await self._wrapped_loop.create_connection(
-            make_protocol, proxy_url.hostname, proxy_url.port
+            make_protocol, proxy_url_parts.hostname, proxy_url_parts.port
         )
 
         assert isinstance(connect_protocol, HttpConnectProtocol)

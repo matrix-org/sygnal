@@ -121,7 +121,7 @@ class GcmPushkin(Pushkin):
             reactor=sygnal.reactor,
             pool=self.http_pool,
             contextFactory=tls_client_options_factory,
-            proxy_url=proxy_url,
+            proxy_url_str=proxy_url,
         )
 
         self.db = sygnal.database
