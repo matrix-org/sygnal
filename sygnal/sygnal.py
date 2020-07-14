@@ -301,7 +301,7 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
-    check_section("proxy", {"enabled", "address", "username", "password"})
+    check_section("proxy", {"url"})
 
     # If 'db' is defined, it will override the 'database' config.
     if "db" in config:
