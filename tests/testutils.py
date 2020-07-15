@@ -180,6 +180,7 @@ class TestCase(unittest.TestCase):
             self.sygnal.reactor.wait_for_work(lambda: channel.done)
 
         assert channel.done
+        assert channel.result is not None
 
         if channel.result.code != 200:
             return channel.result.code
