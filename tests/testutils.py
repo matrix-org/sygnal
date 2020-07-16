@@ -17,7 +17,7 @@ from io import BytesIO
 from os import environ
 from threading import Condition
 from time import time_ns
-from typing import BinaryIO, Optional, Union
+from typing import BinaryIO, List, Optional, Union
 
 import attr
 import psycopg2
@@ -86,7 +86,35 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         reactor = ExtendedMemoryReactorClock()
 
-        config = {"apps": {}, "log": {"setup": {"version": 1}}}
+        logging_config = {
+            "setup": {
+                "formatters": {
+                    "normal": {
+                        "format": "%(asctime)s [%(process)d] "
+                        "%(levelname)-5s %(name)s %(message)s"
+                    }
+                },
+                "handlers": {
+                    "stderr": {
+                        "class": "logging.StreamHandler",
+                        "formatter": "normal",
+                        "stream": "ext://sys.stderr",
+                    },
+                },
+                "loggers": {
+                    "sygnal": {"handlers": ["stderr"], "propagate": False},
+                    "sygnal.access": {
+                        "handlers": ["stderr"],
+                        "level": "INFO",
+                        "propagate": False,
+                    },
+                },
+                "root": {"handlers": ["stderr"], "level": "DEBUG"},
+                "version": 1,
+            }
+        }
+
+        config = {"apps": {}, "log": logging_config}
 
         self.config_setup(config)
 
@@ -155,7 +183,7 @@ class TestCase(unittest.TestCase):
             }
         }
 
-    def _request(self, payload) -> Union[dict, int]:
+    def _request(self, payload: Union[str, dict]) -> Union[dict, int]:
         """
         Make a dummy request to the notify endpoint with the specified payload
 
@@ -186,6 +214,51 @@ class TestCase(unittest.TestCase):
             return channel.result.code
 
         return json.loads(channel.response_body)
+
+    def _multi_requests(
+        self, payloads: List[Union[str, dict]]
+    ) -> List[Union[dict, int]]:
+        """
+        Make multiple dummy requests to the notify endpoint with the specified payloads.
+
+        Acts like a listified version of `_request`.
+
+        Args:
+            payloads: list of payloads to be JSON encoded
+
+        Returns (lists of dicts and/or ints):
+            If successful (200 response received), the response is JSON decoded
+            and the resultant dict is returned.
+            If the response code is not 200, returns the response code.
+        """
+
+        def dump_if_needed(payload):
+            if isinstance(payload, dict):
+                payload = json.dumps(payload)
+            return payload
+
+        contents = [BytesIO(dump_if_needed(payload).encode()) for payload in payloads]
+
+        channels = [FakeChannel(self.v1api.site, self.sygnal.reactor) for _ in contents]
+
+        for channel, content in zip(channels, contents):
+            channel.process_request(b"POST", REQ_PATH, content)
+
+        def all_channels_done():
+            return all([channel.done for channel in channels])
+
+        while not all_channels_done():
+            # we need to advance until the request has been finished
+            self.sygnal.reactor.advance(1)
+            self.sygnal.reactor.wait_for_work(all_channels_done)
+
+        def channel_result(channel):
+            if channel.result.code != 200:
+                return channel.result.code
+            else:
+                return json.loads(channel.response_body)
+
+        return [channel_result(channel) for channel in channels]
 
 
 class ExtendedMemoryReactorClock(MemoryReactorClock):
