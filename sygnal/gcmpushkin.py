@@ -32,10 +32,10 @@ from sygnal.exceptions import (
     TemporaryNotificationDispatchException,
 )
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
+from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 from .exceptions import PushkinSetupException
-from .helper.twisted_proxyagent import ProxyAgent
 from .notifications import Pushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(

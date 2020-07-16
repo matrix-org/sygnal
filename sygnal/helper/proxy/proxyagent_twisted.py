@@ -30,7 +30,7 @@ from twisted.web.iweb import IAgent
 from zope.interface import implementer
 
 from sygnal.helper.proxy import decompose_http_proxy_url
-from sygnal.helper.twisted_connectproxyclient import HTTPConnectProxyEndpoint
+from sygnal.helper.proxy.connectproxyclient_twisted import HTTPConnectProxyEndpoint
 
 logger = logging.getLogger(__name__)
 
