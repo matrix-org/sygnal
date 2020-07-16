@@ -304,8 +304,6 @@ class GcmPushkin(Pushkin):
         pushkeys = [
             device.pushkey for device in n.devices if device.app_id == self.name
         ]
-        total_pushkey_count = len(pushkeys)
-
         # Resolve canonical IDs for all pushkeys
 
         if pushkeys[0] != device.pushkey:
@@ -396,10 +394,6 @@ class GcmPushkin(Pushkin):
 
             if len(pushkeys) > 0:
                 log.info("Gave up retrying reg IDs: %r", pushkeys)
-                if len(pushkeys) == total_pushkey_count:
-                    # if every single device failed, we should properly declare
-                    # this a failure
-                    raise NotificationDispatchException("Gave up retrying FCM.")
             # Count the number of failed devices.
             span_parent.set_tag("gcm_num_failed", len(failed))
             return failed
