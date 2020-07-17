@@ -33,9 +33,8 @@ RUN pip install --prefix="/install" --no-warn-script-location /sygnal
 ###
 
 FROM python:3.7-slim
-
+RUN apt-get update && apt-get install -y libpq5 && apt-get clean
 COPY --from=builder /install /usr/local
-
 EXPOSE 5000/tcp
 
 ENTRYPOINT ["python", "-m", "sygnal.sygnal"]
