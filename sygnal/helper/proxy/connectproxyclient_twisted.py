@@ -74,8 +74,9 @@ class HTTPConnectProxyEndpoint(object):
 class HTTPProxiedClientFactory(protocol.ClientFactory):
     """ClientFactory wrapper that triggers an HTTP proxy CONNECT on connect.
 
-    Once the CONNECT completes, invokes the original ClientFactory to build the
-    HTTP Protocol object and run the rest of the connection.
+    It invokes the original ClientFactory to build the HTTP Protocol object,
+     and then, once CONNECT is completed, uses it to run the rest of the
+     connection.
 
     Args:
         dst_host (bytes): hostname that we want to CONNECT to
