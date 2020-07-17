@@ -132,6 +132,9 @@ class ApnsPushkin(Pushkin):
                 raise PushkinSetupException("You must supply topic.")
 
         if certfile is not None:
+            # max_connection_attempts is actually the maximum number of
+            # additional connection attempts, so =0 means try once only
+            # (we will retry at a higher level so not worth doing more here)
             self.apns_client = APNs(
                 client_cert=certfile,
                 use_sandbox=self.use_sandbox,
@@ -140,6 +143,9 @@ class ApnsPushkin(Pushkin):
 
             self._report_certificate_expiration(certfile)
         else:
+            # max_connection_attempts is actually the maximum number of
+            # additional connection attempts, so =0 means try once only
+            # (we will retry at a higher level so not worth doing more here)
             self.apns_client = APNs(
                 key=self.get_config("keyfile"),
                 key_id=self.get_config("key_id"),
