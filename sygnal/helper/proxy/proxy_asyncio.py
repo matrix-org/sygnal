@@ -14,8 +14,9 @@
 # limitations under the License.
 import asyncio
 import logging
-from asyncio import BaseTransport
+from asyncio import AbstractEventLoop, BaseTransport
 from asyncio.futures import Future
+from asyncio.protocols import Protocol
 from asyncio.transports import Transport
 from base64 import urlsafe_b64encode
 from ssl import SSLContext
@@ -56,7 +57,12 @@ class HttpConnectProtocol(asyncio.Protocol):
     """
 
     def __init__(
-        self, proxy_url_parts, target_hostport: str,
+        self,
+        proxy_url_parts,
+        target_hostport: str,
+        protocol_factory: Callable[[], Protocol],
+        sslcontext: Optional[SSLContext],
+        loop: Optional[AbstractEventLoop] = None,
     ):
         """
         Args:
@@ -75,10 +81,63 @@ class HttpConnectProtocol(asyncio.Protocol):
         self.buffer = b""
         self.transport: Transport = None  # type: ignore
         self.proxy_url_parts = proxy_url_parts
+        self._protocol_factory = protocol_factory
+        self._sslcontext = sslcontext
+        self._loop = loop or asyncio.get_event_loop()
 
         # This future is completed when it is safe to take back control of the
-        # transport (which is also returned to indicate this).
-        self.wait_for_establishment: Future[Transport] = Future()
+        # transport.
+        # It completes with leftover bytes for the next protocol.
+        self._wait_for_establishment: Future[bytes] = Future()
+
+    async def wait_until_connected(self):
+        """
+        XXX docme
+        Returns:
+
+        """
+        left_over_bytes = await self._wait_for_establishment
+        if self.completed:
+            raise RuntimeError(
+                "Can only use `HttpConnectProtocol.wait_connected` once."
+            )
+        self.completed = True
+
+        # construct the desired protocol and hand over the transport to it
+        new_protocol = self._protocol_factory()
+
+        if self._sslcontext:
+            # be careful not to use the `transport` ever again after passing it
+            # to start_tls — we overwrite our variable with the TLS-wrapped
+            # transport to avoid that!
+            # XXX do we need to pass the server_hostname for verification?
+            transport = await self._loop.start_tls(
+                self.transport, new_protocol, self._sslcontext
+            )
+            # XXX is this enough?
+            # XXX do we need e.g. connection_made on SSLProto? or new_proto?
+
+            if left_over_bytes:
+                # this doesn't really apply to TLS but:
+                # pass over dangling bytes if applicable
+                # this is an ugly thing so tempted to remove it and assert that
+                # we don't have any left-over bytes instead (since in TLS,
+                # the client transmits first, so this is theoretically
+                # unreachable).
+                transport._ssl_protocol.data_received(left_over_bytes)  # type: ignore
+        else:
+            # no wrapping required for non-TLS
+            transport = self.transport
+            # wire up transport to call `data_received` etc. on the new transport
+            transport.set_protocol(new_protocol)
+            # let the protocol know it has been connected to the transport
+            new_protocol.connection_made(transport)
+
+            if left_over_bytes:
+                # pass over dangling bytes if applicable
+                new_protocol.data_received(left_over_bytes)
+
+        return transport, new_protocol
 
     def data_received(self, data: bytes) -> None:
         super().data_received(data)
@@ -104,7 +163,8 @@ class HttpConnectProtocol(asyncio.Protocol):
         # All HTTP header lines are terminated by CRLF.
         # the first line of the response headers is the Status Line
         try:
-            lines = self.buffer.split(b"\r\n")
+            response_header, dangling_bytes = self.buffer.split(b"\r\n\r\n", maxsplit=1)
+            lines = response_header.split(b"\r\n")
             status_line = lines[0]
             # maxsplit=2 denotes the number of separators, not the № items
             # StatusLine ← HTTPVersion SP StatusCode SP ReasonPhrase
@@ -137,10 +197,10 @@ class HttpConnectProtocol(asyncio.Protocol):
             logger.debug("Ready to switch over protocol")
 
             self.buffer = None  # type: ignore
-            self.wait_for_establishment.set_result(self.transport)
+            self._wait_for_establishment.set_result(dangling_bytes)
         except Exception as exc:
             logger.error("HTTP CONNECT failed.", exc_info=True)
-            self.wait_for_establishment.set_exception(exc)
+            self._wait_for_establishment.set_exception(exc)
 
     def eof_received(self) -> Optional[bool]:
         return super().eof_received()
@@ -208,9 +268,23 @@ class ProxyingEventLoopWrapper:
     ):
         proxy_url_parts = decompose_http_proxy_url(self.proxy_url_str)
 
+        sslcontext: Optional[SSLContext]
+
+        if ssl:
+            if isinstance(ssl, SSLContext):
+                sslcontext = ssl
+            else:
+                sslcontext = SSLContext()
+        else:
+            sslcontext = None
+
         def make_protocol():
             proxy_setup_protocol = HttpConnectProtocol(
-                proxy_url_parts, f"{host}:{port}"
+                proxy_url_parts,
+                f"{host}:{port}",
+                protocol_factory,
+                sslcontext,
+                loop=self._wrapped_loop,
             )
             return proxy_setup_protocol
 
@@ -227,31 +301,12 @@ class ProxyingEventLoopWrapper:
 
         assert isinstance(connect_protocol, HttpConnectProtocol)
 
-        # wait for the HTTP Proxy CONNECT sequence to complete
-        await connect_protocol.wait_for_establishment
+        # wait for the HTTP Proxy CONNECT sequence to complete,
+        # and get the transport (which may be an SSLTransport rather than the
+        # original) and user protocol.
+        transport, user_protocol = await connect_protocol.wait_until_connected()
 
-        if ssl:
-            if isinstance(ssl, SSLContext):
-                sslcontext = ssl
-            else:
-                sslcontext = SSLContext()
-
-            # be careful not to use the `transport` ever again after passing it
-            # to start_tls — we overwrite our variable with the TLS-wrapped
-            # transport to avoid that!
-            transport = await self._wrapped_loop.start_tls(
-                transport, connect_protocol, sslcontext
-            )
-
-        # construct the desired protocol and hand over the transport to it
-        new_protocol = protocol_factory()
-        # wire up transport to call `data_received` etc. on the new transport
-        transport.set_protocol(new_protocol)
-        # let the protocol know it has been connected to the transport
-        new_protocol.connection_made(transport)
-        # fulfil our contract and hand back the user's protocol and the
-        # underlying transport
-        return transport, new_protocol
+        return transport, user_protocol
 
     def __getattr__(self, item):
         """
