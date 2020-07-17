@@ -38,4 +38,10 @@ class TemporaryNotificationDispatchException(Exception):
 
 
 class ProxyConnectError(ConnectError):
+    """
+    Exception raised when we are unable to start a connection using a HTTP proxy
+    This indicates an issue with the HTTP Proxy in use rather than the final
+    endpoint we wanted to contact.
+    """
+
     pass

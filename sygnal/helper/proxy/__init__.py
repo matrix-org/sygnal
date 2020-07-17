@@ -12,10 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 
 
-def decompose_http_proxy_url(proxy_url):
+def decompose_http_proxy_url(proxy_url: str) -> ParseResult:
+    """
+    Given a HTTP proxy URL, breaks it down into components and checks that it
+    has a hostname (otherwise it is not right useful to us trying to find a
+    proxy) and asserts that the URL has the 'http' scheme as that is all we
+    support.
+
+    Args:
+        proxy_url:
+            The proxy URL, as a string.
+            e.g. 'http://user:password@prox:8080' or just 'http://prox' or
+                anything in between.
+
+    Returns:
+        The result of `urlparse` on that URL, after having checked the
+        conditions mentioned above.
+    """
     url = urlparse(proxy_url, scheme="http")
 
     if not url.hostname:
