@@ -69,63 +69,66 @@ class HttpConnectProtocol(asyncio.Protocol):
     def data_received(self, data: bytes) -> None:
         super().data_received(data)
         self.buffer += data
-        if b"\r\n\r\n" in self.buffer:
-            # The response headers are terminated by a double CRLF.
-            # NB we want want 'in' instead of 'endswith'
-            #  as no guarantee error page won't come immediately.
+        if b"\r\n\r\n" not in self.buffer:
+            # we haven't finished the headers yet
+            return
 
-            # warning: note this won't work if the remote host talks through
-            # the tunnel first.
-            # (This is OK because:
-            #   - in cleartext HTTP, the client sends the request before the
-            #     server utters a word
-            #   - in TLS, the client talks first by sending a client hello
-            #   - we aren't interested in using anything other than TLS over this
-            #     proxy, anyway
-            # )
+        # The response headers are terminated by a double CRLF.
+        # NB we want want 'in' instead of 'endswith'
+        #  as no guarantee error page won't come immediately.
 
-            # All HTTP header lines are terminated by CRLF.
-            # the first line of the response headers is the Status Line
-            try:
-                lines = self.buffer.split(b"\r\n")
-                status_line = lines[0]
-                # maxsplit=2 denotes the number of separators, not the № items
-                # StatusLine ← HTTPVersion SP StatusCode SP ReasonPhrase
-                # None of the fields may contain CRLF, and only ReasonPhrase may
-                # contain SP.
-                [http_version, status, reason_phrase] = status_line.split(
-                    b" ", maxsplit=2
-                )
-                logger.debug(
-                    "CONNECT response from proxy: hv=%s, r=%s, rp=%s",
-                    http_version,
+        # warning: note this won't work if the remote host talks through
+        # the tunnel first.
+        # (This is OK because:
+        #   - in cleartext HTTP, the client sends the request before the
+        #     server utters a word
+        #   - in TLS, the client talks first by sending a client hello
+        #   - we aren't interested in using anything other than TLS over this
+        #     proxy, anyway
+        # )
+
+        # All HTTP header lines are terminated by CRLF.
+        # the first line of the response headers is the Status Line
+        try:
+            lines = self.buffer.split(b"\r\n")
+            status_line = lines[0]
+            # maxsplit=2 denotes the number of separators, not the № items
+            # StatusLine ← HTTPVersion SP StatusCode SP ReasonPhrase
+            # None of the fields may contain CRLF, and only ReasonPhrase may
+            # contain SP.
+            [http_version, status, reason_phrase] = status_line.split(
+                b" ", maxsplit=2
+            )
+            logger.debug(
+                "CONNECT response from proxy: hv=%s, r=%s, rp=%s",
+                http_version,
+                status,
+                reason_phrase,
+            )
+            if status != b"200":
+                # 200 Successful (aka Connection Established) is what we want
+                # if it is not what we have, then we don't have a tunnel
+                logger.error(
+                    "Error from HTTP Proxy"
+                    " whilst attempting CONNECT: %s (%s);"
+                    "aborting connection.",
                     status,
                     reason_phrase,
                 )
-                if status != b"200":
-                    # 200 Successful (aka Connection Established) is what we want
-                    # if it is not what we have, then we don't have a tunnel
-                    logger.error(
-                        "Error from HTTP Proxy"
-                        " whilst attempting CONNECT: %s (%s);"
-                        "aborting connection.",
-                        status,
-                        reason_phrase,
-                    )
-                    self.transport.close()
-                    raise ProxyConnectError(
-                        "Error from HTTP Proxy"
-                        f" whilst attempting CONNECT: {status.decode()}"
-                        f" ({reason_phrase.decode()}); aborting connection."
-                    )
+                self.transport.close()
+                raise ProxyConnectError(
+                    "Error from HTTP Proxy"
+                    f" whilst attempting CONNECT: {status.decode()}"
+                    f" ({reason_phrase.decode()}); aborting connection."
+                )
 
-                logger.debug("Ready to switch over protocol")
+            logger.debug("Ready to switch over protocol")
 
-                self.buffer = None  # type: ignore
-                self.wait_for_establishment.set_result(self.transport)
-            except Exception as exc:
-                logger.error("HTTP CONNECT failed.", exc_info=True)
-                self.wait_for_establishment.set_exception(exc)
+            self.buffer = None  # type: ignore
+            self.wait_for_establishment.set_result(self.transport)
+        except Exception as exc:
+            logger.error("HTTP CONNECT failed.", exc_info=True)
+            self.wait_for_establishment.set_exception(exc)
 
     def eof_received(self) -> Optional[bool]:
         return super().eof_received()
