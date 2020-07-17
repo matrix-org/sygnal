@@ -125,17 +125,16 @@ http:
 
 ## Proxying for outgoing connections #
 #
-proxy:
-  # Specify the URL of a proxy to use for outgoing traffic
-  # (e.g. to Apple & Google) if desired.
-  # Currently only HTTP proxies with CONNECT capability are supported.
-  #
-  # If you do not specify a value, the `HTTPS_PROXY` environment variable will
-  # be used if present. Otherwise, no proxy will be used.
-  #
-  # Default is unspecified.
-  #
-  #url: 'http://user:secret@prox:8080'
+# Specify the URL of a proxy to use for outgoing traffic
+# (e.g. to Apple & Google) if desired.
+# Currently only HTTP proxies with CONNECT capability are supported.
+#
+# If you do not specify a value, the `HTTPS_PROXY` environment variable will
+# be used if present. Otherwise, no proxy will be used.
+#
+# Default is unspecified.
+#
+#proxy: 'http://user:secret@prox:8080'
 
 ## Metrics #
 #

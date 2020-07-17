@@ -133,7 +133,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 raise PushkinSetupException("You must supply topic.")
 
         # use the Sygnal global proxy configuration
-        proxy_url_str = sygnal.config["proxy"].get("url")
+        proxy_url_str = sygnal.config.get("proxy")
 
         loop = asyncio.get_event_loop()
         if proxy_url_str:

@@ -118,7 +118,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         tls_client_options_factory = ClientTLSOptionsFactory()
 
         # use the Sygnal global proxy configuration
-        proxy_url = sygnal.config["proxy"].get("url")
+        proxy_url = sygnal.config.get("proxy")
 
         self.http_agent = ProxyAgent(
             reactor=sygnal.reactor,

@@ -48,7 +48,7 @@ CONFIG_DEFAULTS = {
         },
         "sentry": {"enabled": False},
     },
-    "proxy": {"url": None},
+    "proxy": None,
     "apps": {},
     # This is defined so the key is known to check_config, but it will not
     # define a default value.
@@ -78,7 +78,7 @@ class Sygnal(object):
         observer = twisted_log.PythonLoggingObserver()
         observer.start()
 
-        proxy_url = config["proxy"].get("url")
+        proxy_url = config.get("proxy")
         if proxy_url is not None:
             logger.info("Using proxy configuration from Sygnal configuration file")
         else:
@@ -87,7 +87,7 @@ class Sygnal(object):
                 logger.info(
                     "Using proxy configuration from HTTPS_PROXY environment variable."
                 )
-                config["proxy"]["url"] = proxy_url
+                config["proxy"] = proxy_url
 
         # Old format db config
         if config.get("db") is not None:
@@ -301,7 +301,6 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
-    check_section("proxy", {"url"})
 
     # If 'db' is defined, it will override the 'database' config.
     if "db" in config:
