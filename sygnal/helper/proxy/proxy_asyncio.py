@@ -209,7 +209,7 @@ class ProxyingEventLoopWrapper:
         assert isinstance(connect_protocol, HttpConnectProtocol)
 
         # wait for the HTTP Proxy CONNECT sequence to complete
-        transport = await connect_protocol.wait_for_establishment
+        await connect_protocol.wait_for_establishment
 
         if ssl:
             if isinstance(ssl, SSLContext):

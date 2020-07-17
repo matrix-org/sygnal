@@ -66,7 +66,7 @@ class ProxyAgent(_AgentBase):
         connectTimeout=None,
         bindAddress=None,
         pool=None,
-        proxy_url_str: str = None,
+        proxy_url_str: Optional[str] = None,
     ):
         _AgentBase.__init__(self, reactor, pool)
 

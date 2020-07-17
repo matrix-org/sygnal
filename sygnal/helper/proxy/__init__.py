@@ -9,7 +9,7 @@ def decompose_http_proxy_url(proxy_url):
 
     if url.scheme != "http":
         raise RuntimeError(
-            f"Unknown proxy scheme {url.scheme};" f" only 'http' is supported."
+            f"Unknown proxy scheme {url.scheme}; only 'http' is supported."
         )
 
     return url
