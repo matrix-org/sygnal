@@ -21,7 +21,6 @@ import re
 from typing import Optional
 
 from twisted.internet import defer
-from twisted.internet.base import ReactorBase
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.python.failure import Failure
 from twisted.web.client import URI, BrowserLikePolicyForHTTPS, _AgentBase
@@ -76,11 +75,21 @@ class ProxyAgent(_AgentBase):
         if bindAddress is not None:
             self._endpoint_kwargs["bindAddress"] = bindAddress
 
-        self.proxy_endpoint = _http_proxy_endpoint(
-            proxy_url_str, reactor, **self._endpoint_kwargs
-        )
         if proxy_url_str is not None:
-            self._proxy_url_parts = decompose_http_proxy_url(proxy_url_str)
+            parsed_url = decompose_http_proxy_url(proxy_url_str)
+            if parsed_url.username is None or parsed_url.password is None:
+                self._proxy_auth = None
+            else:
+                self._proxy_auth = (parsed_url.username, parsed_url.password)
+
+            self.proxy_endpoint = HostnameEndpoint(
+                reactor,
+                parsed_url.hostname,
+                parsed_url.port or 80,
+                **self._endpoint_kwargs
+            )
+        else:
+            self.proxy_endpoint = None
 
         self._policy_for_https = contextFactory
         self._reactor = reactor
@@ -132,7 +141,7 @@ class ProxyAgent(_AgentBase):
                 self.proxy_endpoint,
                 parsed_uri.host,
                 parsed_uri.port,
-                self._proxy_url_parts,
+                self._proxy_auth,
             )
         else:
             # not using a proxy
@@ -159,25 +168,3 @@ class ProxyAgent(_AgentBase):
         return self._requestWithEndpoint(
             pool_key, endpoint, method, parsed_uri, headers, bodyProducer, request_path
         )
-
-
-def _http_proxy_endpoint(proxy_url: Optional[str], reactor: ReactorBase, **kwargs):
-    """Parses an http proxy setting and returns an endpoint for the proxy
-
-    Args:
-        proxy_url (str): the proxy setting
-        reactor: reactor to be used to connect to the proxy
-        kwargs: other args to be passed to HostnameEndpoint
-
-    Returns:
-        interfaces.IStreamClientEndpoint|None: endpoint to use to connect to the proxy,
-            or None
-    """
-    if proxy_url is None:
-        return None
-
-    parsed_url = decompose_http_proxy_url(proxy_url)
-
-    return HostnameEndpoint(
-        reactor, parsed_url.hostname, parsed_url.port or 80, **kwargs
-    )

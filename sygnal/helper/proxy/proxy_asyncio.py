@@ -110,9 +110,7 @@ class HttpConnectProtocol(asyncio.Protocol):
             # StatusLine ← HTTPVersion SP StatusCode SP ReasonPhrase
             # None of the fields may contain CRLF, and only ReasonPhrase may
             # contain SP.
-            [http_version, status, reason_phrase] = status_line.split(
-                b" ", maxsplit=2
-            )
+            [http_version, status, reason_phrase] = status_line.split(b" ", maxsplit=2)
             logger.debug(
                 "CONNECT response from proxy: hv=%s, r=%s, rp=%s",
                 http_version,
@@ -216,11 +214,15 @@ class ProxyingEventLoopWrapper:
             )
             return proxy_setup_protocol
 
+        # enforced by decompose_http_proxy_url
+        assert proxy_url_parts.hostname is not None
+
         # create a raw TCP connection to the proxy
         # (N.B. if we want to ever use TLS to the proxy [e.g. to protect the proxy
         # credentials], we can ask this to give us a TLS connection).
+
         transport, connect_protocol = await self._wrapped_loop.create_connection(
-            make_protocol, proxy_url_parts.hostname, proxy_url_parts.port
+            make_protocol, proxy_url_parts.hostname, proxy_url_parts.port or 80
         )
 
         assert isinstance(connect_protocol, HttpConnectProtocol)

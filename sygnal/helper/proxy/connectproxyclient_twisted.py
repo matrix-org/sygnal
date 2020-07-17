@@ -18,9 +18,12 @@
 
 import logging
 from base64 import urlsafe_b64encode
+from typing import Optional, Tuple
 
 from twisted.internet import defer, protocol
-from twisted.internet.interfaces import IStreamClientEndpoint
+from twisted.internet.base import ReactorBase
+from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IProtocol, IStreamClientEndpoint
 from twisted.internet.protocol import connectionDone
 from twisted.web import http
 from zope.interface import implementer
@@ -47,22 +50,30 @@ class HTTPConnectProxyEndpoint(object):
             proxy
         host (bytes): hostname that we want to CONNECT to
         port (int): port that we want to connect to
-        proxy_url_parts: The URL of the HTTP proxy after being parsed by urlparse.
+        proxy_auth (tuple): None or tuple of (username, pasword) for HTTP basic proxy
+            authentication
     """
 
-    def __init__(self, reactor, proxy_endpoint, host, port, proxy_url_parts):
+    def __init__(
+        self,
+        reactor: ReactorBase,
+        proxy_endpoint: IStreamClientEndpoint,
+        host: bytes,
+        port: int,
+        proxy_auth: Optional[Tuple[str, str]],
+    ):
         self._reactor = reactor
         self._proxy_endpoint = proxy_endpoint
         self._host = host
         self._port = port
-        self._proxy_url_parts = proxy_url_parts
+        self._proxy_auth = proxy_auth
 
     def __repr__(self):
         return "<HTTPConnectProxyEndpoint %s>" % (self._proxy_endpoint,)
 
-    def connect(self, protocolFactory):
+    def connect(self, protocolFactory: protocol.ClientFactory):
         f = HTTPProxiedClientFactory(
-            self._host, self._port, self._proxy_url_parts, protocolFactory
+            self._host, self._port, self._proxy_auth, protocolFactory
         )
         d = self._proxy_endpoint.connect(f)
         # once the tcp socket connects successfully, we need to wait for the
@@ -81,13 +92,21 @@ class HTTPProxiedClientFactory(protocol.ClientFactory):
     Args:
         dst_host (bytes): hostname that we want to CONNECT to
         dst_port (int): port that we want to connect to
+        proxy_auth (tuple): None or tuple of (username, pasword) for HTTP basic proxy
+            authentication
         wrapped_factory (protocol.ClientFactory): The original Factory
     """
 
-    def __init__(self, dst_host, dst_port, proxy_url_parts, wrapped_factory):
+    def __init__(
+        self,
+        dst_host: bytes,
+        dst_port: int,
+        proxy_auth: Optional[Tuple[str, str]],
+        wrapped_factory: protocol.ClientFactory,
+    ):
         self.dst_host = dst_host
         self.dst_port = dst_port
-        self.proxy_url_parts = proxy_url_parts
+        self._proxy_auth = proxy_auth
         self.wrapped_factory = wrapped_factory
         self.on_connection = defer.Deferred()
 
@@ -100,7 +119,7 @@ class HTTPProxiedClientFactory(protocol.ClientFactory):
         return HTTPConnectProtocol(
             self.dst_host,
             self.dst_port,
-            self.proxy_url_parts,
+            self._proxy_auth,
             wrapped_protocol,
             self.on_connection,
         )
@@ -127,6 +146,9 @@ class HTTPConnectProtocol(protocol.Protocol):
 
         port (int): The original HTTP(s) port to put in the CONNECT request
 
+        proxy_auth (tuple): None or tuple of (username, pasword) for HTTP basic proxy
+            authentication
+
         wrapped_protocol (interfaces.IProtocol): the original protocol (probably
             HTTPChannel or TLSMemoryBIOProtocol, but could be anything really)
 
@@ -135,14 +157,19 @@ class HTTPConnectProtocol(protocol.Protocol):
     """
 
     def __init__(
-        self, host, port, proxy_url_parts, wrapped_protocol, connected_deferred
+        self,
+        host: bytes,
+        port: int,
+        proxy_auth: Optional[Tuple[str, str]],
+        wrapped_protocol: IProtocol,
+        connected_deferred: Deferred,
     ):
         self.host = host
         self.port = port
         self.wrapped_protocol = wrapped_protocol
         self.connected_deferred = connected_deferred
         self.http_setup_client = HTTPConnectSetupClient(
-            self.host, self.port, proxy_url_parts
+            self.host, self.port, proxy_auth
         )
         self.http_setup_client.on_connected.addCallback(self.proxyConnected)
 
@@ -184,22 +211,23 @@ class HTTPConnectSetupClient(http.HTTPClient):
     Args:
         host (bytes): The hostname to send in the CONNECT message
         port (int): The port to send in the CONNECT message
+        proxy_auth (tuple): None or tuple of (username, pasword) for HTTP basic proxy
+            authentication
     """
 
-    def __init__(self, host, port, proxy_url_parts):
+    def __init__(self, host: bytes, port: int, proxy_auth: Optional[Tuple[str, str]]):
         self.host = host
         self.port = port
-        self.proxy_url = proxy_url_parts
+        self._proxy_auth = proxy_auth
         self.on_connected = defer.Deferred()
 
     def connectionMade(self):
         logger.debug("Connected to proxy, sending CONNECT")
         self.sendCommand(b"CONNECT", b"%s:%d" % (self.host, self.port))
-        if self.proxy_url.username is not None and self.proxy_url.password is not None:
+        if self._proxy_auth is not None:
+            username, password = self._proxy_auth
             # a credential pair is a urlsafe-base64-encoded pair separated by colon
-            encoded_credentials = urlsafe_b64encode(
-                f"{self.proxy_url.username}:{self.proxy_url.password}".encode()
-            )
+            encoded_credentials = urlsafe_b64encode(f"{username}:{password}".encode())
             self.sendHeader(b"Proxy-Authorization", b"basic " + encoded_credentials)
         self.endHeaders()
 
