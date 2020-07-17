@@ -94,7 +94,11 @@ You may also disable proxying entirely to ignore the environment variable.
 Running
 =======
 
-``python -m sygnal.sygnal``
+With default configuration file name of ``sygnal.yaml``:
+    ``python -m sygnal.sygnal``
+
+With custom configuration file name:
+    ``SYGNAL_CONF=/path/to/custom_sygnal.conf python -m sygnal.sygnal``
 
 Python 3.7 or higher is required.
 

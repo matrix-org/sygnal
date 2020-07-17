@@ -36,7 +36,7 @@ from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 from .exceptions import PushkinSetupException
-from .notifications import Pushkin
+from .notifications import ConcurrencyLimitedPushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"
@@ -88,12 +88,15 @@ BAD_MESSAGE_FAILURE_CODES = ["MessageTooBig", "InvalidDataKey", "InvalidTtl"]
 DEFAULT_MAX_CONNECTIONS = 20
 
 
-class GcmPushkin(Pushkin):
+class GcmPushkin(ConcurrencyLimitedPushkin):
     """
     Pushkin that relays notifications to Google/Firebase Cloud Messaging.
     """
 
-    UNDERSTOOD_CONFIG_FIELDS = {"type", "api_key"}
+    UNDERSTOOD_CONFIG_FIELDS = {
+        "type",
+        "api_key",
+    } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config, canonical_reg_id_store):
         super(GcmPushkin, self).__init__(name, sygnal, config)
@@ -298,7 +301,7 @@ class GcmPushkin(Pushkin):
                 f"Unknown GCM response code {response.code}"
             )
 
-    async def dispatch_notification(self, n, device, context):
+    async def _dispatch_notification_unlimited(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
         pushkeys = [

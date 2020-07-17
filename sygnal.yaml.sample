@@ -205,6 +205,15 @@ apps:
   #com.example.myapp.ios:
   #  type: apns
   #  certfile: com.example.myApp_prod_APNS.pem
+  #
+  #  # This is the maximum number of in-flight requests *for this pushkin*
+  #  # before additional notifications will be failed.
+  #  # (This is a robustness measure to prevent one pushkin stacking up with
+  #  #  queued requests and saturating the inbound connection queue of a load
+  #  #  balancer or reverse proxy).
+  #  # Defaults to 512 if unset.
+  #  #
+  #  #inflight_request_limit: 512
 
   # This is an example APNs push configuration using key authentication.
   #
@@ -214,6 +223,15 @@ apps:
   #  key_id: MY_KEY_ID
   #  team_id: MY_TEAM_ID
   #  topic: MY_TOPIC
+  #
+  #  # This is the maximum number of in-flight requests *for this pushkin*
+  #  # before additional notifications will be failed.
+  #  # (This is a robustness measure to prevent one pushkin stacking up with
+  #  #  queued requests and saturating the inbound connection queue of a load
+  #  #  balancer or reverse proxy).
+  #  # Defaults to 512 if unset.
+  #  #
+  #  #inflight_request_limit: 512
 
   # This is an example GCM/FCM push configuration.
   #
@@ -223,3 +241,12 @@ apps:
   #  # This is the maximum number of connections to GCM servers at any one time
   #  # the default is 20.
   #  #max_connections: 20
+  #
+  #  # This is the maximum number of in-flight requests *for this pushkin*
+  #  # before additional notifications will be failed.
+  #  # (This is a robustness measure to prevent one pushkin stacking up with
+  #  #  queued requests and saturating the inbound connection queue of a load
+  #  #  balancer or reverse proxy).
+  #  # Defaults to 512 if unset.
+  #  #
+  #  #inflight_request_limit: 512
