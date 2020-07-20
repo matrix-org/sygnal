@@ -65,18 +65,6 @@ gcm
   to contain the 'Server key', which can be acquired from Firebase Console at:
   ``https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/``
 
-Pusher ``data`` configuration
------------------------------
-
-The following parameters can be specified in the `data` dictionary which is given when configuring the pusher
-via `POST /_matrix/client/r0/pushers/set <https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set>`_ :
-
-* ``default_payload``: a dictionary which defines the basic payload to be sent to the notification service.
-  Sygnal will merge information specific to the push event into this dictionary. If unset, the empty dictionary is used.
-
-  This can be useful for clients to specify default push payload content. For instance, iOS clients will have
-  freedom to use silent/mutable notifications and be able to set some default alert/sound/badge fields.
-
 Using an HTTP Proxy for outbound traffic
 ----------------------------------------
 
@@ -90,6 +78,18 @@ Currently only HTTP proxies with the CONNECT method are supported.
 
 If you wish, you can configure a HTTP CONNECT proxy in ``sygnal.yaml``.
 You may also disable proxying entirely to ignore the environment variable.
+
+Pusher ``data`` configuration
+=============================
+
+The following parameters can be specified in the `data` dictionary which is given when configuring the pusher
+via `POST /_matrix/client/r0/pushers/set <https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set>`_ :
+
+* ``default_payload``: a dictionary which defines the basic payload to be sent to the notification service.
+  Sygnal will merge information specific to the push event into this dictionary. If unset, the empty dictionary is used.
+
+  This can be useful for clients to specify default push payload content. For instance, iOS clients will have
+  freedom to use silent/mutable notifications and be able to set some default alert/sound/badge fields.
 
 Running
 =======
