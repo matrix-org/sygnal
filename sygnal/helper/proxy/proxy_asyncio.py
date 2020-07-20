@@ -114,8 +114,10 @@ class HttpConnectProtocol(asyncio.Protocol):
             transport = await self._loop.start_tls(
                 self.transport, new_protocol, self._sslcontext
             )
-            # XXX is this enough?
-            # XXX do we need e.g. connection_made on SSLProto? or new_proto?
+
+            # start_tls does NOT call connection_made on new_protocol, so we
+            # must do it ourselves
+            new_protocol.connection_made(transport)
 
             if left_over_bytes:
                 # this doesn't really apply to TLS but:
