@@ -76,8 +76,7 @@ If one is present, it will be used for outbound traffic to APNs and GCM/FCM.
 Currently only HTTP proxies with the CONNECT method are supported.
 (Both APNs and FCM use HTTPS traffic which is tunnelled in a CONNECT tunnel.)
 
-If you wish, you can configure a HTTP CONNECT proxy in ``sygnal.yaml``.
-You may also disable proxying entirely to ignore the environment variable.
+If you wish, you can instead configure a HTTP CONNECT proxy in ``sygnal.yaml``.
 
 Pusher ``data`` configuration
 =============================
