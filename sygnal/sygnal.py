@@ -35,7 +35,7 @@ from sygnal.http import PushGatewayApiServer
 
 logger = logging.getLogger(__name__)
 
-CONFIG_DEFAULTS = {
+CONFIG_DEFAULTS: dict = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
     "metrics": {
