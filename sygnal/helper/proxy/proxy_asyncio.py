@@ -19,8 +19,8 @@ from asyncio.futures import Future
 from asyncio.protocols import Protocol
 from asyncio.transports import Transport
 from base64 import urlsafe_b64encode
-from ssl import SSLContext
-from typing import Callable, Optional, Union
+from ssl import Purpose, SSLContext, create_default_context
+from typing import Callable, Optional, Tuple, Union
 
 from sygnal.exceptions import ProxyConnectError
 from sygnal.helper.proxy import decompose_http_proxy_url
@@ -59,7 +59,7 @@ class HttpConnectProtocol(asyncio.Protocol):
     def __init__(
         self,
         proxy_url_parts,
-        target_hostport: str,
+        target_hostport: Tuple[str, int],
         protocol_factory: Callable[[], Protocol],
         sslcontext: Optional[SSLContext],
         loop: Optional[AbstractEventLoop] = None,
@@ -110,9 +110,11 @@ class HttpConnectProtocol(asyncio.Protocol):
             # be careful not to use the `transport` ever again after passing it
             # to start_tls — we overwrite our variable with the TLS-wrapped
             # transport to avoid that!
-            # XXX do we need to pass the server_hostname for verification?
             transport = await self._loop.start_tls(
-                self.transport, new_protocol, self._sslcontext
+                self.transport,
+                new_protocol,
+                self._sslcontext,
+                server_hostname=self.target_hostport[0],
             )
 
             # start_tls does NOT call connection_made on new_protocol, so we
@@ -215,7 +217,8 @@ class HttpConnectProtocol(asyncio.Protocol):
         # when we get a TCP connection to the HTTP proxy, we invoke the CONNECT
         # method on it to open a tunnelled TCP connection through the proxy to
         # the other side
-        transport.write(f"CONNECT {self.target_hostport} HTTP/1.1\r\n".encode())
+        host, port = self.target_hostport
+        transport.write(f"CONNECT {host}:{port} HTTP/1.1\r\n".encode())
         parts = self.proxy_url_parts
         transport.write(f"Host: {parts.hostname}:{parts.port or 80}\r\n".encode())
         if parts.username is not None and parts.password is not None:
@@ -276,14 +279,14 @@ class ProxyingEventLoopWrapper:
             if isinstance(ssl, SSLContext):
                 sslcontext = ssl
             else:
-                sslcontext = SSLContext()
+                sslcontext = create_default_context(Purpose.SERVER_AUTH)
         else:
             sslcontext = None
 
         def make_protocol():
             proxy_setup_protocol = HttpConnectProtocol(
                 proxy_url_parts,
-                f"{host}:{port}",
+                (host, port),
                 protocol_factory,
                 sslcontext,
                 loop=self._wrapped_loop,
