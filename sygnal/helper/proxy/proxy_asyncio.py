@@ -157,17 +157,8 @@ class HttpConnectProtocol(asyncio.Protocol):
 
         # The response headers are terminated by a double CRLF.
         # NB we want want 'in' instead of 'endswith'
-        #  as no guarantee error page won't come immediately.
-
-        # warning: note this won't work if the remote host talks through
-        # the tunnel first.
-        # (This is OK because:
-        #   - in cleartext HTTP, the client sends the request before the
-        #     server utters a word
-        #   - in TLS, the client talks first by sending a client hello
-        #   - we aren't interested in using anything other than TLS over this
-        #     proxy, anyway
-        # )
+        #  as no guarantee error page (or even bytes from the target server)
+        #  won't come immediately.
 
         # All HTTP header lines are terminated by CRLF.
         # the first line of the response headers is the Status Line
@@ -206,6 +197,11 @@ class HttpConnectProtocol(asyncio.Protocol):
             logger.debug("Ready to switch over protocol")
 
             self.buffer = None  # type: ignore
+            # TLS doesn't seem to allow the server to talk before the client begins
+            # the handshake, but plain HTTP/2 seems like the server can talk first
+            # and who knows what the future holds?
+            # (we may wish to use other protocols or TLS might change)
+            # So we must also keep the left-over bytes to hand to the next Protocol
             self._wait_for_establishment.set_result(dangling_bytes)
         except Exception as exc:
             logger.error("HTTP CONNECT failed.", exc_info=True)
