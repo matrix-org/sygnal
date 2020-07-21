@@ -90,11 +90,16 @@ class HttpConnectProtocol(asyncio.Protocol):
         # It completes with leftover bytes for the next protocol.
         self._wait_for_establishment: Future[bytes] = Future()
 
-    async def wait_until_connected(self):
+    async def wait_until_connected(self) -> Tuple[BaseTransport, Protocol]:
         """
-        XXX docme
+        Waits until we are connected to the remote (i.e. that our CONNECT
+        request succeeds).
+        Then constructs the requested protocol and attaches it to the transport,
+        potentially wrapping it in TLS first.
         Returns:
-
+            the transport followed by the constructed protocol that uses it
+            Note: the transport may be an SSLTransport; it is not necessarily
+                the same one used to communicate with the proxy directly.
         """
         left_over_bytes = await self._wait_for_establishment
         if self.completed:
