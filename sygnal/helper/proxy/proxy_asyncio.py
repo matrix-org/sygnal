@@ -203,9 +203,6 @@ class HttpConnectProtocol(asyncio.Protocol):
             logger.error("HTTP CONNECT failed.", exc_info=True)
             self._wait_for_establishment.set_exception(exc)
 
-    def eof_received(self) -> Optional[bool]:
-        return super().eof_received()
-
     def connection_made(self, transport: BaseTransport) -> None:
         if not isinstance(transport, Transport):
             raise ValueError("transport must be a proper Transport")
