@@ -23,7 +23,7 @@ from ssl import Purpose, SSLContext, create_default_context
 from typing import Callable, Optional, Tuple, Union
 
 from sygnal.exceptions import ProxyConnectError
-from sygnal.helper.proxy import decompose_http_proxy_url
+from sygnal.helper.proxy import HttpProxyUrl, decompose_http_proxy_url
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class HttpConnectProtocol(asyncio.Protocol):
 
     def __init__(
         self,
-        proxy_url_parts,
+        proxy_url_parts: HttpProxyUrl,
         target_hostport: Tuple[str, int],
         protocol_factory: Callable[[], Protocol],
         sslcontext: Optional[SSLContext],
@@ -66,15 +66,15 @@ class HttpConnectProtocol(asyncio.Protocol):
     ):
         """
         Args:
-            proxy_url_parts (ParseResult):
+            proxy_url_parts:
                 The URL of the HTTP proxy after being parsed by urlparse.
                 Used in the `Host` request header to the proxy, and for the
                 extraction of basic authentication credentials (if required).
 
-            target_hostport (str):
+            target_hostport:
                 The host & port of the destination that the proxy should connect
-                to on your behalf. Must include a port number.
-                Examples: 'example.org:443'
+                to on your behalf.
+                Examples: ('example.org', 443)
         """
         self.completed = False
         self.target_hostport = target_hostport
@@ -112,6 +112,11 @@ class HttpConnectProtocol(asyncio.Protocol):
         new_protocol = self._protocol_factory()
 
         if self._sslcontext:
+            if left_over_bytes:
+                # in TLS, the client transmits first, so this is theoretically
+                # unreachable
+                raise RuntimeError("Left over bytes should not occur with TLS")
+
             # be careful not to use the `transport` ever again after passing it
             # to start_tls — we overwrite our variable with the TLS-wrapped
             # transport to avoid that!
@@ -125,15 +130,6 @@ class HttpConnectProtocol(asyncio.Protocol):
             # start_tls does NOT call connection_made on new_protocol, so we
             # must do it ourselves
             new_protocol.connection_made(transport)
-
-            if left_over_bytes:
-                # this doesn't really apply to TLS but:
-                # pass over dangling bytes if applicable
-                # this is an ugly thing so tempted to remove it and assert that
-                # we don't have any left-over bytes instead (since in TLS,
-                # the client transmits first, so this is theoretically
-                # unreachable).
-                transport._ssl_protocol.data_received(left_over_bytes)  # type: ignore
         else:
             # no wrapping required for non-TLS
             transport = self.transport
@@ -221,12 +217,11 @@ class HttpConnectProtocol(asyncio.Protocol):
         host, port = self.target_hostport
         transport.write(f"CONNECT {host}:{port} HTTP/1.1\r\n".encode())
         parts = self.proxy_url_parts
-        transport.write(f"Host: {parts.hostname}:{parts.port or 80}\r\n".encode())
-        if parts.username is not None and parts.password is not None:
+        transport.write(f"Host: {parts.hostname}:{parts.port}\r\n".encode())
+        if parts.credentials:
+            username, password = parts.credentials
             # a credential pair is a urlsafe-base64-encoded pair separated by colon
-            encoded_credentials = urlsafe_b64encode(
-                f"{parts.username}:{parts.password}".encode()
-            )
+            encoded_credentials = urlsafe_b64encode(f"{username}:{password}".encode())
             transport.write(
                 b"Proxy-Authorization: basic " + encoded_credentials + b"\r\n"
             )
@@ -302,7 +297,7 @@ class ProxyingEventLoopWrapper:
         # credentials], we can ask this to give us a TLS connection).
 
         transport, connect_protocol = await self._wrapped_loop.create_connection(
-            make_protocol, proxy_url_parts.hostname, proxy_url_parts.port or 80
+            make_protocol, proxy_url_parts.hostname, proxy_url_parts.port
         )
 
         assert isinstance(connect_protocol, HttpConnectProtocol)

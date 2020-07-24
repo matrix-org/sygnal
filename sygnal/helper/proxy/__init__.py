@@ -12,10 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from urllib.parse import ParseResult, urlparse
+from typing import NamedTuple, Optional, Tuple
+from urllib.parse import urlparse
+
+"""
+    HttpProxyUrl represents a HTTP proxy URL and no more.
+
+    hostname is a string with the pure hostname (or IP address).
+    port is always an integer; a default port number used if necessary.
+    credentials is None or a tuple of (username, password) strings.
+"""
+HttpProxyUrl = NamedTuple(
+    "HttpProxyUrl",
+    [("hostname", str), ("port", int), ("credentials", Optional[Tuple[str, str]])],
+)
 
 
-def decompose_http_proxy_url(proxy_url: str) -> ParseResult:
+def decompose_http_proxy_url(proxy_url: str) -> HttpProxyUrl:
     """
     Given a HTTP proxy URL, breaks it down into components and checks that it
     has a hostname (otherwise it is not right useful to us trying to find a
@@ -29,8 +42,8 @@ def decompose_http_proxy_url(proxy_url: str) -> ParseResult:
                 anything in between.
 
     Returns:
-        The result of `urlparse` on that URL, after having checked the
-        conditions mentioned above.
+        A `HttpProxyUrl` namedtuple with the separate information relevant for
+        connecting to a proxy.
     """
     url = urlparse(proxy_url, scheme="http")
 
@@ -42,4 +55,12 @@ def decompose_http_proxy_url(proxy_url: str) -> ParseResult:
             f"Unknown proxy scheme {url.scheme}; only 'http' is supported."
         )
 
-    return url
+    if url.port is None:
+        # set the default port to keep things simple
+        url.port = 80
+
+    credentials = None
+    if url.username and url.password:
+        credentials = (url.username, url.password)
+
+    return HttpProxyUrl(hostname=url.hostname, port=url.port, credentials=credentials)

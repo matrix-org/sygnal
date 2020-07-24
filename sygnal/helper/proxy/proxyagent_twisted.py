@@ -77,16 +77,10 @@ class ProxyAgent(_AgentBase):
 
         if proxy_url_str is not None:
             parsed_url = decompose_http_proxy_url(proxy_url_str)
-            if parsed_url.username is None or parsed_url.password is None:
-                self._proxy_auth = None
-            else:
-                self._proxy_auth = (parsed_url.username, parsed_url.password)
+            self._proxy_auth = parsed_url.credentials
 
             self.proxy_endpoint = HostnameEndpoint(
-                reactor,
-                parsed_url.hostname,
-                parsed_url.port or 80,
-                **self._endpoint_kwargs
+                reactor, parsed_url.hostname, parsed_url.port, **self._endpoint_kwargs
             )
         else:
             self.proxy_endpoint = None
