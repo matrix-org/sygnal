@@ -55,12 +55,10 @@ def decompose_http_proxy_url(proxy_url: str) -> HttpProxyUrl:
             f"Unknown proxy scheme {url.scheme}; only 'http' is supported."
         )
 
-    if url.port is None:
-        # set the default port to keep things simple
-        url.port = 80
-
     credentials = None
     if url.username and url.password:
         credentials = (url.username, url.password)
 
-    return HttpProxyUrl(hostname=url.hostname, port=url.port, credentials=credentials)
+    return HttpProxyUrl(
+        hostname=url.hostname, port=url.port or 80, credentials=credentials
+    )
