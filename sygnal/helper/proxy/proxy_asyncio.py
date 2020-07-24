@@ -104,7 +104,7 @@ class HttpConnectProtocol(asyncio.Protocol):
         # It completes with leftover bytes for the next protocol.
         self._wait_for_establishment: Future[bytes] = Future()
 
-    async def wait_until_connected(self) -> Tuple[BaseTransport, Protocol]:
+    async def switch_over_when_ready(self) -> Tuple[BaseTransport, Protocol]:
         """
         Waits until we are connected to the remote (i.e. that our CONNECT
         request succeeds).
@@ -308,7 +308,7 @@ class ProxyingEventLoopWrapper:
         # wait for the HTTP Proxy CONNECT sequence to complete,
         # and get the transport (which may be an SSLTransport rather than the
         # original) and user protocol.
-        transport, user_protocol = await connect_protocol.wait_until_connected()
+        transport, user_protocol = await connect_protocol.switch_over_when_ready()
 
         return transport, user_protocol
 
