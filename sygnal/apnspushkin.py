@@ -141,19 +141,29 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             loop = ProxyingEventLoopWrapper(loop, proxy_url_str)  # type: ignore
 
         if certfile is not None:
+            # max_connection_attempts is actually the maximum number of
+            # additional connection attempts, so =0 means try once only
+            # (we will retry at a higher level so not worth doing more here)
             self.apns_client = APNs(
-                client_cert=certfile, use_sandbox=self.use_sandbox, loop=loop
+                client_cert=certfile,
+                use_sandbox=self.use_sandbox,
+                max_connection_attempts=0,
+                loop=loop
             )
 
             self._report_certificate_expiration(certfile)
         else:
+            # max_connection_attempts is actually the maximum number of
+            # additional connection attempts, so =0 means try once only
+            # (we will retry at a higher level so not worth doing more here)
             self.apns_client = APNs(
                 key=self.get_config("keyfile"),
                 key_id=self.get_config("key_id"),
                 team_id=self.get_config("team_id"),
                 topic=self.get_config("topic"),
                 use_sandbox=self.use_sandbox,
-                loop=loop,
+                max_connection_attempts=0,
+                loop=loop
             )
 
         # without this, aioapns will retry every second forever.
