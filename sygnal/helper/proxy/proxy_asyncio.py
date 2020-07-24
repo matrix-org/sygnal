@@ -176,13 +176,6 @@ class HttpConnectProtocol(asyncio.Protocol):
             if status != b"200":
                 # 200 Successful (aka Connection Established) is what we want
                 # if it is not what we have, then we don't have a tunnel
-                logger.error(
-                    "Error from HTTP Proxy"
-                    " whilst attempting CONNECT: %s (%s);"
-                    "aborting connection.",
-                    status,
-                    reason_phrase,
-                )
                 self.transport.close()
                 raise ProxyConnectError(
                     "Error from HTTP Proxy"
@@ -200,7 +193,6 @@ class HttpConnectProtocol(asyncio.Protocol):
             # So we must also keep the left-over bytes to hand to the next Protocol
             self._wait_for_establishment.set_result(dangling_bytes)
         except Exception as exc:
-            logger.error("HTTP CONNECT failed.", exc_info=True)
             self._wait_for_establishment.set_exception(exc)
 
     def connection_made(self, transport: BaseTransport) -> None:
