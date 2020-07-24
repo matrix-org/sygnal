@@ -148,7 +148,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 client_cert=certfile,
                 use_sandbox=self.use_sandbox,
                 max_connection_attempts=0,
-                loop=loop
+                loop=loop,
             )
 
             self._report_certificate_expiration(certfile)
@@ -163,7 +163,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 topic=self.get_config("topic"),
                 use_sandbox=self.use_sandbox,
                 max_connection_attempts=0,
-                loop=loop
+                loop=loop,
             )
 
         # without this, aioapns will retry every second forever.
