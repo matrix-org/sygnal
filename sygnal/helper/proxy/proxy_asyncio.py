@@ -90,8 +90,8 @@ class HttpConnectProtocol(asyncio.Protocol):
                 An asyncio EventLoop to use; if not provided, the default will
                 be used.
         """
-        # set to True when we have switched over
-        self._switched_over = False
+        # set to True when we have called `switch_over_when_ready`.
+        self._switch_over_called = False
 
         # (host, port) of the target that we want a tunnel to
         self._target_hostport = target_hostport
@@ -131,13 +131,14 @@ class HttpConnectProtocol(asyncio.Protocol):
             Note: the transport may be an SSLTransport; it is not necessarily
                 the same one used to communicate with the proxy directly.
         """
-        left_over_bytes = await self._tunnel_established_future
-        if self._switched_over:
+
+        if self._switch_over_called:
             raise RuntimeError(
                 "Can only use `HttpConnectProtocol.switch_over_when_ready` once."
             )
-        self._switched_over = True
+        self._switch_over_called = True
 
+        left_over_bytes = await self._tunnel_established_future
         # construct the desired protocol and hand over the transport to it
         new_protocol = self._protocol_factory()
 
