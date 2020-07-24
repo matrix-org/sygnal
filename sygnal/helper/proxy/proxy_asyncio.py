@@ -23,7 +23,7 @@ from ssl import Purpose, SSLContext, create_default_context
 from typing import Callable, Optional, Tuple, Union
 
 from sygnal.exceptions import ProxyConnectError
-from sygnal.helper.proxy import HttpProxyUrl, decompose_http_proxy_url
+from sygnal.helper.proxy import decompose_http_proxy_url
 
 logger = logging.getLogger(__name__)
 
@@ -58,23 +58,21 @@ class HttpConnectProtocol(asyncio.Protocol):
 
     def __init__(
         self,
-        proxy_url_parts: HttpProxyUrl,
         target_hostport: Tuple[str, int],
+        proxy_credentials: Optional[Tuple[str, str]],
         protocol_factory: Callable[[], Protocol],
         sslcontext: Optional[SSLContext],
         loop: Optional[AbstractEventLoop] = None,
     ):
         """
         Args:
-            proxy_url_parts:
-                The URL of the HTTP proxy after being parsed by urlparse.
-                Used in the `Host` request header to the proxy, and for the
-                extraction of basic authentication credentials (if required).
-
             target_hostport:
                 The host & port of the destination that the proxy should connect
                 to on your behalf.
                 Examples: ('example.org', 443)
+
+            proxy_credentials (optional):
+                A (username, password) tuple of strings to pass to the proxy.
 
             protocol_factory:
                 A 0-argument function which, when called, returns a Protocol
@@ -102,8 +100,8 @@ class HttpConnectProtocol(asyncio.Protocol):
         # underlying transport
         self._transport: Transport = None  # type: ignore
 
-        # the proxy's URL, already parsed
-        self._proxy_url_parts = proxy_url_parts
+        # the proxy's credentials as a string pair, or None
+        self._proxy_credentials = proxy_credentials
 
         # function of () -> Protocol, to be called once when we switch over to
         # this protocol
@@ -190,7 +188,9 @@ class HttpConnectProtocol(asyncio.Protocol):
         # All HTTP header lines are terminated by CRLF.
         # the first line of the response headers is the Status Line
         try:
-            response_header, dangling_bytes = self._response_buffer.split(b"\r\n\r\n", maxsplit=1)
+            response_header, dangling_bytes = self._response_buffer.split(
+                b"\r\n\r\n", maxsplit=1
+            )
             lines = response_header.split(b"\r\n")
             status_line = lines[0]
             # maxsplit=2 denotes the number of separators, not the № items
@@ -235,11 +235,9 @@ class HttpConnectProtocol(asyncio.Protocol):
         # method on it to open a tunnelled TCP connection through the proxy to
         # the other side
         host, port = self._target_hostport
-        transport.write(f"CONNECT {host}:{port} HTTP/1.1\r\n".encode())
-        parts = self._proxy_url_parts
-        transport.write(f"Host: {parts.hostname}:{parts.port}\r\n".encode())
-        if parts.credentials:
-            username, password = parts.credentials
+        transport.write(f"CONNECT {host}:{port} HTTP/1.0\r\n".encode())
+        if self._proxy_credentials:
+            username, password = self._proxy_credentials
             # a credential pair is a urlsafe-base64-encoded pair separated by colon
             encoded_credentials = urlsafe_b64encode(f"{username}:{password}".encode())
             transport.write(
@@ -301,8 +299,8 @@ class ProxyingEventLoopWrapper:
 
         def make_protocol():
             proxy_setup_protocol = HttpConnectProtocol(
-                proxy_url_parts,
                 (host, port),
+                proxy_url_parts.credentials,
                 protocol_factory,
                 sslcontext,
                 loop=self._wrapped_loop,
