@@ -90,19 +90,35 @@ class HttpConnectProtocol(asyncio.Protocol):
                 An asyncio EventLoop to use; if not provided, the default will
                 be used.
         """
-        self.completed = False
-        self.target_hostport = target_hostport
-        self.buffer = b""
-        self.transport: Transport = None  # type: ignore
-        self.proxy_url_parts = proxy_url_parts
+        # set to True when we have switched over
+        self._switched_over = False
+
+        # (host, port) of the target that we want a tunnel to
+        self._target_hostport = target_hostport
+
+        # buffer for the HTTP response that comes back from the HTTP proxy
+        self._response_buffer = b""
+
+        # underlying transport
+        self._transport: Transport = None  # type: ignore
+
+        # the proxy's URL, already parsed
+        self._proxy_url_parts = proxy_url_parts
+
+        # function of () -> Protocol, to be called once when we switch over to
+        # this protocol
         self._protocol_factory = protocol_factory
+
+        # optional SSLContext if TLS is desired, None otherwise
         self._sslcontext = sslcontext
-        self._loop = loop or asyncio.get_event_loop()
+
+        # asyncio EventLoop
+        self._event_loop = loop or asyncio.get_event_loop()
 
         # This future is completed when it is safe to take back control of the
         # transport.
         # It completes with leftover bytes for the next protocol.
-        self._wait_for_establishment: Future[bytes] = Future()
+        self._tunnel_established_future: Future[bytes] = Future()
 
     async def switch_over_when_ready(self) -> Tuple[BaseTransport, Protocol]:
         """
@@ -115,12 +131,12 @@ class HttpConnectProtocol(asyncio.Protocol):
             Note: the transport may be an SSLTransport; it is not necessarily
                 the same one used to communicate with the proxy directly.
         """
-        left_over_bytes = await self._wait_for_establishment
-        if self.completed:
+        left_over_bytes = await self._tunnel_established_future
+        if self._switched_over:
             raise RuntimeError(
-                "Can only use `HttpConnectProtocol.wait_connected` once."
+                "Can only use `HttpConnectProtocol.switch_over_when_ready` once."
             )
-        self.completed = True
+        self._switched_over = True
 
         # construct the desired protocol and hand over the transport to it
         new_protocol = self._protocol_factory()
@@ -134,11 +150,11 @@ class HttpConnectProtocol(asyncio.Protocol):
             # be careful not to use the `transport` ever again after passing it
             # to start_tls — we overwrite our variable with the TLS-wrapped
             # transport to avoid that!
-            transport = await self._loop.start_tls(
-                self.transport,
+            transport = await self._event_loop.start_tls(
+                self._transport,
                 new_protocol,
                 self._sslcontext,
-                server_hostname=self.target_hostport[0],
+                server_hostname=self._target_hostport[0],
             )
 
             # start_tls does NOT call connection_made on new_protocol, so we
@@ -146,7 +162,7 @@ class HttpConnectProtocol(asyncio.Protocol):
             new_protocol.connection_made(transport)
         else:
             # no wrapping required for non-TLS
-            transport = self.transport
+            transport = self._transport
             # wire up transport to call `data_received` etc. on the new transport
             transport.set_protocol(new_protocol)
             # let the protocol know it has been connected to the transport
@@ -160,8 +176,8 @@ class HttpConnectProtocol(asyncio.Protocol):
 
     def data_received(self, data: bytes) -> None:
         super().data_received(data)
-        self.buffer += data
-        if b"\r\n\r\n" not in self.buffer:
+        self._response_buffer += data
+        if b"\r\n\r\n" not in self._response_buffer:
             # we haven't finished the headers yet
             return
 
@@ -173,7 +189,7 @@ class HttpConnectProtocol(asyncio.Protocol):
         # All HTTP header lines are terminated by CRLF.
         # the first line of the response headers is the Status Line
         try:
-            response_header, dangling_bytes = self.buffer.split(b"\r\n\r\n", maxsplit=1)
+            response_header, dangling_bytes = self._response_buffer.split(b"\r\n\r\n", maxsplit=1)
             lines = response_header.split(b"\r\n")
             status_line = lines[0]
             # maxsplit=2 denotes the number of separators, not the № items
@@ -190,7 +206,7 @@ class HttpConnectProtocol(asyncio.Protocol):
             if status != b"200":
                 # 200 Successful (aka Connection Established) is what we want
                 # if it is not what we have, then we don't have a tunnel
-                self.transport.close()
+                self._transport.close()
                 raise ProxyConnectError(
                     "Error from HTTP Proxy"
                     f" whilst attempting CONNECT: {status.decode()}"
@@ -199,15 +215,15 @@ class HttpConnectProtocol(asyncio.Protocol):
 
             logger.debug("Ready to switch over protocol")
 
-            self.buffer = None  # type: ignore
+            self._response_buffer = None  # type: ignore
             # TLS doesn't seem to allow the server to talk before the client begins
             # the handshake, but plain HTTP/2 seems like the server can talk first
             # and who knows what the future holds?
             # (we may wish to use other protocols or TLS might change)
             # So we must also keep the left-over bytes to hand to the next Protocol
-            self._wait_for_establishment.set_result(dangling_bytes)
+            self._tunnel_established_future.set_result(dangling_bytes)
         except Exception as exc:
-            self._wait_for_establishment.set_exception(exc)
+            self._tunnel_established_future.set_exception(exc)
 
     def connection_made(self, transport: BaseTransport) -> None:
         if not isinstance(transport, Transport):
@@ -217,9 +233,9 @@ class HttpConnectProtocol(asyncio.Protocol):
         # when we get a TCP connection to the HTTP proxy, we invoke the CONNECT
         # method on it to open a tunnelled TCP connection through the proxy to
         # the other side
-        host, port = self.target_hostport
+        host, port = self._target_hostport
         transport.write(f"CONNECT {host}:{port} HTTP/1.1\r\n".encode())
-        parts = self.proxy_url_parts
+        parts = self._proxy_url_parts
         transport.write(f"Host: {parts.hostname}:{parts.port}\r\n".encode())
         if parts.credentials:
             username, password = parts.credentials
@@ -234,7 +250,7 @@ class HttpConnectProtocol(asyncio.Protocol):
         logger.debug("Initiating proxy CONNECT")
 
         # now we wait ...
-        self.transport = transport
+        self._transport = transport
 
 
 class ProxyingEventLoopWrapper:
