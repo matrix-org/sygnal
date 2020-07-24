@@ -75,6 +75,20 @@ class HttpConnectProtocol(asyncio.Protocol):
                 The host & port of the destination that the proxy should connect
                 to on your behalf.
                 Examples: ('example.org', 443)
+
+            protocol_factory:
+                A 0-argument function which, when called, returns a Protocol
+                to switch over to.
+
+            sslcontext:
+                If TLS is desired after the connection is completed, pass an
+                SSLContext here, making sure it is safe for your purposes —
+                see ssl.create_default_context's documentation as a starting
+                point.
+
+            loop (optional):
+                An asyncio EventLoop to use; if not provided, the default will
+                be used.
         """
         self.completed = False
         self.target_hostport = target_hostport
