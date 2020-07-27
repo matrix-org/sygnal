@@ -71,8 +71,8 @@ class HttpConnectProtocol(asyncio.Protocol):
                 to on your behalf.
                 Examples: ('example.org', 443)
 
-            proxy_credentials (optional):
-                A (username, password) tuple of strings to pass to the proxy.
+            proxy_credentials:
+                An optional (username, password) tuple of strings to pass to the proxy.
 
             protocol_factory:
                 A 0-argument function which, when called, returns a Protocol
