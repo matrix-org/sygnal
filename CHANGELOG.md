@@ -1,3 +1,12 @@
+Sygnal 0.7.1 (2020-07-27)
+=========================
+
+Bugfixes
+--------
+
+- Update minimum version of `aioapns` dependency to 1.10, which has security fixes. ([\#139](https://github.com/matrix-org/sygnal/issues/139))
+
+
 Sygnal 0.7.0 (2020-06-24)
 =========================
 
