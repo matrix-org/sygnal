@@ -1,3 +1,22 @@
+Sygnal 0.8.0 (2020-07-27)
+=========================
+
+Features
+--------
+
+- Add support for HTTP CONNECT proxies on outbound FCM and APNs traffic, with optional support for HTTP Proxy Basic Authentication. ([\#130](https://github.com/matrix-org/sygnal/issues/130))
+- Add support for per-pushkin in-flight request limiting. ([\#132](https://github.com/matrix-org/sygnal/issues/132))
+
+
+Internal Changes
+----------------
+
+- Fixed MyPy errors so it can be enabled in CI and gradually be increased in coverage. ([\#131](https://github.com/matrix-org/sygnal/issues/131))
+- Attempt the same number of retries for both GCM and APNS. ([\#133](https://github.com/matrix-org/sygnal/issues/133))
+- Use tox for tests and linting. ([\#134](https://github.com/matrix-org/sygnal/issues/134))
+- Include libpq5 in the docker image. ([\#135](https://github.com/matrix-org/sygnal/issues/135))
+
+
 Sygnal 0.7.1 (2020-07-27)
 =========================
 
