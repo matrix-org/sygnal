@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright 2014 OpenMarket Ltd
 # Copyright 2018, 2019 New Vector Ltd
-# Copyright 2019 The Matrix.org Foundation C.I.C.
+# Copyright 2019-2020 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ from sygnal.http import PushGatewayApiServer
 
 logger = logging.getLogger(__name__)
 
-CONFIG_DEFAULTS = {
+CONFIG_DEFAULTS: dict = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
     "metrics": {
@@ -48,6 +48,7 @@ CONFIG_DEFAULTS = {
         },
         "sentry": {"enabled": False},
     },
+    "proxy": None,
     "apps": {},
     # This is defined so the key is known to check_config, but it will not
     # define a default value.
@@ -77,6 +78,17 @@ class Sygnal(object):
         observer = twisted_log.PythonLoggingObserver()
         observer.start()
 
+        proxy_url = config.get("proxy")
+        if proxy_url is not None:
+            logger.info("Using proxy configuration from Sygnal configuration file")
+        else:
+            proxy_url = os.getenv("HTTPS_PROXY")
+            if proxy_url:
+                logger.info(
+                    "Using proxy configuration from HTTPS_PROXY environment variable."
+                )
+                config["proxy"] = proxy_url
+
         # Old format db config
         if config.get("db") is not None:
             logger.warning(
@@ -88,10 +100,7 @@ class Sygnal(object):
                 "args": {"dbfile": config["db"]["dbfile"]},
             }
         elif config.get("database") is None:
-            config["database"] = {
-                "name": "sqlite3",
-                "args": {"dbfile": "sygnal.db"},
-            }
+            config["database"] = {"name": "sqlite3", "args": {"dbfile": "sygnal.db"}}
 
         sentrycfg = config["metrics"]["sentry"]
         if sentrycfg["enabled"] is True:
@@ -142,7 +151,7 @@ class Sygnal(object):
             logger.info("Using postgresql database")
             self.database_engine = "postgresql"
             self.database = ConnectionPool(
-                "psycopg2", cp_reactor=self.reactor, **config["database"].get("args"),
+                "psycopg2", cp_reactor=self.reactor, **config["database"].get("args")
             )
         elif db_name == "sqlite3":
             logger.info("Using sqlite database")
@@ -241,6 +250,7 @@ def parse_config():
         A loaded configuration.
     """
     config_path = os.getenv("SYGNAL_CONF", "sygnal.yaml")
+    print("Using configuration file: %s" % config_path, file=sys.stderr)
     try:
         with open(config_path) as file_handle:
             return yaml.safe_load(file_handle)
@@ -273,7 +283,7 @@ def check_config(config):
     nonunderstood = set(config.keys()).difference(UNDERSTOOD_CONFIG_FIELDS)
     if len(nonunderstood) > 0:
         logger.warning(
-            "The following configuration fields are not understood: %s", nonunderstood
+            "The following configuration sections are not understood: %s", nonunderstood
         )
 
     check_section("http", {"port", "bind_addresses"})

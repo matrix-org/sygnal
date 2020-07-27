@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from twisted.internet.error import ConnectError
 
 
 class InvalidNotificationException(Exception):
@@ -34,3 +35,13 @@ class TemporaryNotificationDispatchException(Exception):
     def __init__(self, *args: object, custom_retry_delay=None) -> None:
         super().__init__(*args)
         self.custom_retry_delay = custom_retry_delay
+
+
+class ProxyConnectError(ConnectError):
+    """
+    Exception raised when we are unable to start a connection using a HTTP proxy
+    This indicates an issue with the HTTP Proxy in use rather than the final
+    endpoint we wanted to contact.
+    """
+
+    pass

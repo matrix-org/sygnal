@@ -37,6 +37,7 @@ from sygnal.exceptions import (
     PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
+from sygnal.helper.proxy.proxy_asyncio import ProxyingEventLoopWrapper
 from sygnal.notifications import ConcurrencyLimitedPushkin
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
@@ -131,6 +132,14 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             if not self.get_config("topic"):
                 raise PushkinSetupException("You must supply topic.")
 
+        # use the Sygnal global proxy configuration
+        proxy_url_str = sygnal.config.get("proxy")
+
+        loop = asyncio.get_event_loop()
+        if proxy_url_str:
+            # this overrides the create_connection method to use a HTTP proxy
+            loop = ProxyingEventLoopWrapper(loop, proxy_url_str)  # type: ignore
+
         if certfile is not None:
             # max_connection_attempts is actually the maximum number of
             # additional connection attempts, so =0 means try once only
@@ -139,6 +148,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 client_cert=certfile,
                 use_sandbox=self.use_sandbox,
                 max_connection_attempts=0,
+                loop=loop,
             )
 
             self._report_certificate_expiration(certfile)
@@ -153,6 +163,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 topic=self.get_config("topic"),
                 use_sandbox=self.use_sandbox,
                 max_connection_attempts=0,
+                loop=loop,
             )
 
         # without this, aioapns will retry every second forever.

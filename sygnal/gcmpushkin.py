@@ -24,7 +24,7 @@ from opentracing import logs, tags
 from prometheus_client import Counter, Gauge, Histogram
 from twisted.enterprise.adbapi import ConnectionPool
 from twisted.internet.defer import DeferredSemaphore
-from twisted.web.client import Agent, FileBodyProducer, HTTPConnectionPool, readBody
+from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 
 from sygnal.exceptions import (
@@ -32,6 +32,7 @@ from sygnal.exceptions import (
     TemporaryNotificationDispatchException,
 )
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
+from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 from .exceptions import PushkinSetupException
@@ -116,10 +117,14 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
         tls_client_options_factory = ClientTLSOptionsFactory()
 
-        self.http_agent = Agent(
+        # use the Sygnal global proxy configuration
+        proxy_url = sygnal.config.get("proxy")
+
+        self.http_agent = ProxyAgent(
             reactor=sygnal.reactor,
             pool=self.http_pool,
             contextFactory=tls_client_options_factory,
+            proxy_url_str=proxy_url,
         )
 
         self.db = sygnal.database
