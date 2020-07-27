@@ -1,1 +1,1 @@
-Update to aioapns 1.10 which has security fixes.
+Update minimum version of `aioapns` dependency to 1.10, which has security fixes.
