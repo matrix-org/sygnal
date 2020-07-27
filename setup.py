@@ -38,7 +38,7 @@ setup(
     install_requires=[
         "Twisted>=19.2.1",
         "prometheus_client>=0.7.0,<0.8",
-        "aioapns>=1.7",
+        "aioapns>=1.10",
         "cryptography>=2.1.4",
         "pyyaml>=5.1.1",
         "service_identity>=18.1.0",
