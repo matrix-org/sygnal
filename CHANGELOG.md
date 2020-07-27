@@ -1,6 +1,21 @@
 Sygnal 0.7.1 (2020-07-27)
 =========================
 
+Security advisory
+-----------------
+
+This version of Sygnal updates the minimum version of the `aioapns` dependency
+to version `1.10` which addresses a TLS hostname validation bug in `aioapns`.
+
+Sygnal was vulnerable to a man-in-the-middle attack on APNs data if someone
+could spoof your DNS or otherwise redirect your APNs traffic.
+
+This issue affects any Sygnal deployments that make use of APNs certificate
+authentication (i.e. those with `certfile: something.pem` in the configuration).
+
+Administrators are encouraged to upgrade.
+
+
 Bugfixes
 --------
 
