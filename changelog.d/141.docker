@@ -1,1 +1,0 @@
-Include GeoTrust Global CA's certificate in the Docker image as it is needed for APNs (and was removed by Debian).
