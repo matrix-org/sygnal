@@ -36,6 +36,10 @@ FROM python:3.7-slim
 
 COPY --from=builder /install /usr/local
 
+# copy the root certificate used by APNs, since Debian removed it
+COPY docker/GeoTrust_Global_CA.crt /usr/share/ca-certificates/GeoTrust_Global_CA.crt
+RUN update-ca-certificates
+
 EXPOSE 5000/tcp
 
 ENTRYPOINT ["python", "-m", "sygnal.sygnal"]
