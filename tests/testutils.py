@@ -17,15 +17,19 @@ from io import BytesIO
 from os import environ
 from threading import Condition
 from time import time_ns
-from typing import BinaryIO, List, Optional, Union
+from typing import BinaryIO, Dict, List, Optional, Union
 
 import attr
 import psycopg2
-from twisted.internet.defer import ensureDeferred
-from twisted.test.proto_helpers import MemoryReactorClock
+from twisted.internet._resolver import SimpleResolverComplexifier
+from twisted.internet.defer import ensureDeferred, fail, succeed
+from twisted.internet.error import DNSLookupError
+from twisted.internet.interfaces import IReactorPluggableNameResolver, IResolverSimple
+from twisted.internet.testing import MemoryReactorClock
 from twisted.trial import unittest
 from twisted.web.http_headers import Headers
 from twisted.web.server import Request
+from zope.interface.declarations import implementer
 
 from sygnal.http import PushGatewayApiServer
 from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
@@ -88,6 +92,7 @@ class TestCase(unittest.TestCase):
 
         logging_config = {
             "setup": {
+                "disable_existing_loggers": False,  # otherwise this breaks logging!
                 "formatters": {
                     "normal": {
                         "format": "%(asctime)s [%(process)d] "
@@ -123,6 +128,7 @@ class TestCase(unittest.TestCase):
             self._set_up_database(self.dbname)
 
         self.sygnal = Sygnal(config, reactor)
+        self.reactor = reactor
         self.sygnal.database.start()
         self.v1api = PushGatewayApiServer(self.sygnal)
 
@@ -261,10 +267,23 @@ class TestCase(unittest.TestCase):
         return [channel_result(channel) for channel in channels]
 
 
+@implementer(IReactorPluggableNameResolver)
 class ExtendedMemoryReactorClock(MemoryReactorClock):
     def __init__(self):
         super().__init__()
         self.work_notifier = Condition()
+
+        self.lookups: Dict[str, str] = {}
+
+        @implementer(IResolverSimple)
+        class FakeResolver(object):
+            @staticmethod
+            def getHostByName(name, timeout=None):
+                if name not in self.lookups:
+                    return fail(DNSLookupError("OH NO: unknown %s" % (name,)))
+                return succeed(self.lookups[name])
+
+        self.nameResolver = SimpleResolverComplexifier(FakeResolver())
 
     def callFromThread(self, function, *args):
         self.callLater(0, function, *args)
