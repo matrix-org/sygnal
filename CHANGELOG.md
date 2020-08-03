@@ -1,3 +1,21 @@
+Sygnal 0.8.1 (2020-07-28)
+=========================
+
+Updates to the Docker image
+---------------------------
+
+- Include GeoTrust Global CA's certificate in the Docker image as it is needed for APNs (and was removed by Debian). ([\#141](https://github.com/matrix-org/sygnal/issues/141))
+
+
+Sygnal 0.7.2 (2020-07-28)
+=========================
+
+Updates to the Docker image
+---------------------------
+
+- Include GeoTrust Global CA's certificate in the Docker image as it is needed for APNs (and was removed by Debian). ([\#141](https://github.com/matrix-org/sygnal/issues/141))
+
+
 Sygnal 0.8.0 (2020-07-27)
 =========================
 
