@@ -96,7 +96,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     UNDERSTOOD_CONFIG_FIELDS = {
         "type",
         "api_key",
-        "fcm_options"
+        "fcm_options",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config, canonical_reg_id_store):
@@ -137,7 +137,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
         self.base_request_body: dict = self.get_config("fcm_options", {})
         if not isinstance(self.base_request_body, dict):
-            raise PushkinSetupException("fcm_options, if set, should be a dictionary of options.")
+            raise PushkinSetupException(
+                "fcm_options, if set, should be a dictionary of options."
+            )
 
     @classmethod
     async def create(cls, name, sygnal, config):

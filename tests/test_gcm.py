@@ -34,7 +34,11 @@ DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD = {
         }
     },
 }
-DEVICE_EXAMPLE_IOS = {"app_id": "com.example.gcm.ios", "pushkey": "spqr", "pushkey_ts": 42}
+DEVICE_EXAMPLE_IOS = {
+    "app_id": "com.example.gcm.ios",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+}
 
 
 class TestGcmPushkin(GcmPushkin):
@@ -75,10 +79,7 @@ class GcmTestCase(testutils.TestCase):
         config["apps"]["com.example.gcm.ios"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
             "api_key": "kii",
-            "fcm_options": {
-                "content_available": True,
-                "mutable_content": True
-            }
+            "fcm_options": {"content_available": True, "mutable_content": True},
         }
 
     def test_expected(self):
