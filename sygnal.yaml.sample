@@ -249,3 +249,11 @@ apps:
   #  # Defaults to 512 if unset.
   #  #
   #  #inflight_request_limit: 512
+  #
+  #  # This allows you to specify additional options to send to Firebase.
+  #  # See https://firebase.google.com/docs/cloud-messaging/http-server-ref
+  #  # Of particular interest, admins who wish to support iOS apps using Firebase
+  #  # probably wish to set content_available, and may need to set mutable_content.
+  #  #fcm_options:
+  #  #  content_available: true
+  #  #  mutable_content: true
