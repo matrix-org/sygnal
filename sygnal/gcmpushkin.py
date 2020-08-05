@@ -135,6 +135,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         if not self.api_key:
             raise PushkinSetupException("No API key set in config")
 
+        # Use the fcm_options config dictionary as a foundation for the body;
+        # this lets the Sygnal admin choose custom FCM options
+        # (e.g. content_available).
         self.base_request_body: dict = self.get_config("fcm_options", {})
         if not isinstance(self.base_request_body, dict):
             raise PushkinSetupException(
@@ -355,8 +358,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # TODO: Implement collapse_key to queue only one message per room.
             failed = []
 
-            # use the base body as a foundation for the body; this lets the
-            # Sygnal admin choose custom FCM options (e.g. content_available).
             body = self.base_request_body.copy()
             body["data"] = data
             body["priority"] = "normal" if n.prio == "low" else "high"
