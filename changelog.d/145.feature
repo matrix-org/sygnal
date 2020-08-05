@@ -1,1 +1,1 @@
-Add ability to configure custom FCM options, which can be useful for using iOS with Firebase.
+Add the ability to configure custom FCM options, which is necessary for using iOS with Firebase.

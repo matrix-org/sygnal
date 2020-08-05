@@ -138,7 +138,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         self.base_request_body: dict = self.get_config("fcm_options", {})
         if not isinstance(self.base_request_body, dict):
             raise PushkinSetupException(
-                "fcm_options, if set, should be a dictionary of options."
+                "Config field fcm_options, if set, must be a dictionary of options"
             )
 
     @classmethod
