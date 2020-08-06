@@ -1,3 +1,13 @@
+Sygnal 0.8.2 (2020-08-06)
+=========================
+
+Features
+--------
+
+- Add the ability to configure custom FCM options, which is necessary for using iOS with Firebase. ([\#145](https://github.com/matrix-org/sygnal/issues/145))
+- Add a Prometheus metric (`sygnal_inflight_request_limit_drop`) that shows the number of notifications dropped due to exceeding the in-flight concurrent request limit. ([\#146](https://github.com/matrix-org/sygnal/issues/146))
+
+
 Sygnal 0.8.1 (2020-07-28)
 =========================
 
