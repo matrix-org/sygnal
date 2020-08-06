@@ -34,6 +34,11 @@ DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD = {
         }
     },
 }
+DEVICE_EXAMPLE_IOS = {
+    "app_id": "com.example.gcm.ios",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+}
 
 
 class TestGcmPushkin(GcmPushkin):
@@ -70,6 +75,11 @@ class GcmTestCase(testutils.TestCase):
         config["apps"]["com.example.gcm"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
             "api_key": "kii",
+        }
+        config["apps"]["com.example.gcm.ios"] = {
+            "type": "tests.test_gcm.TestGcmPushkin",
+            "api_key": "kii",
+            "fcm_options": {"content_available": True, "mutable_content": True},
         }
 
     def test_expected(self):
@@ -227,3 +237,19 @@ class GcmTestCase(testutils.TestCase):
         # make sense of it otherwise.
         self.assertEqual(resp, {"rejected": ["spqr"]})
         self.assertEqual(gcm.num_requests, 2)
+
+    def test_fcm_options(self):
+        """
+        Tests that the config option `fcm_options` allows setting a base layer
+        of options to pass to FCM, for example ones that would be needed for iOS.
+        """
+        gcm = self.sygnal.pushkins["com.example.gcm.ios"]
+        gcm.preload_with_response(
+            200, {"results": [{"registration_id": "spqr_new", "message_id": "msg42"}]}
+        )
+
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE_IOS]))
+
+        self.assertEqual(resp, {"rejected": []})
+        self.assertEqual(gcm.last_request_body["mutable_content"], True)
+        self.assertEqual(gcm.last_request_body["content_available"], True)

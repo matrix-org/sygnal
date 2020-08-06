@@ -96,6 +96,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     UNDERSTOOD_CONFIG_FIELDS = {
         "type",
         "api_key",
+        "fcm_options",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config, canonical_reg_id_store):
@@ -133,6 +134,15 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         self.api_key = self.get_config("api_key")
         if not self.api_key:
             raise PushkinSetupException("No API key set in config")
+
+        # Use the fcm_options config dictionary as a foundation for the body;
+        # this lets the Sygnal admin choose custom FCM options
+        # (e.g. content_available).
+        self.base_request_body: dict = self.get_config("fcm_options", {})
+        if not isinstance(self.base_request_body, dict):
+            raise PushkinSetupException(
+                "Config field fcm_options, if set, must be a dictionary of options"
+            )
 
     @classmethod
     async def create(cls, name, sygnal, config):
@@ -348,7 +358,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # TODO: Implement collapse_key to queue only one message per room.
             failed = []
 
-            body = {"data": data, "priority": "normal" if n.prio == "low" else "high"}
+            body = self.base_request_body.copy()
+            body["data"] = data
+            body["priority"] = "normal" if n.prio == "low" else "high"
 
             for retry_number in range(0, MAX_TRIES):
                 mapped_pushkeys = [reg_id_mappings[pk] for pk in pushkeys]
