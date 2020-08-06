@@ -17,6 +17,8 @@
 import typing
 from typing import Any, Dict, List, Optional
 
+from prometheus_client import Counter
+
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 
 if typing.TYPE_CHECKING:
@@ -142,6 +144,13 @@ class ConcurrencyLimitedPushkin(Pushkin):
 
     UNDERSTOOD_CONFIG_FIELDS = {"inflight_request_limit"}
 
+    RATELIMITING_DROPPED_REQUESTS = Counter(
+        "sygnal_inflight_request_limit_drop",
+        "Number of notifications dropped because the number of inflight requests"
+        " exceeded the configured inflight_request_limit.",
+        labelnames=["pushkin"],
+    )
+
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         super(ConcurrencyLimitedPushkin, self).__init__(name, sygnal, config)
         self._concurrent_limit = config.get(
@@ -154,6 +163,9 @@ class ConcurrencyLimitedPushkin(Pushkin):
         self, n: Notification, device: Device, context: "NotificationContext"
     ) -> List[str]:
         if self._concurrent_now >= self._concurrent_limit:
+            ConcurrencyLimitedPushkin.RATELIMITING_DROPPED_REQUESTS.labels(
+                pushkin=self.name
+            ).inc()
             raise NotificationDispatchException(
                 "Too many in-flight requests for this pushkin. "
                 "(Something is wrong and Sygnal is struggling to keep up!)"
