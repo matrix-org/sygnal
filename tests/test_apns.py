@@ -68,7 +68,7 @@ class ApnsTestCase(testutils.TestCase):
         """
         # Arrange
         method = self.apns_pushkin_snotif
-        method.return_value = testutils.make_async_magic_mock(
+        method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
         self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 240
@@ -91,7 +91,7 @@ class ApnsTestCase(testutils.TestCase):
         """
         # Arrange
         method = self.apns_pushkin_snotif
-        method.return_value = testutils.make_async_magic_mock(
+        method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
         self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 4096
