@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The Matrix.org Foundation C.I.C.
+# Copyright 2019-2020 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,9 +34,9 @@ logger = logging.getLogger(__name__)
 HTTPFactory = Factory.forProtocol(HTTPChannel)
 
 
-class MatrixFederationAgentTests(TestCase):
+class SygnalTwistedProxyTests(TestCase):
     def config_setup(self, config):
-        super(MatrixFederationAgentTests, self).config_setup(config)
+        super(SygnalTwistedProxyTests, self).config_setup(config)
         config["apps"]["com.example.gcm"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
             "api_key": "kii",
