@@ -9,6 +9,7 @@ for a high level overview of how notifications work in Matrix.
 https://matrix.org/docs/spec/push_gateway/r0.1.0
 describes the protocol that Matrix Home Servers use to send notifications to Push Gateways such as Sygnal.
 
+
 Setup
 =====
 Sygnal is configured through a YAML configuration file.
@@ -26,6 +27,7 @@ Keys in this section take the form of the ``app_id``, as specified when setting 
 (see https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-pushers-set).
 
 See the sample configuration for examples.
+
 
 App Types
 ---------
@@ -65,6 +67,7 @@ gcm
   to contain the 'Server key', which can be acquired from Firebase Console at:
   ``https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/``
 
+
 Using an HTTP Proxy for outbound traffic
 ----------------------------------------
 
@@ -78,6 +81,7 @@ Currently only HTTP proxies with the CONNECT method are supported.
 
 If you wish, you can instead configure a HTTP CONNECT proxy in ``sygnal.yaml``.
 
+
 Pusher ``data`` configuration
 =============================
 
@@ -90,6 +94,7 @@ via `POST /_matrix/client/r0/pushers/set <https://matrix.org/docs/spec/client_se
   This can be useful for clients to specify default push payload content. For instance, iOS clients will have
   freedom to use silent/mutable notifications and be able to set some default alert/sound/badge fields.
 
+
 Running
 =======
 
@@ -101,9 +106,20 @@ With custom configuration file name:
 
 Python 3.7 or higher is required.
 
+
 Log Rotation
 ============
+
 Sygnal's logging appends to files but does not use a rotating logger.
 The recommended configuration is therefore to use ``logrotate``.
 The log file will be automatically reopened if the log file changes, for example
 due to ``logrotate``.
+
+
+More Documentation
+==================
+
+More documentation for Sygnal is available in the ``docs`` directory:
+
+* `Notes for Application Developers <./docs/applications.md>`_
+* `Troubleshooting <./docs/troubleshooting.md>`_
