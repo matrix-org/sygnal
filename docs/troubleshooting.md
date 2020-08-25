@@ -94,7 +94,7 @@ but this name could be misleading).
 
 Whereas data messages will wake up apps on Android with no additional changes,
 iOS needs to be told that a notification is meant to wake up an inactive app.
-This is done with the `content_available` flag, which you can set in your
+This is done with FCM's `content_available` flag, which you can set in your
 `fcm_options` dictionary for the Firebase pushkin.
 (See [`sygnal.yaml.sample`](../sygnal.yaml.sample).)
 
