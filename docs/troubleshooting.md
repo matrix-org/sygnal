@@ -30,7 +30,7 @@ deployment.
 
 ```sql
 SELECT app_id, data FROM pushers
-WHERE user_name = '@my.user:example.org' AND kind='http';
+  WHERE user_name = '@my.user:example.org' AND kind='http';
 ```
 
 You should see something like:
@@ -45,7 +45,7 @@ You should see something like:
 
 #### On other homeserver implementations
 
-No details available, but contributions welcomed.
+No details available, but contributions welcome.
 
 
 ### Check the push gateway (Sygnal) is reachable from the homeserver
@@ -53,8 +53,8 @@ No details available, but contributions welcomed.
 Following on from the example above, the homeserver's database contains the
 push gateway URL of `https://example.org/_matrix/push/v1/notify`.
 
-It may be worth manually checking that the push gateway is reachable; e.g. with
-curl:
+It may be worth manually checking that the push gateway is reachable from the
+homeserver; e.g. with curl:
 
 ```
 $ curl https://example.org/_matrix/push/v1/notify
@@ -67,23 +67,23 @@ $ curl https://example.org/_matrix/push/v1/notify
 </html>
 ```
 
-If you get a response, such as an error like 405 Method Not Allowed, as above,
+If you get a response, such as an error like **405 Method Not Allowed**, as above,
 this would suggest that the push gateway is at least reachable.
 
 If you get a **404 No Such Resource** error on the `/_matrix/push/v1/notify` endpoint,
 then chances are that your reverse proxy is not configured to pass through the
 full URL.
 
-If you don't get a HTTP response, then it is probably worth investigation.
+If you don't get an HTTP response, then it is probably worth investigation.
 Check that:
 
 * Sygnal is running
 * Sygnal's configuration makes it listen on the desired port
 * Any reverse proxies are correctly set up and running
-* The firewall permits inbound traffic on the port in question.
+* The firewall permits inbound traffic on the port in question
 
 
-## Troubleshooting Firebase Notifications
+## Troubleshooting Firebase notifications
 
 ### iOS-specific troubles with apps using Firebase
 
@@ -96,10 +96,10 @@ Whereas data messages will wake up apps on Android with no additional changes,
 iOS needs to be told that a notification is meant to wake up an inactive app.
 This is done with the `content_available` flag, which you can set in your
 `fcm_options` dictionary for the Firebase pushkin.
-(See `sygnal.yaml.sample`.)
+(See [`sygnal.yaml.sample`](../sygnal.yaml.sample).)
 
 
-## Troubleshooting APNs Notifications
+## Troubleshooting APNs notifications
 
 ### Base64 decoding error in the logs
 
@@ -131,7 +131,7 @@ Firebase with your APNs secrets, and Sygnal with your Firebase secrets.
 If you want your application to be woken up to be able to process APNs messages
 received when your application is in the background, you need to set the
 `content-available` flag in your pusher's default payload — see
-[the notes for iOS applications](./applications.md#ios-applications-beware).
+[the notes for iOS applications](applications.md#ios-applications-beware).
 
 
 # Appendices

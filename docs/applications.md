@@ -1,4 +1,4 @@
-# Notes for Application Developers
+# Notes for application developers
 
 This document aims to illustrate some of the quirks, peculiarities and other
 notable aspects of Sygnal for developers of applications that need to receive
@@ -7,9 +7,9 @@ push.
 Sygnal has been somewhat flavoured by the development of the Element iOS
 and Element Android clients, but nevertheless is intended to be useful for
 other iOS and Android applications that have 'typical' requirements, without
-need to resort to customising the pushkins.
+need to resort to customising the application types (Pushkins).
 
-(It is possible to extend Sygnal with other kinds of pushkins, but this is
+(It is possible to extend Sygnal with other application types, but this is
 out of scope for this document.)
 
 Once you have read this document, you may also find [the troubleshooting document](./troubleshooting.md)
@@ -25,9 +25,12 @@ useful if you are running into trouble whilst deploying Sygnal.
   iOS and Chrome applications.
 * **push key**: Also known as registration token (FCM) or device token (APNs),
   this ID identifies a device to which notifications can be sent.
+* **Pushkin**: A module which adds support to Sygnal for an application type.
+  Sygnal comes with an APNs pushkin and an FCM pushkin out of the box, but you
+  may also use custom ones.
 
 
-## Outlines of Flows
+## Outlines of flows
 
 An understanding of the flows of push notifications may be useful.
 This section will provide an outline.
@@ -38,7 +41,7 @@ This section will provide an outline.
 0) The client needs to be configured with the address of its Sygnal instance,
    and any configuration that FCM or APNs requires for client apps.
 
-1) The client needs to use the FCM or APNs library to acquire a push key, which
+1) The client needs to use an FCM or APNs library to acquire a push key, which
    identifies the client to the notification service.
 
 2) The client registers a pusher on the user's homeserver, giving the address of
@@ -95,8 +98,8 @@ This section will provide an outline.
   - Data-only messages are always sent to FCM.
 
   - Data-only messages are sent to APNs when the `event_id_only` format is in
-    use. In other cases, the app may still need to perform additional processing
-    as encrypted events would need to be decrypted, for example.
+    use. In other cases, the app may still need to perform additional processing,
+    for example if encrypted events would need to be decrypted.
 
 * When encrypted events are present, the homeserver is unable to conclusively
   run push rules — in this case, the client will need to run them locally to
@@ -109,7 +112,7 @@ This section will provide an outline.
   which some may prefer to avoid.
 
 
-## Platform-specific Notes
+## Platform-specific notes
 
 ### Apple Push Notification service
 
@@ -134,12 +137,12 @@ By default, the client will receive a message with this structure:
 ```
 
 Please note that fields may be truncated if they are large, so that they fit
-within APNs's limit.
+within APNs' limit.
 Please also note that some fields will be unavailable if you registered a pusher
 with `event_id_only` format.
 
 
-#### iOS Applications Beware!
+#### iOS applications beware!
 
 When registering your iOS pusher, you have the ability to specify a default
 payload that will be sent to APNs. This allows you to set custom flags for APNs.
@@ -163,7 +166,7 @@ An example `data` dictionary to specify on `POST /_matrix/client/r0/pushers/set`
     "aps": {
       "mutable-content": 1,
       "content-available": 1,
-      "alert": {"loc-key": "SINGLE_UNREAD", "loc-args": []},
+      "alert": {"loc-key": "SINGLE_UNREAD", "loc-args": []}
     }
   }
 }

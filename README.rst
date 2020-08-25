@@ -121,5 +121,5 @@ More Documentation
 
 More documentation for Sygnal is available in the ``docs`` directory:
 
-* `Notes for Application Developers <./docs/applications.md>`_
-* `Troubleshooting <./docs/troubleshooting.md>`_
+* `Notes for Application Developers <docs/applications.md>`_
+* `Troubleshooting <docs/troubleshooting.md>`_
