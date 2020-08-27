@@ -15,7 +15,7 @@ class TimelessEventLoopWrapper:
     def __class__(self):
         """
         Fakes isinstance(this, AbstractEventLoop) so we can set_event_loop
-         without fail.
+        without fail.
         """
         return self._wrapped_loop.__class__
 
