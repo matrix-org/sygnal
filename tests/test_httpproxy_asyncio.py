@@ -68,7 +68,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         fake_proxy.set_protocol(hcp)
         hcp.connection_made(fake_proxy)
 
-        # check we got sent a reasonable, uh, hardcoded, CONNECT request
+        # Check that the proxy got the proper CONNECT request.
         self.assertEqual(fake_proxy.buffer, b"CONNECT example.org:443 HTTP/1.0\r\n\r\n")
         # clear
         fake_proxy.buffer = b""
