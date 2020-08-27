@@ -132,7 +132,6 @@ class MockTransport(Transport):
 
     def close(self):
         self.closed = True
-        return
 
 
 class MockProtocol(Protocol):
