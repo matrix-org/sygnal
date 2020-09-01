@@ -3,7 +3,8 @@ import types
 from asyncio import AbstractEventLoop, transports
 from asyncio.protocols import BaseProtocol, Protocol
 from asyncio.transports import Transport
-from typing import Any, Callable, List, Tuple
+from contextvars import Context
+from typing import Any, Callable, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -60,17 +61,31 @@ class TimelessEventLoopWrapper:
         else:
             return value
 
-    def call_later(self, delay: float, callback: Callable, *args: Any, context=None):
+    def call_later(
+        self,
+        delay: float,
+        callback: Callable,
+        *args: Any,
+        context: Optional[Context] = None,
+    ):
         self.call_at(self._time + delay, callback, *args, context=context)
 
-    def call_at(self, when: float, callback: Callable, *args: Any, context=None):
+    def call_at(
+        self,
+        when: float,
+        callback: Callable,
+        *args: Any,
+        context: Optional[Context] = None,
+    ):
         logger.debug(f"Calling {callback} at %f...", when)
         self._to_be_called.append((when, callback, args, context))
 
         # re-sort list in ascending time order
         self._to_be_called.sort(key=lambda x: x[0])
 
-    def call_soon(self, callback: Callable, *args: Any, context=None):
+    def call_soon(
+        self, callback: Callable, *args: Any, context: Optional[Context] = None
+    ):
         return self.call_later(0, callback, *args, context=context)
 
     def time(self) -> float:

@@ -47,8 +47,8 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         fake_proxy = MockTransport()
         # make a fake protocol that we fancy using through the proxy
         fake_protocol = MockProtocol()
-        # create a connect proxy client
-        hcp = HttpConnectProtocol(
+        # create a HTTP CONNECT proxy client protocol
+        http_connect_protocol = HttpConnectProtocol(
             target_hostport=(host, port),
             proxy_credentials=proxy_credentials,
             protocol_factory=lambda: fake_protocol,
@@ -56,13 +56,14 @@ class AsyncioHttpProxyTest(testutils.TestCase):
             loop=None,
         )
         switch_over_task = asyncio.get_event_loop().create_task(
-            hcp.switch_over_when_ready()
+            http_connect_protocol.switch_over_when_ready()
         )
-        # if it's already done, that'd be odd
+        # check the task is not somehow already marked as done before we even
+        # receive anything.
         self.assertFalse(switch_over_task.done())
         # connect the proxy client to the proxy
-        fake_proxy.set_protocol(hcp)
-        hcp.connection_made(fake_proxy)
+        fake_proxy.set_protocol(http_connect_protocol)
+        http_connect_protocol.connection_made(fake_proxy)
         return fake_protocol, fake_proxy, switch_over_task
 
     def test_connect_no_credentials(self):
@@ -91,13 +92,14 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         # advance event loop because we have to let coroutines be executed
         self.loop.advance(1.0)
 
-        # *now* we should have switched over!
+        # *now* we should have switched over from the HTTP CONNECT protocol
+        # to the user protocol (in our case, a MockProtocol).
         self.assertTrue(switch_over_task.done())
 
         transport, protocol = switch_over_task.result()
 
         # check it was our protocol that was returned
-        self.assertEqual(protocol, fake_protocol)
+        self.assertIs(protocol, fake_protocol)
 
         # check our protocol received exactly the bytes meant for it
         self.assertEqual(
@@ -115,8 +117,8 @@ class AsyncioHttpProxyTest(testutils.TestCase):
             host, port, proxy_credentials
         )
 
-        # check we got sent a reasonable, uh, hardcoded, CONNECT request
-        # with the correctly-encoded credentials
+        # Check that the proxy got the proper CONNECT request with the
+        # correctly-encoded credentials
         self.assertEqual(
             fake_proxy.buffer,
             b"CONNECT example.org:443 HTTP/1.0\r\n"
@@ -135,13 +137,14 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         # advance event loop because we have to let coroutines be executed
         self.loop.advance(1.0)
 
-        # *now* we should have switched over!
+        # *now* we should have switched over from the HTTP CONNECT protocol
+        # to the user protocol (in our case, a MockProtocol).
         self.assertTrue(switch_over_task.done())
 
         transport, protocol = switch_over_task.result()
 
         # check it was our protocol that was returned
-        self.assertEqual(protocol, fake_protocol)
+        self.assertIs(protocol, fake_protocol)
 
         # check our protocol received exactly the bytes meant for it
         self.assertEqual(
@@ -160,8 +163,8 @@ class AsyncioHttpProxyTest(testutils.TestCase):
             host, port, proxy_credentials
         )
 
-        # check we got sent a reasonable, uh, hardcoded, CONNECT request
-        # with the correctly-encoded credentials
+        # Check that the proxy got the proper CONNECT request with the
+        # correctly-encoded credentials.
         self.assertEqual(
             fake_proxy.buffer,
             b"CONNECT example.org:443 HTTP/1.0\r\n"
@@ -170,7 +173,8 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         # Reset the proxy mock
         fake_proxy.reset_mock()
 
-        # pretend we got a sad response with a HTML error page
+        # For the sake of this test, pretend the credentials are incorrect so
+        # send a sad response with a HTML error page
         fake_proxy.pretend_to_receive(
             b"HTTP/1.0 401 Unauthorised\r\n\r\n<HTML>... some error here ...</HTML>"
         )
@@ -178,7 +182,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         # advance event loop because we have to let coroutines be executed
         self.loop.advance(1.0)
 
-        # *now* we should be complete
+        # *now* this future should have completed (
         self.assertTrue(switch_over_task.done())
 
         # but we should have failed
