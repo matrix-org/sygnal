@@ -182,7 +182,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         # advance event loop because we have to let coroutines be executed
         self.loop.advance(1.0)
 
-        # *now* this future should have completed (
+        # *now* this future should have completed
         self.assertTrue(switch_over_task.done())
 
         # but we should have failed
