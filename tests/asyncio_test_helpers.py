@@ -73,7 +73,7 @@ class TimelessEventLoopWrapper:
     def call_soon(self, callback: Callable, *args: Any, context=None):
         return self.call_later(0, callback, *args, context=context)
 
-    def time(self):
+    def time(self) -> float:
         return self._time
 
 
