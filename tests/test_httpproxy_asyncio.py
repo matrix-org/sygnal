@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
-from asyncio import AbstractEventLoop
-from typing import cast
+from asyncio import AbstractEventLoop, BaseTransport, Protocol, Task
+from typing import Optional, Tuple, cast
 
 from sygnal.exceptions import ProxyConnectError
 from sygnal.helper.proxy.proxy_asyncio import HttpConnectProtocol
@@ -39,39 +39,47 @@ class AsyncioHttpProxyTest(testutils.TestCase):
 
         self.loop = augmented_loop
 
-    def test_connect_no_credentials(self):
-        """
-        Tests the proxy connection procedure when there is no basic auth.
-        """
+    def make_fake_proxy(
+        self, host: str, port: int, proxy_credentials: Optional[Tuple[str, str]]
+    ) -> Tuple[MockProtocol, MockTransport, "Task[Tuple[BaseTransport, Protocol]]"]:
+        # Task[Tuple[MockTransport, MockProtocol]]
         # make a fake proxy
         fake_proxy = MockTransport()
         # make a fake protocol that we fancy using through the proxy
         fake_protocol = MockProtocol()
-
         # create a connect proxy client
         hcp = HttpConnectProtocol(
-            target_hostport=("example.org", 443),
-            proxy_credentials=None,
+            target_hostport=(host, port),
+            proxy_credentials=proxy_credentials,
             protocol_factory=lambda: fake_protocol,
             sslcontext=None,
             loop=None,
         )
-
         switch_over_task = asyncio.get_event_loop().create_task(
             hcp.switch_over_when_ready()
         )
-
         # if it's already done, that'd be odd
         self.assertFalse(switch_over_task.done())
-
         # connect the proxy client to the proxy
         fake_proxy.set_protocol(hcp)
         hcp.connection_made(fake_proxy)
+        return fake_protocol, fake_proxy, switch_over_task
+
+    def test_connect_no_credentials(self):
+        """
+        Tests the proxy connection procedure when there is no basic auth.
+        """
+        host = "example.org"
+        port = 443
+        proxy_credentials = None
+        fake_protocol, fake_proxy, switch_over_task = self.make_fake_proxy(
+            host, port, proxy_credentials
+        )
 
         # Check that the proxy got the proper CONNECT request.
         self.assertEqual(fake_proxy.buffer, b"CONNECT example.org:443 HTTP/1.0\r\n\r\n")
-        # clear
-        fake_proxy.buffer = b""
+        # Reset the proxy mock
+        fake_proxy.reset_mock()
 
         # pretend we got a happy response with some dangling bytes from the
         # target protocol
@@ -80,7 +88,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
             b"begin beep boop\r\n\r\n~~ :) ~~"
         )
 
-        # advance reactor because we have to let coroutines be executed
+        # advance event loop because we have to let coroutines be executed
         self.loop.advance(1.0)
 
         # *now* we should have switched over!
@@ -100,30 +108,12 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         """
         Tests the proxy connection procedure when there is basic auth.
         """
-        # make a fake proxy
-        fake_proxy = MockTransport()
-        # make a fake protocol that we fancy using through the proxy
-        fake_protocol = MockProtocol()
-
-        # create a connect proxy client
-        hcp = HttpConnectProtocol(
-            target_hostport=("example.org", 443),
-            proxy_credentials=("user", "secret"),
-            protocol_factory=lambda: fake_protocol,
-            sslcontext=None,
-            loop=None,
+        host = "example.org"
+        port = 443
+        proxy_credentials = ("user", "secret")
+        fake_protocol, fake_proxy, switch_over_task = self.make_fake_proxy(
+            host, port, proxy_credentials
         )
-
-        switch_over_task = asyncio.get_event_loop().create_task(
-            hcp.switch_over_when_ready()
-        )
-
-        # if it's already done, that'd be odd
-        self.assertFalse(switch_over_task.done())
-
-        # connect the proxy client to the proxy
-        fake_proxy.set_protocol(hcp)
-        hcp.connection_made(fake_proxy)
 
         # check we got sent a reasonable, uh, hardcoded, CONNECT request
         # with the correctly-encoded credentials
@@ -132,8 +122,8 @@ class AsyncioHttpProxyTest(testutils.TestCase):
             b"CONNECT example.org:443 HTTP/1.0\r\n"
             b"Proxy-Authorization: basic dXNlcjpzZWNyZXQ=\r\n\r\n",
         )
-        # clear
-        fake_proxy.buffer = b""
+        # Reset the proxy mock
+        fake_proxy.reset_mock()
 
         # pretend we got a happy response with some dangling bytes from the
         # target protocol
@@ -142,7 +132,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
             b"begin beep boop\r\n\r\n~~ :) ~~"
         )
 
-        # advance reactor because we have to let coroutines be executed
+        # advance event loop because we have to let coroutines be executed
         self.loop.advance(1.0)
 
         # *now* we should have switched over!
@@ -163,30 +153,12 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         Test that our task fails properly when we cannot make a connection through
         the proxy.
         """
-        # make a fake proxy
-        fake_proxy = MockTransport()
-        # make a fake protocol that we fancy using through the proxy
-        fake_protocol = MockProtocol()
-
-        # create a connect proxy client
-        hcp = HttpConnectProtocol(
-            target_hostport=("example.org", 443),
-            proxy_credentials=("user", "secret"),
-            protocol_factory=lambda: fake_protocol,
-            sslcontext=None,
-            loop=None,
+        host = "example.org"
+        port = 443
+        proxy_credentials = ("user", "secret")
+        fake_protocol, fake_proxy, switch_over_task = self.make_fake_proxy(
+            host, port, proxy_credentials
         )
-
-        switch_over_task = asyncio.get_event_loop().create_task(
-            hcp.switch_over_when_ready()
-        )
-
-        # if it's already done, that'd be odd
-        self.assertFalse(switch_over_task.done())
-
-        # connect the proxy client to the proxy
-        fake_proxy.set_protocol(hcp)
-        hcp.connection_made(fake_proxy)
 
         # check we got sent a reasonable, uh, hardcoded, CONNECT request
         # with the correctly-encoded credentials
@@ -195,16 +167,15 @@ class AsyncioHttpProxyTest(testutils.TestCase):
             b"CONNECT example.org:443 HTTP/1.0\r\n"
             b"Proxy-Authorization: basic dXNlcjpzZWNyZXQ=\r\n\r\n",
         )
-        # clear
-        fake_proxy.buffer = b""
+        # Reset the proxy mock
+        fake_proxy.reset_mock()
 
-        # pretend we got a happy response with some dangling bytes from the
-        # target protocol
+        # pretend we got a sad response with a HTML error page
         fake_proxy.pretend_to_receive(
-            b"HTTP/1.0 401 Unauthorised\r\n\r\n" b"<HTML>... some error here ...</HTML>"
+            b"HTTP/1.0 401 Unauthorised\r\n\r\n<HTML>... some error here ...</HTML>"
         )
 
-        # advance reactor because we have to let coroutines be executed
+        # advance event loop because we have to let coroutines be executed
         self.loop.advance(1.0)
 
         # *now* we should be complete

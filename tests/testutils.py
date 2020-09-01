@@ -245,7 +245,7 @@ class TestCase(unittest.TestCase):
             channel.process_request(b"POST", REQ_PATH, content)
 
         def all_channels_done():
-            return all([channel.done for channel in channels])
+            return all(channel.done for channel in channels)
 
         while not all_channels_done():
             # we need to advance until the request has been finished

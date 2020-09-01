@@ -35,6 +35,15 @@ class ProxyUrlTestCase(unittest.TestCase):
             parts, HttpProxyUrl("example.org", 8080, ("bob", "secretsquirrel"))
         )
 
+    def test_decompose_username_only(self):
+        """
+        We do not support usernames without passwords for now — this tests the
+        current behaviour, though (it ignores the username).
+        """
+
+        parts = decompose_http_proxy_url("http://bob@example.org:8080")
+        self.assertEqual(parts, HttpProxyUrl("example.org", 8080, None))
+
     def test_decompose_http_proxy_url_failure(self):
         # test that non-HTTP schemes raise an exception
         self.assertRaises(

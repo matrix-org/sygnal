@@ -3,15 +3,13 @@ import types
 from asyncio import AbstractEventLoop, transports
 from asyncio.protocols import BaseProtocol, Protocol
 from asyncio.transports import Transport
-from typing import Any, List, Tuple
+from typing import Any, Callable, List, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class TimelessEventLoopWrapper:
     @property  # type: ignore
-    # -- we have no need to make this read/write
-    # (o.O being able to re-write a __class__ is odd!)
     def __class__(self):
         """
         Fakes isinstance(this, AbstractEventLoop) so we can set_event_loop
@@ -46,7 +44,7 @@ class TimelessEventLoopWrapper:
         # no more tasks can run now but advance to the time anyway
         self._time = target_time
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str):
         """
         We use this to delegate other method calls to the real EventLoop.
         """
@@ -55,22 +53,24 @@ class TimelessEventLoopWrapper:
             # rebind this method to be called on us
             # this makes the wrapped class use our overridden methods when
             # available.
-            # Otherwise, call_soon etc won't come to us in all scenarios.
+            # we have to do this because methods are bound to the underlying
+            # event loop, which will call `self.call_later` or something
+            # which won't normally hit us because we are not an actual subtype.
             return types.MethodType(value.__func__, self)
         else:
             return value
 
-    def call_later(self, delay, callback, *args, context=None):
-        self.call_at(self._time + delay, callback, *args, context)
+    def call_later(self, delay: float, callback: Callable, *args: Any, context=None):
+        self.call_at(self._time + delay, callback, *args, context=context)
 
-    def call_at(self, when, callback, *args, context=None):
+    def call_at(self, when: float, callback: Callable, *args: Any, context=None):
         logger.debug(f"Calling {callback} at %f...", when)
         self._to_be_called.append((when, callback, args, context))
 
         # re-sort list in ascending time order
         self._to_be_called.sort(key=lambda x: x[0])
 
-    def call_soon(self, callback, *args, context=None):
+    def call_soon(self, callback: Callable, *args: Any, context=None):
         return self.call_later(0, callback, *args, context=context)
 
     def time(self):
@@ -84,41 +84,56 @@ class MockTransport(Transport):
     """
 
     def __init__(self):
+        # Holds bytes received
+        self.buffer = b""
+
+        # Whether we reached the end of file/stream
+        self.eofed = False
+
+        # Whether the connection was aborted
+        self.aborted = False
+
+        # The protocol attached to this transport
+        self.protocol = None
+
+        # Whether this transport was closed
+        self.closed = False
+
+    def reset_mock(self) -> None:
         self.buffer = b""
         self.eofed = False
         self.aborted = False
-        self.protocol = None
         self.closed = False
 
-    def is_reading(self):
+    def is_reading(self) -> bool:
         return True
 
-    def pause_reading(self):
+    def pause_reading(self) -> None:
         pass  # NOP
 
-    def resume_reading(self):
+    def resume_reading(self) -> None:
         pass  # NOP
 
-    def set_write_buffer_limits(self, high=None, low=None):
+    def set_write_buffer_limits(self, high: int = None, low: int = None) -> None:
         pass  # NOP
 
-    def get_write_buffer_size(self):
+    def get_write_buffer_size(self) -> int:
         """Return the current size of the write buffer."""
         raise NotImplementedError
 
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         self.buffer += data
 
-    def write_eof(self):
+    def write_eof(self) -> None:
         self.eofed = True
 
-    def can_write_eof(self):
+    def can_write_eof(self) -> bool:
         return True
 
-    def abort(self):
+    def abort(self) -> None:
         self.aborted = True
 
-    def pretend_to_receive(self, data: bytes):
+    def pretend_to_receive(self, data: bytes) -> None:
         proto = self.get_protocol()
         assert isinstance(proto, Protocol)
         proto.data_received(data)
@@ -130,7 +145,7 @@ class MockTransport(Transport):
         assert isinstance(self.protocol, BaseProtocol)
         return self.protocol
 
-    def close(self):
+    def close(self) -> None:
         self.closed = True
 
 
@@ -154,7 +169,7 @@ class MockProtocol(Protocol):
         if self._to_transmit:
             transport.write(self._to_transmit)
 
-    def write(self, data: bytes):
+    def write(self, data: bytes) -> None:
         if self.transport:
             self.transport.write(data)
         else:
