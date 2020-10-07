@@ -126,6 +126,23 @@ Instead of configuring Sygnal with your APNs secrets, you need to configure
 Firebase with your APNs secrets, and Sygnal with your Firebase secrets.
 
 
+#### Common cause 3: Using sandbox tokens with the production APNs server
+
+Sygnal connects to the production APNs instance by default. This will return
+`400 BadDeviceToken` if you send it a token intended for the sandbox APNs
+server.
+
+Either use production tokens, or switch to the sandbox APNs server by setting:
+
+```
+com.example.myapp.ios:
+  type: apns
+  ...
+  platform: sandbox
+```
+
+in your sygnal config file.
+
 ### App doesn't receive notifications when inactive
 
 If you want your application to be woken up to be able to process APNs messages

@@ -199,10 +199,22 @@ metrics:
 # For the type, you may specify a fully-qualified Python classname if desired.
 #
 apps:
-  # This is an example APNs push configuration using certificate authentication.
+  # This is an example APNs push configuration
   #
   #com.example.myapp.ios:
   #  type: apns
+  #
+  #  # Authentication
+  #  #
+  #  # Two methods of authentication to APNs are currently supported.
+  #  #
+  #  # You can authenticate using a key:
+  #  keyfile: my_key.p8
+  #  key_id: MY_KEY_ID
+  #  team_id: MY_TEAM_ID
+  #  topic: MY_TOPIC
+  #
+  #  # Or, a certificate can be used instead:
   #  certfile: com.example.myApp_prod_APNS.pem
   #
   #  # This is the maximum number of in-flight requests *for this pushkin*
@@ -213,30 +225,23 @@ apps:
   #  # Defaults to 512 if unset.
   #  #
   #  #inflight_request_limit: 512
-
-  # This is an example APNs push configuration using key authentication.
   #
-  #com.example.myapp2.ios:
-  #  type: apns
-  #  keyfile: my_key.p8
-  #  key_id: MY_KEY_ID
-  #  team_id: MY_TEAM_ID
-  #  topic: MY_TOPIC
-  #
-  #  # This is the maximum number of in-flight requests *for this pushkin*
-  #  # before additional notifications will be failed.
-  #  # (This is a robustness measure to prevent one pushkin stacking up with
-  #  #  queued requests and saturating the inbound connection queue of a load
-  #  #  balancer or reverse proxy).
-  #  # Defaults to 512 if unset.
+  #  # Specifies whether to use the production or sandbox APNs server. Note that
+  #  # sandbox tokens should only be used with the sandbox server and vice versa. 
   #  #
-  #  #inflight_request_limit: 512
+  #  # Valid options are:
+  #  #   * production
+  #  #   * sandbox
+  #  #
+  #  # The default is 'production'. Uncomment to use the sandbox instance.
+  #  #platform: sandbox
 
   # This is an example GCM/FCM push configuration.
   #
   #com.example.myapp.android:
   #  type: gcm
   #  api_key: your_api_key_for_gcm
+  #
   #  # This is the maximum number of connections to GCM servers at any one time
   #  # the default is 20.
   #  #max_connections: 20
