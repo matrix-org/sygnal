@@ -1,3 +1,6 @@
+0. Consider whether this release will affect any customers, including those on
+EMS, and warn them beforehand - in case they need to upgrade quickly.
+
 1. Set a variable to the version number for convenience:
    ```sh
    ver=x.y.z
@@ -28,3 +31,5 @@
    ```sh
    xdg-open https://github.com/matrix-org/sygnal/releases/edit/v$ver
    ```
+1. Notify #sygnal:matrix.org, #synapse-dev:matrix.org and EMS that a new
+   release has been published.
