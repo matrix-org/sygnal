@@ -213,6 +213,16 @@ apps:
   #  # Defaults to 512 if unset.
   #  #
   #  #inflight_request_limit: 512
+  #
+  #  # Specifies whether to use the production or sandbox APNs server. Note that
+  #  # sandbox tokens should only be used with the sandbox server and vice versa. 
+  #  #
+  #  # Valid options are:
+  #  #   * production
+  #  #   * sandbox
+  #  #
+  #  # The default is 'production'.
+  #  #platform: sandbox
 
   # This is an example APNs push configuration using key authentication.
   #
@@ -231,6 +241,16 @@ apps:
   #  # Defaults to 512 if unset.
   #  #
   #  #inflight_request_limit: 512
+  #
+  #  # Specifies whether to use the production or sandbox APNs server. Note that
+  #  # sandbox tokens should only be used with the sandbox server and vice versa. 
+  #  #
+  #  # Valid options are:
+  #  #   * production
+  #  #   * sandbox
+  #  #
+  #  # The default is 'production'.
+  #  #platform: sandbox
 
   # This is an example GCM/FCM push configuration.
   #
