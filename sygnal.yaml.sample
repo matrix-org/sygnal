@@ -201,7 +201,7 @@ metrics:
 apps:
   # This is an example APNs push configuration
   #
-  #com.example.myapp2.ios:
+  #com.example.myapp.ios:
   #  type: apns
   #
   #  # Authentication
@@ -233,7 +233,7 @@ apps:
   #  #   * production
   #  #   * sandbox
   #  #
-  #  # The default is 'production'.
+  #  # The default is 'production'. Uncomment to use the sandbox instance.
   #  #platform: sandbox
 
   # This is an example GCM/FCM push configuration.
