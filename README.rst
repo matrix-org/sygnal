@@ -123,3 +123,14 @@ More documentation for Sygnal is available in the ``docs`` directory:
 
 * `Notes for Application Developers <docs/applications.md>`_
 * `Troubleshooting <docs/troubleshooting.md>`_
+
+Considerations
+=================
+
+For some reason the server doesn't work with postgresql. Currently is working with SQLite.
+
+The best way to execute the server is:
+
+* `docker build -f docker/Dockerfile .`
+
+* `docker run --detach -v /home/jartiga/sygnal/sygnal.yaml:/sygnal.yaml -p 5000:5000 078efc0c47a0`

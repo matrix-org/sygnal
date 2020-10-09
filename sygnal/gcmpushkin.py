@@ -486,7 +486,6 @@ class CanonicalRegIdStore(object):
         """
         self.db = db
         self.engine = engine
-
         await self.db.runOperation(self.TABLE_CREATE_QUERY)
 
     async def set_canonical_id(self, reg_id, canonical_reg_id):

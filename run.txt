@@ -1,0 +1,2 @@
+docker run --detach -v /home/jartiga/sygnal/sygnal.yaml:/sygnal.yaml -p 5000:5000 937bc4c1d7f8
+
