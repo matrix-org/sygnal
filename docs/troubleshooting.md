@@ -126,7 +126,20 @@ Instead of configuring Sygnal with your APNs secrets, you need to configure
 Firebase with your APNs secrets, and Sygnal with your Firebase secrets.
 
 
-#### Common cause 3: Using sandbox tokens with the production APNs server
+### App doesn't receive notifications when inactive
+
+If you want your application to be woken up to be able to process APNs messages
+received when your application is in the background, you need to set the
+`content-available` flag in your pusher's default payload — see
+[the notes for iOS applications](applications.md#ios-applications-beware).
+
+
+### '400 BadDeviceToken' error
+
+If you have a bad device token and your token was not a fictitious invention,
+the most likely cause is that you have used a token from the wrong 'environment',
+such as a development token when Sygnal is configured to use the production
+environment.
 
 Sygnal connects to the production APNs instance by default. This will return
 `400 BadDeviceToken` if you send it a token intended for the sandbox APNs
@@ -141,14 +154,7 @@ com.example.myapp.ios:
   platform: sandbox
 ```
 
-in your sygnal config file.
-
-### App doesn't receive notifications when inactive
-
-If you want your application to be woken up to be able to process APNs messages
-received when your application is in the background, you need to set the
-`content-available` flag in your pusher's default payload — see
-[the notes for iOS applications](applications.md#ios-applications-beware).
+in your Sygnal config file.
 
 
 # Appendices
