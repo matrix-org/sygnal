@@ -136,8 +136,8 @@ received when your application is in the background, you need to set the
 
 ### '400 BadDeviceToken' error
 
-If you have a bad device token and your token was not a fictitious invention,
-the most likely cause is that you have used a token from the wrong 'environment',
+If you get a bad device token error and you have doubled-checked the
+token is correct, it is possible that you have used a token from the wrong 'environment',
 such as a development token when Sygnal is configured to use the production
 environment.
 
