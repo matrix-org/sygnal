@@ -97,6 +97,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "type",
         "api_key",
         "fcm_options",
+        "max_connections",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config, canonical_reg_id_store):
