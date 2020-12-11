@@ -1,1 +1,1 @@
-Fix erroneous warning log line when setting the 'max_connections' option in a GCM app config.
+Fix erroneous warning log line when setting the `max_connections` option in a GCM app config.
