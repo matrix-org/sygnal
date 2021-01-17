@@ -14,6 +14,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import logging
+import sys
 import typing
 from typing import Any, Dict, List, Optional
 
@@ -24,6 +27,7 @@ from .exceptions import InvalidNotificationException, NotificationDispatchExcept
 if typing.TYPE_CHECKING:
     from .sygnal import Sygnal
 
+logger = logging.getLogger(__name__)
 
 class Tweaks:
     def __init__(self, raw):
@@ -157,6 +161,10 @@ class ConcurrencyLimitedPushkin(Pushkin):
             "inflight_request_limit",
             ConcurrencyLimitedPushkin.DEFAULT_CONCURRENCY_LIMIT,
         )
+        self._crash_on_limit = config.get(
+            "crash_on_limit",
+            False,
+        )
         self._concurrent_now = 0
 
     async def dispatch_notification(
@@ -166,10 +174,14 @@ class ConcurrencyLimitedPushkin(Pushkin):
             ConcurrencyLimitedPushkin.RATELIMITING_DROPPED_REQUESTS.labels(
                 pushkin=self.name
             ).inc()
-            raise NotificationDispatchException(
-                "Too many in-flight requests for this pushkin. "
-                "(Something is wrong and Sygnal is struggling to keep up!)"
-            )
+            if self._crash_on_limit:
+                logger.critical("Crashing process due to too many in-flight requests")
+                os.exit(1)
+            else:
+                raise NotificationDispatchException(
+                    "Too many in-flight requests for this pushkin. "
+                    "(Something is wrong and Sygnal is struggling to keep up!)"
+                )
 
         self._concurrent_now += 1
         try:

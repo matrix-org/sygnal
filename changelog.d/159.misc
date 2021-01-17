@@ -1,0 +1,1 @@
+Add new config 'crash_on_limit', which can restart the python process if the rate limit is exceeded.y
