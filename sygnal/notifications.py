@@ -162,8 +162,8 @@ class ConcurrencyLimitedPushkin(Pushkin):
         # Grab an instance of the dropped request counter given our pushkin name.
         # Note this ensures the counter appears in metrics even if it hasn't yet
         # been incremented.
-        self.dropped_requests_counter = ConcurrencyLimitedPushkin.RATELIMITING_DROPPED_REQUESTS.labels(
-            pushkin=name
+        self.dropped_requests_counter = (
+            ConcurrencyLimitedPushkin.RATELIMITING_DROPPED_REQUESTS.labels(pushkin=name)
         )
 
     async def dispatch_notification(
