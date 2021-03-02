@@ -159,13 +159,18 @@ class ConcurrencyLimitedPushkin(Pushkin):
         )
         self._concurrent_now = 0
 
+        # Grab an instance of the dropped request counter given our pushkin name.
+        # Note this ensures the counter appears in metrics even if it hasn't yet
+        # been incremented.
+        self.dropped_requests_counter = ConcurrencyLimitedPushkin.RATELIMITING_DROPPED_REQUESTS.labels(
+            pushkin=name
+        )
+
     async def dispatch_notification(
         self, n: Notification, device: Device, context: "NotificationContext"
     ) -> List[str]:
         if self._concurrent_now >= self._concurrent_limit:
-            ConcurrencyLimitedPushkin.RATELIMITING_DROPPED_REQUESTS.labels(
-                pushkin=self.name
-            ).inc()
+            self.dropped_requests_counter.inc()
             raise NotificationDispatchException(
                 "Too many in-flight requests for this pushkin. "
                 "(Something is wrong and Sygnal is struggling to keep up!)"
