@@ -97,7 +97,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
         endpoint = device.data["endpoint"]
-        session_id = device.data["session_id"]
         auth = device.data["auth"]
         subscription_info = {
             'endpoint': endpoint,
@@ -106,19 +105,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 'auth': auth
             }
         }
-        payload = {
-            'room_name': n.room_name,
-            'room_alias': n.room_alias,
-            'prio': n.prio,
-            'membership': n.membership,
-            'sender_display_name': n.sender_display_name,
-            'event_id': n.event_id,
-            'room_id': n.room_id,
-            'user_is_target': n.user_is_target,
-            'type': n.type,
-            'sender': n.sender,
-            'session_id': session_id,
-        }
+        payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
         try:
             response_wrapper = webpush(
@@ -130,13 +117,63 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             )
             response = await response_wrapper.deferred
             response_text = (await readBody(response)).decode()
-            logger.info("webpush provider responded with status: %d, body: %s", response.code, response_text)
+
         except Exception as exception:
             raise TemporaryNotificationDispatchException(
                 "webpush request failure"
             ) from exception
 
-        return []
+        failed_pushkeys = []
+        # assume 4xx is permanent and 5xx is temporary
+        if 400 <= response.code < 500:
+            failed_pushkeys.append(device.pushkey)
+        return failed_pushkeys
+
+    @staticmethod
+    def _build_payload(n, device):
+        """
+        Build the payload data to be sent.
+        Args:
+            n: Notification to build the payload for.
+            device (Device): Device information to which the constructed payload
+            will be sent.
+
+        Returns:
+            JSON-compatible dict
+        """
+        payload = {}
+
+        if device.data:
+            payload.update(device.data.get("default_payload", {}))
+
+        # if type is m.room.message, add content.msgtype and content.body
+        if getattr(n, "type", None) == "m.room.message" and getattr(n, "content", None):
+            content = n.content
+            for attr in ["msgtype", "body"]:
+                if getattr(content, attr, None):
+                    payload[attr] = getattr(content, attr)
+
+        for attr in [
+            "room_id",
+            "room_name",
+            "room_alias",
+            "membership",
+            "sender",
+            "sender_display_name",
+            "event_id",
+            "user_is_target",
+            "type",
+        ]:
+            if getattr(n, attr, None):
+                payload[attr] = getattr(n, attr)
+
+        if getattr(n, "counts", None):
+            counts = n.counts
+            for attr in ["unread", "missed_calls"]:
+                if getattr(counts, attr, None):
+                    payload[attr] = getattr(counts, attr)
+
+        return payload
 
 class HttpAgentWrapper:
     def __init__(self, http_agent):
