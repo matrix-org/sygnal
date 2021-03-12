@@ -95,6 +95,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         self.vapid_claims = {"sub": "mailto:{}".format(vapid_contact_email)}
 
     async def _dispatch_notification_unlimited(self, n, device, context):
+        p256dh = device.pushkey
+        endpoint = device.data["endpoint"]
+        session_id = device.data["session_id"]
+        auth = device.data["auth"]
+        subscription_info = {
+            'endpoint': endpoint,
+            'keys': {
+                'p256dh': p256dh,
+                'auth': auth
+            }
+        }
         payload = {
             'room_name': n.room_name,
             'room_alias': n.room_alias,
@@ -106,18 +117,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             'user_is_target': n.user_is_target,
             'type': n.type,
             'sender': n.sender,
+            'session_id': session_id,
         }
         data = json.dumps(payload)
-        p256dh = device.pushkey
-        endpoint = device.data["endpoint"]
-        auth = device.data["auth"]
-        subscription_info = {
-            'endpoint': endpoint,
-            'keys': {
-                'p256dh': p256dh,
-                'auth': auth
-            }
-        }
         try:
             response_wrapper = webpush(
                 subscription_info=subscription_info,
