@@ -91,9 +91,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         privkey_filename = self.get_config("vapid_private_key")
         self.vapid_private_key = Vapid.from_file(private_key_file=self.get_config("vapid_private_key"))
-        self.vapid_contact_email = self.get_config("vapid_contact_email")
-
-        logger.info("webpush pushkin created")
+        vapid_contact_email = self.get_config("vapid_contact_email")
+        self.vapid_claims = {"sub": "mailto:{}".format(vapid_contact_email)}
 
     async def _dispatch_notification_unlimited(self, n, device, context):
         payload = {
@@ -124,7 +123,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 subscription_info=subscription_info,
                 data=data,
                 vapid_private_key=self.vapid_private_key,
-                vapid_claims={"sub": "mailto:{}".format(self.vapid_contact_email)},
+                vapid_claims=self.vapid_claims,
                 requests_session=self.http_agent_wrapper
             )
             response = await response_wrapper.deferred
