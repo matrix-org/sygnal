@@ -62,8 +62,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
     def __init__(self, name, sygnal, config):
         super(WebpushPushkin, self).__init__(name, sygnal, config)
 
-        nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
-        if len(nonunderstood) > 0:
+        nonunderstood = self.cfg.keys() - self.UNDERSTOOD_CONFIG_FIELDS
+        if nonunderstood:
             logger.warning(
                 "The following configuration fields are not understood: %s",
                 nonunderstood,
