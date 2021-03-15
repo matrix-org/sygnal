@@ -16,6 +16,7 @@ import json
 import logging
 import os.path
 from io import BytesIO
+
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid
 from pywebpush import webpush
