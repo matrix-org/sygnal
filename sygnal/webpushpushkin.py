@@ -164,7 +164,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         if getattr(n, "counts", None):
             counts = n.counts
             for attr in ["unread", "missed_calls"]:
-                if getattr(counts, attr, None):
+                if getattr(counts, attr, None) != None:
                     payload[attr] = getattr(counts, attr)
 
         return payload
