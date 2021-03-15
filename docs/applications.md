@@ -207,10 +207,10 @@ with `event_id_only` format.
 
 #### Setup & configuration
 
-In the sygnal virtualenv, generate the server key pair by running `vapid --gen --applicationServerKey`. This will generate a `private_key.pem` (which you'll refer to in the config file with `vapid_private_key`) and `public_key.pem` file (which you should likely rename to a name that includes your application id), and a string labeled `Application Server Key`. You'll copy the Application Server Key to your web application to subscribe to the push manager:
+In the sygnal virtualenv, generate the server key pair by running `vapid --gen --applicationServerKey`. This will generate a `private_key.pem` (which you'll refer to in the config file with `vapid_private_key`) and `public_key.pem` file, and also string labeled `Application Server Key`. You'll copy the Application Server Key to your web application to subscribe to the push manager:
 
 ```js
-pushManager.subscribe({
+serviceWorkerRegistration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: "...",
 });
@@ -220,7 +220,7 @@ You also need to set an e-mail address in `vapid_contact_email` in the config fi
 
 #### Push key and expected push data
 
-In your web application, the push manager subscribe method will return an object with an `endpoint` and `keys` property, the latter containing a `p256dh` and `auth` property. The `p256dh` key is used as the push key, and the push data is expected `endpoint` and `auth`. You can also set `default_payload` in the push data; any properties set in it will be present in the push messages you receive, so it can be used to pass identifiers specific to your client (like which account the notification is for).
+In your web application, [the push manager subscribe method](https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe) will return [a subscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription) with an `endpoint` and `keys` property, the latter containing a `p256dh` and `auth` property. The `p256dh` key is used as the push key, and the push data is expected `endpoint` and `auth`. You can also set `default_payload` in the push data; any properties set in it will be present in the push messages you receive, so it can be used to pass identifiers specific to your client (like which account the notification is for).
 
 Also note that because you can only have one push subscription per service worker, and hence per origin, you might create pushers for different accounts with the same p256dh push key. To prevent the server from removing other pushers with the same push key for your other users, you should set `append` to `true` when uploading your pusher.
 
