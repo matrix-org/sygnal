@@ -14,15 +14,11 @@
 # limitations under the License.
 import json
 import logging
-import time
-import os.path;
+import os.path
 from io import BytesIO
-from json import JSONDecodeError
-from pywebpush import webpush, WebPushException
+from pywebpush import webpush
 from py_vapid import Vapid
-from opentracing import logs, tags
-from prometheus_client import Counter, Gauge, Histogram
-from twisted.enterprise.adbapi import ConnectionPool
+from prometheus_client import Gauge, Histogram
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
@@ -34,24 +30,29 @@ from .exceptions import PushkinSetupException
 from .notifications import ConcurrencyLimitedPushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(
-    "sygnal_webpush_queue_time", "Time taken waiting for a connection to webpush endpoint"
+    "sygnal_webpush_queue_time",
+    "Time taken waiting for a connection to webpush endpoint"
 )
 
 SEND_TIME_HISTOGRAM = Histogram(
-    "sygnal_webpush_request_time", "Time taken to send HTTP request to webpush endpoint"
+    "sygnal_webpush_request_time",
+    "Time taken to send HTTP request to webpush endpoint"
 )
 
 PENDING_REQUESTS_GAUGE = Gauge(
-    "sygnal_pending_webpush_requests", "Number of webpush requests waiting for a connection"
+    "sygnal_pending_webpush_requests",
+    "Number of webpush requests waiting for a connection"
 )
 
 ACTIVE_REQUESTS_GAUGE = Gauge(
-    "sygnal_active_webpush_requests", "Number of webpush requests in flight"
+    "sygnal_active_webpush_requests",
+    "Number of webpush requests in flight"
 )
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_CONNECTIONS = 20
+
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
     """
@@ -183,10 +184,11 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         if getattr(n, "counts", None):
             counts = n.counts
             for attr in ["unread", "missed_calls"]:
-                if getattr(counts, attr, None) != None:
+                if getattr(counts, attr, None) is not None:
                     payload[attr] = getattr(counts, attr)
 
         return payload
+
 
 class HttpAgentWrapper:
     def __init__(self, http_agent):
@@ -209,9 +211,9 @@ class HttpAgentWrapper:
         )
         return HttpResponseWrapper(deferred)
 
+
 class HttpResponseWrapper:
     def __init__(self, deferred):
         self.deferred = deferred
         self.status_code = 0
         self.text = None
-
