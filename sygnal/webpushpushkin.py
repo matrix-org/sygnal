@@ -146,23 +146,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         if device.data:
             payload.update(device.data.get("default_payload", {}))
 
-        # if type is m.room.message, add content.msgtype and content.body
-        if getattr(n, "type", None) == "m.room.message" and getattr(n, "content", None):
-            content = n.content
-            for attr in ["msgtype", "body"]:
-                if getattr(content, attr, None):
-                    payload[attr] = getattr(content, attr)
-
         for attr in [
             "room_id",
             "room_name",
             "room_alias",
             "membership",
+            "event_id",
             "sender",
             "sender_display_name",
-            "event_id",
             "user_is_target",
             "type",
+            "content"
         ]:
             if getattr(n, attr, None):
                 payload[attr] = getattr(n, attr)
