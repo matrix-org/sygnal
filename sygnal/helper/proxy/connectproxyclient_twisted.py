@@ -24,7 +24,7 @@ from twisted.internet import defer, protocol
 from twisted.internet.base import ReactorBase
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocolFactory, IStreamClientEndpoint
-from twisted.internet.protocol import connectionDone, Protocol
+from twisted.internet.protocol import Protocol, connectionDone
 from twisted.web import http
 from zope.interface import implementer
 
