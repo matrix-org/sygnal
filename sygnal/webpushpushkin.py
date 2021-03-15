@@ -31,22 +31,20 @@ from .notifications import ConcurrencyLimitedPushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_webpush_queue_time",
-    "Time taken waiting for a connection to webpush endpoint"
+    "Time taken waiting for a connection to webpush endpoint",
 )
 
 SEND_TIME_HISTOGRAM = Histogram(
-    "sygnal_webpush_request_time",
-    "Time taken to send HTTP request to webpush endpoint"
+    "sygnal_webpush_request_time", "Time taken to send HTTP request to webpush endpoint"
 )
 
 PENDING_REQUESTS_GAUGE = Gauge(
     "sygnal_pending_webpush_requests",
-    "Number of webpush requests waiting for a connection"
+    "Number of webpush requests waiting for a connection",
 )
 
 ACTIVE_REQUESTS_GAUGE = Gauge(
-    "sygnal_active_webpush_requests",
-    "Number of webpush requests in flight"
+    "sygnal_active_webpush_requests", "Number of webpush requests in flight"
 )
 
 logger = logging.getLogger(__name__)
@@ -112,11 +110,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         endpoint = device.data["endpoint"]
         auth = device.data["auth"]
         subscription_info = {
-            'endpoint': endpoint,
-            'keys': {
-                'p256dh': p256dh,
-                'auth': auth
-            }
+            "endpoint": endpoint,
+            "keys": {"p256dh": p256dh, "auth": auth},
         }
         payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
@@ -136,7 +131,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         data=data,
                         vapid_private_key=self.vapid_private_key,
                         vapid_claims=self.vapid_claims,
-                        requests_session=self.http_agent_wrapper
+                        requests_session=self.http_agent_wrapper,
                     )
                     response = await response_wrapper.deferred
                     await readBody(response)
@@ -176,7 +171,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             "sender_display_name",
             "user_is_target",
             "type",
-            "content"
+            "content",
         ]:
             if getattr(n, attr, None):
                 payload[attr] = getattr(n, attr)
