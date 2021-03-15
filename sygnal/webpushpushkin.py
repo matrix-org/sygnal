@@ -27,16 +27,27 @@ from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 
-from sygnal.exceptions import (
-    NotificationDispatchException,
-    TemporaryNotificationDispatchException,
-)
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 from .exceptions import PushkinSetupException
 from .notifications import ConcurrencyLimitedPushkin
+
+QUEUE_TIME_HISTOGRAM = Histogram(
+    "sygnal_webpush_queue_time", "Time taken waiting for a connection to webpush endpoint"
+)
+
+SEND_TIME_HISTOGRAM = Histogram(
+    "sygnal_webpush_request_time", "Time taken to send HTTP request to webpush endpoint"
+)
+
+PENDING_REQUESTS_GAUGE = Gauge(
+    "sygnal_pending_webpush_requests", "Number of webpush requests waiting for a connection"
+)
+
+ACTIVE_REQUESTS_GAUGE = Gauge(
+    "sygnal_active_webpush_requests", "Number of webpush requests in flight"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -108,21 +119,28 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         }
         payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
-        try:
-            response_wrapper = webpush(
-                subscription_info=subscription_info,
-                data=data,
-                vapid_private_key=self.vapid_private_key,
-                vapid_claims=self.vapid_claims,
-                requests_session=self.http_agent_wrapper
-            )
-            response = await response_wrapper.deferred
-            response_text = (await readBody(response)).decode()
 
-        except Exception as exception:
-            raise TemporaryNotificationDispatchException(
-                "webpush request failure"
-            ) from exception
+        # we use the semaphore to actually limit the number of concurrent
+        # requests, since the HTTPConnectionPool will actually just lead to more
+        # requests being created but not pooled – it does not perform limiting.
+        with QUEUE_TIME_HISTOGRAM.time():
+            with PENDING_REQUESTS_GAUGE.track_inprogress():
+                await self.connection_semaphore.acquire()
+
+        try:
+            with SEND_TIME_HISTOGRAM.time():
+                with ACTIVE_REQUESTS_GAUGE.track_inprogress():
+                    response_wrapper = webpush(
+                        subscription_info=subscription_info,
+                        data=data,
+                        vapid_private_key=self.vapid_private_key,
+                        vapid_claims=self.vapid_claims,
+                        requests_session=self.http_agent_wrapper
+                    )
+                    response = await response_wrapper.deferred
+                    await readBody(response)
+        finally:
+            self.connection_semaphore.release()
 
         failed_pushkeys = []
         # assume 4xx is permanent and 5xx is temporary
