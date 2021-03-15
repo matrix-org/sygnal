@@ -24,7 +24,7 @@ import psycopg2
 from twisted.internet._resolver import SimpleResolverComplexifier
 from twisted.internet.defer import ensureDeferred, fail, succeed
 from twisted.internet.error import DNSLookupError
-from twisted.internet.interfaces import IResolverSimple
+from twisted.internet.interfaces import IReactorPluggableNameResolver, IResolverSimple
 from twisted.internet.testing import MemoryReactorClock
 from twisted.trial import unittest
 from twisted.web.http_headers import Headers
@@ -267,6 +267,7 @@ class TestCase(unittest.TestCase):
         return [channel_result(channel) for channel in channels]
 
 
+@implementer(IReactorPluggableNameResolver)
 class ExtendedMemoryReactorClock(MemoryReactorClock):
     def __init__(self):
         super().__init__()
@@ -283,6 +284,10 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
                 return succeed(self.lookups[name])
 
         self.nameResolver = SimpleResolverComplexifier(FakeResolver())
+
+    def installNameResolver(self, resolver):
+        # It is not expected that this gets called.
+        raise RuntimeError(resolver)
 
     def callFromThread(self, function, *args):
         self.callLater(0, function, *args)
