@@ -24,7 +24,7 @@ import psycopg2
 from twisted.internet._resolver import SimpleResolverComplexifier
 from twisted.internet.defer import ensureDeferred, fail, succeed
 from twisted.internet.error import DNSLookupError
-from twisted.internet.interfaces import IReactorPluggableNameResolver, IResolverSimple
+from twisted.internet.interfaces import IResolverSimple
 from twisted.internet.testing import MemoryReactorClock
 from twisted.trial import unittest
 from twisted.web.http_headers import Headers
@@ -267,7 +267,6 @@ class TestCase(unittest.TestCase):
         return [channel_result(channel) for channel in channels]
 
 
-@implementer(IReactorPluggableNameResolver)
 class ExtendedMemoryReactorClock(MemoryReactorClock):
     def __init__(self):
         super().__init__()
