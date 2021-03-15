@@ -16,9 +16,9 @@ import json
 import logging
 import os.path
 from io import BytesIO
-from pywebpush import webpush
-from py_vapid import Vapid
 from prometheus_client import Gauge, Histogram
+from py_vapid import Vapid
+from pywebpush import webpush
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
