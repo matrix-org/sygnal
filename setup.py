@@ -52,7 +52,7 @@ setup(
         # a minor change was needed to make this library work with async io, which has been proposed
         # to merge upstream at https://github.com/web-push-libs/pywebpush/pull/133
         # for now, we point to the fork
-        "pywebpush@git+https://github.com/matrix-org/pywebpush#b723ef616eaf7cd79e592a9627d601b202017572"
+        "pywebpush@git+https://github.com/matrix-org/pywebpush#f663c4633350600c4e70dd7c8c209cc1edaa6589"
         "py-vapid>=1.7.0"
     ],
     long_description=read("README.rst"),
