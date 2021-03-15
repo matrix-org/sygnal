@@ -49,10 +49,12 @@ setup(
         "idna>=2.8",
         "psycopg2>=2.8.4",
         "importlib_metadata",
-        # a minor change was needed to make this library work with async io, which has been proposed
-        # to merge upstream at https://github.com/web-push-libs/pywebpush/pull/133
+        # a minor change was needed to make this library work with async io,
+        # which has been proposed to merge upstream at 
+        # https://github.com/web-push-libs/pywebpush/pull/133
         # for now, we point to the fork
-        "pywebpush@git+https://github.com/matrix-org/pywebpush#f663c4633350600c4e70dd7c8c209cc1edaa6589"
+        "pywebpush@git+https://github.com/matrix-org/pywebpush" +
+            "#f663c4633350600c4e70dd7c8c209cc1edaa6589",
         "py-vapid>=1.7.0"
     ],
     long_description=read("README.rst"),
