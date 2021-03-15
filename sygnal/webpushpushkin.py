@@ -15,9 +15,9 @@
 import json
 import logging
 import time
+import os.path;
 from io import BytesIO
 from json import JSONDecodeError
-
 from pywebpush import webpush, WebPushException
 from py_vapid import Vapid
 from opentracing import logs, tags
@@ -40,12 +40,7 @@ from .notifications import ConcurrencyLimitedPushkin
 
 logger = logging.getLogger(__name__)
 
-MAX_TRIES = 3
-RETRY_DELAY_BASE = 10
-MAX_BYTES_PER_FIELD = 1024
-
 DEFAULT_MAX_CONNECTIONS = 20
-
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
     """
@@ -90,8 +85,14 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         self.http_agent_wrapper = HttpAgentWrapper(self.http_agent)
 
         privkey_filename = self.get_config("vapid_private_key")
-        self.vapid_private_key = Vapid.from_file(private_key_file=self.get_config("vapid_private_key"))
+        if not privkey_filename:
+            raise PushkinSetupException("'vapid_private_key' not set in config")
+        if not os.path.exists(privkey_filename):
+            raise PushkinSetupException("path in 'vapid_private_key' does not exist")
+        self.vapid_private_key = Vapid.from_file(private_key_file=privkey_filename)
         vapid_contact_email = self.get_config("vapid_contact_email")
+        if not vapid_contact_email:
+            raise PushkinSetupException("'vapid_contact_email' not set in config")
         self.vapid_claims = {"sub": "mailto:{}".format(vapid_contact_email)}
 
     async def _dispatch_notification_unlimited(self, n, device, context):
