@@ -285,6 +285,10 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
 
         self.nameResolver = SimpleResolverComplexifier(FakeResolver())
 
+    def installNameResolver(self, resolver):
+        # It is not expected that this gets called.
+        raise RuntimeError(resolver)
+
     def callFromThread(self, function, *args):
         self.callLater(0, function, *args)
 
