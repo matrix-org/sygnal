@@ -156,8 +156,10 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             an instance of this Pushkin
         """
         logger.debug("About to set up CanonicalRegId Store")
-        canonical_reg_id_store = CanonicalRegIdStore()
-        await canonical_reg_id_store.setup(sygnal.database, sygnal.database_engine)
+        canonical_reg_id_store = CanonicalRegIdStore(
+            sygnal.database, sygnal.database_engine
+        )
+        await canonical_reg_id_store.setup()
         logger.debug("Finished setting up CanonicalRegId Store")
 
         return cls(name, sygnal, config, canonical_reg_id_store)
@@ -468,26 +470,23 @@ class CanonicalRegIdStore(object):
         );
         """
 
-    def __init__(self):
-        self.db: ConnectionPool = None
-        self.engine = None
+    def __init__(self, db: ConnectionPool, engine: str):
+        """
+        Args:
+            db (adbapi.ConnectionPool): database to prepare
+            engine (str):
+                Database engine to use. Shoud be either "sqlite" or "postgresql".
+        """
+        self.db = db
+        self.engine = engine
 
-    async def setup(self, db, engine):
+    async def setup(self):
         """
         Prepares, if necessary, the database for storing canonical registration IDs.
 
         Separate method from the constructor because we wait for an async request
         to complete, so it must be an `async def` method.
-
-        Args:
-            db (adbapi.ConnectionPool): database to prepare
-            engine (str):
-                Database engine to use. Shoud be either "sqlite" or "postgresql".
-
         """
-        self.db = db
-        self.engine = engine
-
         await self.db.runOperation(self.TABLE_CREATE_QUERY)
 
     async def set_canonical_id(self, reg_id, canonical_reg_id):

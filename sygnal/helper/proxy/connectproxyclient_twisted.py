@@ -23,8 +23,8 @@ from typing import Optional, Tuple
 from twisted.internet import defer, protocol
 from twisted.internet.base import ReactorBase
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IProtocol, IStreamClientEndpoint
-from twisted.internet.protocol import connectionDone
+from twisted.internet.interfaces import IProtocolFactory, IStreamClientEndpoint
+from twisted.internet.protocol import Protocol, connectionDone
 from twisted.web import http
 from zope.interface import implementer
 
@@ -71,7 +71,8 @@ class HTTPConnectProxyEndpoint(object):
     def __repr__(self):
         return "<HTTPConnectProxyEndpoint %s>" % (self._proxy_endpoint,)
 
-    def connect(self, protocolFactory: protocol.ClientFactory):
+    def connect(self, protocolFactory: IProtocolFactory):
+        assert isinstance(protocolFactory, protocol.ClientFactory)
         f = HTTPProxiedClientFactory(
             self._host, self._port, self._proxy_auth, protocolFactory
         )
@@ -90,11 +91,11 @@ class HTTPProxiedClientFactory(protocol.ClientFactory):
      connection.
 
     Args:
-        dst_host (bytes): hostname that we want to CONNECT to
-        dst_port (int): port that we want to connect to
-        proxy_auth (tuple): None or tuple of (username, pasword) for HTTP basic proxy
+        dst_host: hostname that we want to CONNECT to
+        dst_port: port that we want to connect to
+        proxy_auth: None or tuple of (username, pasword) for HTTP basic proxy
             authentication
-        wrapped_factory (protocol.ClientFactory): The original Factory
+        wrapped_factory: The original Factory
     """
 
     def __init__(
@@ -141,18 +142,18 @@ class HTTPConnectProtocol(protocol.Protocol):
     """Protocol that wraps an existing Protocol to do a CONNECT handshake at connect
 
     Args:
-        host (bytes): The original HTTP(s) hostname or IPv4 or IPv6 address literal
+        host: The original HTTP(s) hostname or IPv4 or IPv6 address literal
             to put in the CONNECT request
 
-        port (int): The original HTTP(s) port to put in the CONNECT request
+        port: The original HTTP(s) port to put in the CONNECT request
 
-        proxy_auth (tuple): None or tuple of (username, pasword) for HTTP basic proxy
+        proxy_auth: None or tuple of (username, pasword) for HTTP basic proxy
             authentication
 
-        wrapped_protocol (interfaces.IProtocol): the original protocol (probably
+        wrapped_protocol: the original protocol (probably
             HTTPChannel or TLSMemoryBIOProtocol, but could be anything really)
 
-        connected_deferred (Deferred): a Deferred which will be callbacked with
+        connected_deferred: a Deferred which will be callbacked with
             wrapped_protocol when the CONNECT completes
     """
 
@@ -161,7 +162,7 @@ class HTTPConnectProtocol(protocol.Protocol):
         host: bytes,
         port: int,
         proxy_auth: Optional[Tuple[str, str]],
-        wrapped_protocol: IProtocol,
+        wrapped_protocol: Protocol,
         connected_deferred: Deferred,
     ):
         self.host = host
