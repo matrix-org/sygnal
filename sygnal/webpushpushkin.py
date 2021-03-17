@@ -108,8 +108,18 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
-        endpoint = device.data["endpoint"]
-        auth = device.data["auth"]
+        if not isinstance(device.data, dict):
+            logger.info("device.data is not a dict, reject pushkey")
+            return [device.pushkey]
+
+        endpoint = device.data.get("endpoint")
+        auth = device.data.get("auth")
+
+        # required subscription info is missing, this is an invalid pusher
+        if not p256dh or not endpoint or not auth:
+            logger.info("subscription info missing, reject pushkey")
+            return [device.pushkey]
+
         subscription_info = {
             "endpoint": endpoint,
             "keys": {"p256dh": p256dh, "auth": auth},
@@ -127,6 +137,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         try:
             with SEND_TIME_HISTOGRAM.time():
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
+                    logger.info("sending payload %s", data)
                     response_wrapper = webpush(
                         subscription_info=subscription_info,
                         data=data,
@@ -139,11 +150,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         finally:
             self.connection_semaphore.release()
 
-        failed_pushkeys = []
         # assume 4xx is permanent and 5xx is temporary
         if 400 <= response.code < 500:
-            failed_pushkeys.append(device.pushkey)
-        return failed_pushkeys
+            return [device.pushkey]
+        return []
 
     @staticmethod
     def _build_payload(n, device):
@@ -159,8 +169,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         """
         payload = {}
 
-        if device.data:
-            payload.update(device.data.get("default_payload", {}))
+        default_payload = device.data.get("default_payload")
+        if isinstance(default_payload, dict):
+            payload.update(default_payload)
 
         for attr in [
             "room_id",
