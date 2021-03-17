@@ -247,7 +247,7 @@ your pusher.
 #### Notification format
 
 The notification as received by your web application will contain the following keys 
-(assuming they were sent by the homeserver). These are the
+(assuming non-null values were sent by the homeserver). These are the
 same as specified in [the push gateway spec](https://matrix.org/docs/spec/push_gateway/r0.1.0#post-matrix-push-v1-notify),
 but the sub-keys of `counts` (`unread` and `missed_calls`) are flattened into
 the notification object.
