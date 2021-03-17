@@ -168,6 +168,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
     def _build_payload(n, device):
         """
         Build the payload data to be sent.
+
         Args:
             n: Notification to build the payload for.
             device (Device): Device information to which the constructed payload
@@ -208,30 +209,29 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         return payload
 
 
-"""
-Provide a post method that matches the API expected from pywebpush.
-"""
-
-
 class HttpAgentWrapper:
+    """
+    Provide a post method that matches the API expected from pywebpush.
+    """
     def __init__(self, http_agent):
         self.http_agent = http_agent
 
     def post(self, endpoint, data, headers, timeout):
         """
-        Parameters
-        ----------
-        endpoint: str
-            the full http url to post to
-        data: bytes
-            the (encrypted) binary body of the request
-        headers: py_vapid.CaseInsensitiveDict
-            a (costum) dictionary with the headers.
-            We convert these because http_agent requires the names in camel casing.
-        timeout: int
-            ignored for now
+        Convert the requests-like API to a Twisted API call.
+
+        Args:
+            endpoint (str):
+                The full http url to post to
+            data (bytes):
+                the (encrypted) binary body of the request
+            headers (py_vapid.CaseInsensitiveDict):
+                A (costume) dictionary with the headers.
+            timeout (int)
+                Ignored for now
         """
         body_producer = FileBodyProducer(BytesIO(data))
+        # Convert the headers to the camelcase version.
         headers = {
             b"User-Agent": ["sygnal"],
             b"Content-Encoding": [headers["content-encoding"]],
@@ -247,27 +247,26 @@ class HttpAgentWrapper:
         return HttpResponseWrapper(deferred)
 
 
-"""
-Provide a response object that matches the API expected from pywebpush.
-pywebpush expects a synchronous api, while we use an asynchronous network api.
-
-To keep pywebpush happy we present it with some hardcoded values that
-make its assertions pass while the async network call is happening
-in the background.
-
-Attributes
-----------
-deferred : Deferred
-    the deferred to await the actual response after calling pywebpush
-status_code : int
-    defined to be 200 so pywebpush check if it's below 202 passes
-text : str
-    set to None as pywebpush references this field for its logging
-"""
-
-
 class HttpResponseWrapper:
+    """
+    Provide a response object that matches the API expected from pywebpush.
+    pywebpush expects a synchronous API, while we use an asynchronous API.
+
+    To keep pywebpush happy we present it with some hardcoded values that
+    make its assertions pass while the async network call is happening
+    in the background.
+
+    Attributes:
+        deferred (Deferred):
+            The deferred to await the actual response after calling pywebpush.
+        status_code (int):
+            Defined to be 200 so the pywebpush check to see if is below 202
+            passes.
+        text (str):
+            Set to None as pywebpush references this field for its logging.
+    """
+    status_code = 200
+    text = None
+
     def __init__(self, deferred):
         self.deferred = deferred
-        self.status_code = 200
-        self.text = None
