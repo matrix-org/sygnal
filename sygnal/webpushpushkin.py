@@ -215,6 +215,19 @@ class HttpAgentWrapper:
         self.http_agent = http_agent
 
     def post(self, endpoint, data, headers, timeout):
+        """
+        Parameters
+        ----------
+        endpoint: str
+            the full http url to post to
+        data: bytes
+            the (encrypted) binary body of the request
+        headers: py_vapid.CaseInsensitiveDict
+            a (costum) dictionary with the headers.
+            We convert these because http_agent requires the names in camel casing.
+        timeout: int
+            ignored for now
+        """
         body_producer = FileBodyProducer(BytesIO(data))
         headers = {
             b"User-Agent": ["sygnal"],
