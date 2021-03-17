@@ -32,20 +32,20 @@ from .notifications import ConcurrencyLimitedPushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_webpush_queue_time",
-    "Time taken waiting for a connection to webpush endpoint",
+    "Time taken waiting for a connection to WebPush endpoint",
 )
 
 SEND_TIME_HISTOGRAM = Histogram(
-    "sygnal_webpush_request_time", "Time taken to send HTTP request to webpush endpoint"
+    "sygnal_webpush_request_time", "Time taken to send HTTP request to WebPush endpoint"
 )
 
 PENDING_REQUESTS_GAUGE = Gauge(
     "sygnal_pending_webpush_requests",
-    "Number of webpush requests waiting for a connection",
+    "Number of WebPush requests waiting for a connection",
 )
 
 ACTIVE_REQUESTS_GAUGE = Gauge(
-    "sygnal_active_webpush_requests", "Number of webpush requests in flight"
+    "sygnal_active_webpush_requests", "Number of WebPush requests in flight"
 )
 
 logger = logging.getLogger(__name__)

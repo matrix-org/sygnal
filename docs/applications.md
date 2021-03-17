@@ -203,7 +203,7 @@ within FCM's limit.
 Please also note that some fields will be unavailable if you registered a pusher
 with `event_id_only` format.
 
-### Web Push
+### WebPush
 
 #### Setup & configuration
 
@@ -228,8 +228,8 @@ about your usage of their API.
 
 #### Push key and expected push data
 
-In your web application, [the push manager subscribe method]
-(https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe) will return
+In your web application, [the push manager subscribe method](https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe)
+will return
 [a subscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription) 
 with an `endpoint` and `keys` property, the latter containing a `p256dh` and `auth` 
 property. The `p256dh` key is used as the push key, and the push data is expected 
@@ -246,11 +246,11 @@ your pusher.
 
 #### Notification format
 
-The notification as received by your web application will contain these keys 
-if they were set by the homeserver, and otherwise omit them. These are the
-same as specified in [the push gateway spec]
-(https://matrix.org/docs/spec/push_gateway/r0.1.0#post-matrix-push-v1-notify),
-but `counts` with `unread` and `missed_calls` is flattened into the notification object.
+The notification as received by your web application will contain the following keys 
+(assuming they were sent by the homeserver). These are the
+same as specified in [the push gateway spec](https://matrix.org/docs/spec/push_gateway/r0.1.0#post-matrix-push-v1-notify),
+but the sub-keys of `counts` (`unread` and `missed_calls`) are flattened into
+the notification object.
 
 ```
 room_id
