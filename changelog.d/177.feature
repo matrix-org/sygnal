@@ -1,1 +1,1 @@
-Add webpush support
+Add experimental support for WebPush pushkins.
