@@ -250,7 +250,7 @@ The notification as received by your web application will contain these keys
 if they were set by the homeserver, and otherwise omit them. These are the
 same as specified in [the push gateway spec]
 (https://matrix.org/docs/spec/push_gateway/r0.1.0#post-matrix-push-v1-notify),
-but `count` with `unread` and `missed_calls` is flattened into the notification object.
+but `counts` with `unread` and `missed_calls` is flattened into the notification object.
 
 ```
 room_id
