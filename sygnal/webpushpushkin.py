@@ -184,8 +184,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             "type",
             "content",
         ]:
-            if getattr(n, attr, None):
-                payload[attr] = getattr(n, attr)
+            value = getattr(n, attr, None)
+            if value:
+                payload[attr] = value
 
         counts = getattr(n, "count", None)
         if count is not None:
