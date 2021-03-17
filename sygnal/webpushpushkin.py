@@ -112,14 +112,22 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
         if not isinstance(device.data, dict):
-            logger.info("device.data is not a dict, reject pushkey")
+            logger.warn(
+                "device.data is not a dict for pushkey %s, rejecting pushkey", p256dh
+            )
             return [device.pushkey]
 
         endpoint = device.data.get("endpoint")
         auth = device.data.get("auth")
 
         if not p256dh or not endpoint or not auth:
-            logger.info("subscription info missing, reject pushkey")
+            logger.warn(
+                "subscription info incomplete "
+                + "(p256dh: %s, endpoint: %s, auth: %s), rejecting pushkey",
+                p256dh,
+                endpoint,
+                auth,
+            )
             return [device.pushkey]
 
         subscription_info = {
@@ -139,7 +147,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         try:
             with SEND_TIME_HISTOGRAM.time():
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
-                    logger.info("sending payload %s", data)
                     response_wrapper = webpush(
                         subscription_info=subscription_info,
                         data=data,
