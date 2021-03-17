@@ -100,7 +100,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             raise PushkinSetupException("'vapid_private_key' not set in config")
         if not os.path.exists(privkey_filename):
             raise PushkinSetupException("path in 'vapid_private_key' does not exist")
-        self.vapid_private_key = Vapid.from_file(private_key_file=privkey_filename)
+        try:
+            self.vapid_private_key = Vapid.from_file(private_key_file=privkey_filename)
+        except BaseException as e:
+            raise PushkinSetupException("invalid 'vapid_private_key' file") from e
         vapid_contact_email = self.get_config("vapid_contact_email")
         if not vapid_contact_email:
             raise PushkinSetupException("'vapid_contact_email' not set in config")
