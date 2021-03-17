@@ -115,7 +115,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         endpoint = device.data.get("endpoint")
         auth = device.data.get("auth")
 
-        # required subscription info is missing, this is an invalid pusher
         if not p256dh or not endpoint or not auth:
             logger.info("subscription info missing, reject pushkey")
             return [device.pushkey]
