@@ -244,12 +244,12 @@ Attributes
 deferred : Deferred
     the deferred to await the actual response after calling pywebpush 
 status_code : int
-    defined to be 0 so pywebpush check if it's below 202 passes
+    defined to be 200 so pywebpush check if it's below 202 passes
 test : str
     set to None as pywebpush references this field for its logging
 """
 class HttpResponseWrapper:
     def __init__(self, deferred):
         self.deferred = deferred
-        self.status_code = 0
+        self.status_code = 200
         self.text = None
