@@ -213,6 +213,7 @@ class HttpAgentWrapper:
     """
     Provide a post method that matches the API expected from pywebpush.
     """
+
     def __init__(self, http_agent):
         self.http_agent = http_agent
 
@@ -265,6 +266,7 @@ class HttpResponseWrapper:
         text (str):
             Set to None as pywebpush references this field for its logging.
     """
+
     status_code = 200
     text = None
 
