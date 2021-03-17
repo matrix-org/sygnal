@@ -207,7 +207,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         return payload
 
-
+"""
+Provide a post method that matches the API expected from pywebpush.
+"""
 class HttpAgentWrapper:
     def __init__(self, http_agent):
         self.http_agent = http_agent
@@ -229,7 +231,23 @@ class HttpAgentWrapper:
         )
         return HttpResponseWrapper(deferred)
 
+"""
+Provide a response object that matches the API expected from pywebpush.
+pywebpush expects a synchronous api, while we use an asynchronous network api.
 
+To keep pywebpush happy we present it with some hardcoded values that
+make its assertions pass while the async network call is happening
+in the background.
+
+Attributes
+----------
+deferred : Deferred
+    the deferred to await the actual response after calling pywebpush 
+status_code : int
+    defined to be 0 so pywebpush check if it's below 202 passes
+test : str
+    set to None as pywebpush references this field for its logging
+"""
 class HttpResponseWrapper:
     def __init__(self, deferred):
         self.deferred = deferred
