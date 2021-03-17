@@ -18,7 +18,7 @@ import os.path
 from io import BytesIO
 
 from prometheus_client import Gauge, Histogram
-from py_vapid import Vapid
+from py_vapid import Vapid, VapidException
 from pywebpush import webpush
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
@@ -102,7 +102,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             raise PushkinSetupException("path in 'vapid_private_key' does not exist")
         try:
             self.vapid_private_key = Vapid.from_file(private_key_file=privkey_filename)
-        except BaseException as e:
+        except VapidException as e:
             raise PushkinSetupException("invalid 'vapid_private_key' file") from e
         vapid_contact_email = self.get_config("vapid_contact_email")
         if not vapid_contact_email:
