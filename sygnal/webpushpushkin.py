@@ -261,7 +261,7 @@ deferred : Deferred
     the deferred to await the actual response after calling pywebpush
 status_code : int
     defined to be 200 so pywebpush check if it's below 202 passes
-test : str
+text : str
     set to None as pywebpush references this field for its logging
 """
 
