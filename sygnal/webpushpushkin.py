@@ -215,7 +215,6 @@ class HttpAgentWrapper:
         self.http_agent = http_agent
 
     def post(self, endpoint, data, headers, timeout):
-        logger.info("HttpAgentWrapper: POST %s", endpoint)
         body_producer = FileBodyProducer(BytesIO(data))
         headers = {
             b"User-Agent": ["sygnal"],
