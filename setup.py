@@ -49,10 +49,7 @@ setup(
         "idna>=2.8",
         "psycopg2>=2.8.4",
         "importlib_metadata",
-        # a minor change was needed to make this library work with async io,
-        # which has been been merged upstream but not released yet
-        "pywebpush@git+https://github.com/web-push-libs/pywebpush"
-        + "#336b1fb1edaab88c278b17995d29f9db55fe67b1",
+        "pywebpush>=1.13.0",
         "py-vapid>=1.7.0",
     ],
     long_description=read("README.rst"),
