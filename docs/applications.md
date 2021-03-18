@@ -203,3 +203,66 @@ within FCM's limit.
 Please also note that some fields will be unavailable if you registered a pusher
 with `event_id_only` format.
 
+### WebPush
+
+#### Setup & configuration
+
+In the sygnal virtualenv, generate the server key pair by running
+`vapid --gen --applicationServerKey`. This will generate a `private_key.pem`
+(which you'll refer to in the config file with `vapid_private_key`) 
+and `public_key.pem` file, and also string labeled `Application Server Key`.
+
+You'll copy the Application Server Key to your web application to subscribe
+to the push manager:
+
+```js
+serviceWorkerRegistration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: "...",
+});
+```
+
+You also need to set an e-mail address in `vapid_contact_email` in the config file,
+where the push gateway operator can reach you in case they need to notify you
+about your usage of their API.
+
+#### Push key and expected push data
+
+In your web application, [the push manager subscribe method](https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe)
+will return
+[a subscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription) 
+with an `endpoint` and `keys` property, the latter containing a `p256dh` and `auth` 
+property. The `p256dh` key is used as the push key, and the push data is expected 
+`endpoint` and `auth`. You can also set `default_payload` in the push data;
+any properties set in it will be present in the push messages you receive, 
+so it can be used to pass identifiers specific to your client
+(like which account the notification is for).
+
+Also note that because you can only have one push subscription per service worker,
+and hence per origin, you might create pushers for different accounts with the same 
+p256dh push key. To prevent the server from removing other pushers with the same 
+push key for your other users, you should set `append` to `true` when uploading 
+your pusher.
+
+#### Notification format
+
+The notification as received by your web application will contain the following keys 
+(assuming non-null values were sent by the homeserver). These are the
+same as specified in [the push gateway spec](https://matrix.org/docs/spec/push_gateway/r0.1.0#post-matrix-push-v1-notify),
+but the sub-keys of `counts` (`unread` and `missed_calls`) are flattened into
+the notification object.
+
+```
+room_id
+room_name
+room_alias
+membership
+event_id
+sender
+sender_display_name
+user_is_target
+type
+content
+unread
+missed_calls
+```
