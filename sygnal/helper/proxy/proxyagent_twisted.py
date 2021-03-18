@@ -22,6 +22,7 @@ from typing import Optional
 
 from twisted.internet import defer
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
+from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.python.failure import Failure
 from twisted.web.client import URI, BrowserLikePolicyForHTTPS, _AgentBase
 from twisted.web.error import SchemeNotSupported
@@ -81,7 +82,7 @@ class ProxyAgent(_AgentBase):
 
             self.proxy_endpoint = HostnameEndpoint(
                 reactor, parsed_url.hostname, parsed_url.port, **self._endpoint_kwargs
-            )
+            )  # type: Optional[HostnameEndpoint]
         else:
             self.proxy_endpoint = None
 
@@ -127,7 +128,7 @@ class ProxyAgent(_AgentBase):
             # Cache *all* connections under the same key, since we are only
             # connecting to a single destination, the proxy:
             pool_key = ("http-proxy", self.proxy_endpoint)
-            endpoint = self.proxy_endpoint
+            endpoint = self.proxy_endpoint  # type: IStreamClientEndpoint
             request_path = uri
         elif parsed_uri.scheme == b"https" and self.proxy_endpoint:
             endpoint = HTTPConnectProxyEndpoint(

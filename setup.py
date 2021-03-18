@@ -49,6 +49,8 @@ setup(
         "idna>=2.8",
         "psycopg2>=2.8.4",
         "importlib_metadata",
+        "pywebpush>=1.13.0",
+        "py-vapid>=1.7.0",
     ],
     long_description=read("README.rst"),
 )
