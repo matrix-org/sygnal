@@ -260,7 +260,9 @@ class ProxyingEventLoopWrapper:
     """
 
     def __init__(
-        self, wrapped_loop: asyncio.AbstractEventLoop, proxy_url_str: str,
+        self,
+        wrapped_loop: asyncio.AbstractEventLoop,
+        proxy_url_str: str,
     ):
         """
         Args:
