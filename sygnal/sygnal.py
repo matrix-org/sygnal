@@ -149,9 +149,15 @@ class Sygnal(object):
 
         if db_name == "psycopg2":
             logger.info("Using postgresql database")
+
+            # By default enable `cp_reconnect`. We need to fiddle with db_args in case
+            # someone has explicitly set `cp_reconnect`.
+            db_args = dict(config["database"].get("args", {}))
+            db_args.setdefault("cp_reconnect", True)
+
             self.database_engine = "postgresql"
             self.database = ConnectionPool(
-                "psycopg2", cp_reactor=self.reactor, **config["database"].get("args")
+                "psycopg2", cp_reactor=self.reactor, **db_args
             )
         elif db_name == "sqlite3":
             logger.info("Using sqlite database")

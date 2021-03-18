@@ -1,0 +1,1 @@
+Fix bug where Sygnal would not recover after losing connection to the database.
