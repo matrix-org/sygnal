@@ -268,8 +268,6 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
 
             for retry_number in range(self.MAX_TRIES):
                 try:
-                    log.debug("Trying")
-
                     span_tags = {"retry_num": retry_number}
 
                     with self.sygnal.tracer.start_span(
