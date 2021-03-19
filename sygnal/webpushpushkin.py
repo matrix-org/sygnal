@@ -151,7 +151,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         subscription_info=subscription_info,
                         data=data,
                         vapid_private_key=self.vapid_private_key,
-                        vapid_claims=self.vapid_claims,
+                        vapid_claims=self.vapid_claims.copy(),  # make a copy as it is modified by webpush
                         requests_session=self.http_agent_wrapper,
                     )
                     response = await response_wrapper.deferred
