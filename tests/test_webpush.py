@@ -14,7 +14,7 @@
 # limitations under the License.
 from unittest.mock import MagicMock, patch
 from sygnal.webpushpushkin import WebpushPushkin
-from twisted.internet import defer;
+from twisted.internet import defer
 from sygnal import apnstruncate
 
 from tests import testutils
@@ -26,37 +26,34 @@ VAPID_EMAIL = "alice@server.tld"
 # need to go one dir up because the tests are run in a temporary sub directory
 VAPID_PRIVATE_KEY = "../tests/webpush/private_key.pem"
 DEVICE1_EXAMPLE = {
-    "app_id":PUSHKIN_ID,
-    "kind":"http",
-    "data":{
-        "endpoint":"https://some.push.gateway.com/endpoint",
-        "auth":"tk-uFizVuguwlVdI6lXrKA",
-        "default_payload":{
-            "session_id":"7192604822299679"
-        },
+    "app_id": PUSHKIN_ID,
+    "kind": "http",
+    "data": {
+        "endpoint": "https://some.push.gateway.com/endpoint",
+        "auth": "tk-uFizVuguwlVdI6lXrKA",
+        "default_payload": {"session_id": "7192604822299679"},
     },
-    "pushkey":"BMndGyzAWuhx4qbONDPp_pwtaA95U8c967lkUMx8LUY09WcxRzRB5WuSJox56DYZy7lx4Yt9tfuKcpyoz-KDYTA",
-    "app_display_name":"Some web app",
-    "device_display_name":"Some web app",
-    "lang":"en"
+    "pushkey": "BMndGyzAWuhx4qbONDPp_pwtaA95U8c967lkUMx8LUY09WcxRzRB5WuSJox56DYZy7lx4Yt9tfuKcpyoz-KDYTA",
+    "app_display_name": "Some web app",
+    "device_display_name": "Some web app",
+    "lang": "en",
 }
-DEVICE1_AUTHORIZATION = 'vapid t=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJhdWQiOiJodHRwczovL3NvbWUucHVzaC5nYXRld2F5LmNvbSIsImV4cCI6MzE1NTc1NjQwMCwic3ViIjoibWFpbHRvOmFsaWNlQHNlcnZlci50bGQifQ.viywllKQrPs7HJT-rTSesFGSYMdfIseLKWV6C0_r4qO_gNg0BUTCMJJriJZPMsnl_ZwnXsejiyN19cqPLUHDkA,k=BNYtdPa5ccnu8AvoMSQVuIuBU94Z-w3aJo7u2qIV6p20b0PCiamqzckCH38yRCbTUIFzXzqIgvjbFguK9Id-0zc';
+DEVICE1_AUTHORIZATION = "vapid t=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJhdWQiOiJodHRwczovL3NvbWUucHVzaC5nYXRld2F5LmNvbSIsImV4cCI6MzE1NTc1NjQwMCwic3ViIjoibWFpbHRvOmFsaWNlQHNlcnZlci50bGQifQ.viywllKQrPs7HJT-rTSesFGSYMdfIseLKWV6C0_r4qO_gNg0BUTCMJJriJZPMsnl_ZwnXsejiyN19cqPLUHDkA,k=BNYtdPa5ccnu8AvoMSQVuIuBU94Z-w3aJo7u2qIV6p20b0PCiamqzckCH38yRCbTUIFzXzqIgvjbFguK9Id-0zc"
 DEVICE2_EXAMPLE = {
-    "app_id":PUSHKIN_ID,
-    "kind":"http",
-    "data":{
-        "endpoint":"https://some.other.push.gateway.com/endpoint",
-        "auth":"uxAHzLLdA8bQYmcso8PQHQ",
-        "default_payload":{
-            "session_id":"405552421672423"
-        },
+    "app_id": PUSHKIN_ID,
+    "kind": "http",
+    "data": {
+        "endpoint": "https://some.other.push.gateway.com/endpoint",
+        "auth": "uxAHzLLdA8bQYmcso8PQHQ",
+        "default_payload": {"session_id": "405552421672423"},
     },
-    "pushkey":"BIGwA79vqCCxVngC4f038nezxZXL8E7ZpjbO-tb8hTxG1CaLBAUOwG5Nj8RI5eXV37kwmsQwoKXwgd9BUXjy9ws",
-    "app_display_name":"Some web app",
-    "device_display_name":"Some web app",
-    "lang":"en"
+    "pushkey": "BIGwA79vqCCxVngC4f038nezxZXL8E7ZpjbO-tb8hTxG1CaLBAUOwG5Nj8RI5eXV37kwmsQwoKXwgd9BUXjy9ws",
+    "app_display_name": "Some web app",
+    "device_display_name": "Some web app",
+    "lang": "en",
 }
-DEVICE2_AUTHORIZATION = '...';
+DEVICE2_AUTHORIZATION = "..."
+
 
 class MockHttpWrapper:
     def __init__(self):
@@ -74,6 +71,7 @@ class MockHttpWrapper:
         # and readBody in the wrapper below reads the response_text prop
         return MockHttpResponseWrapper(defer.succeed(self))
 
+
 class MockHttpResponseWrapper:
     status_code = 200
     text = None
@@ -84,6 +82,7 @@ class MockHttpResponseWrapper:
     async def read_body(self, response):
         http_wrapper = await self.deferred
         return http_wrapper.response_text
+
 
 class TestWebpushPushkin(WebpushPushkin):
     def __init__(self, name, sygnal, config):
@@ -96,13 +95,14 @@ class TestWebpushPushkin(WebpushPushkin):
         # as the expire value
         return 3155756400
 
+
 class WebPushTestCase(testutils.TestCase):
     def config_setup(self, config):
         super(WebPushTestCase, self).config_setup(config)
         config["apps"][PUSHKIN_ID] = {
             "type": "tests.test_webpush.TestWebpushPushkin",
             "vapid_private_key": VAPID_PRIVATE_KEY,
-            "vapid_contact_email": VAPID_EMAIL
+            "vapid_contact_email": VAPID_EMAIL,
         }
 
     def test_device1(self):
@@ -128,7 +128,7 @@ class WebPushTestCase(testutils.TestCase):
         # print(pushkin.http_agent_wrapper.headers.get("authorization"))
         authorization = pushkin.http_agent_wrapper.headers.get("authorization")
         self.assertEqual(authorization, DEVICE2_AUTHORIZATION)
-    
+
     def test_device2_after_device1_has_same_result(self):
         pushkin = self.sygnal.pushkins[PUSHKIN_ID]
         # Arrange

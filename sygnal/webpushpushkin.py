@@ -140,7 +140,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         # not that webpush modifies vapid_claims, so make sure it's only used once
         vapid_claims = {
             "sub": "mailto:{}".format(self.vapid_contact_email),
-            "exp": self._get_vapid_exp()
+            "exp": self._get_vapid_exp(),
         }
         # we use the semaphore to actually limit the number of concurrent
         # requests, since the HTTPConnectionPool will actually just lead to more
