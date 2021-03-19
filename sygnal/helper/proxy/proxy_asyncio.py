@@ -22,6 +22,8 @@ from base64 import urlsafe_b64encode
 from ssl import Purpose, SSLContext, create_default_context
 from typing import Callable, Optional, Tuple, Union
 
+import attr
+
 from sygnal.exceptions import ProxyConnectError
 from sygnal.helper.proxy import decompose_http_proxy_url
 
@@ -146,19 +148,25 @@ class HttpConnectProtocol(asyncio.Protocol):
                 # unreachable
                 raise RuntimeError("Left over bytes should not occur with TLS")
 
+            # There is a race where the `new_protocol` may get given data before
+            # we manage to call `connection_made` on it, which can lead to
+            # exceptions if the protocol then tries to write to the transport
+            # that is has been given yet.
+            buffered_protocol = _BufferedWrapperProtocol(new_protocol)
+
             # be careful not to use the `transport` ever again after passing it
             # to start_tls — we overwrite our variable with the TLS-wrapped
             # transport to avoid that!
             transport = await self._event_loop.start_tls(
                 self._transport,
-                new_protocol,
+                buffered_protocol,
                 self._sslcontext,
                 server_hostname=self._target_hostport[0],
             )
 
             # start_tls does NOT call connection_made on new_protocol, so we
             # must do it ourselves
-            new_protocol.connection_made(transport)
+            buffered_protocol.connection_made(transport)
         else:
             # no wrapping required for non-TLS
             transport = self._transport
@@ -170,6 +178,8 @@ class HttpConnectProtocol(asyncio.Protocol):
             if left_over_bytes:
                 # pass over dangling bytes if applicable
                 new_protocol.data_received(left_over_bytes)
+
+        logger.debug("Finished switching protocol")
 
         return transport, new_protocol
 
@@ -332,3 +342,39 @@ class ProxyingEventLoopWrapper:
         We use this to delegate other method calls to the real EventLoop.
         """
         return getattr(self._wrapped_loop, item)
+
+
+@attr.s(slots=True, auto_attribs=True)
+class _BufferedWrapperProtocol(Protocol):
+    """Wraps a protocol to buffer any incoming data received before
+    `connection_made` is called.
+    """
+
+    _protocol: Protocol
+    _connected: bool = False
+    _buffer: bytearray = attr.Factory(bytearray)
+
+    def connection_made(self, transport: BaseTransport):
+        self._connected = True
+        self._protocol.connection_made(transport)
+        if self._buffer:
+            self._protocol.data_received(self._buffer)
+            self._buffer = bytearray()
+
+    def connection_lost(self, exc: Optional[Exception]):
+        self._protocol.connection_lost(exc)
+
+    def pause_writing(self):
+        self._protocol.pause_writing()
+
+    def resume_writing(self):
+        self._protocol.resume_writing()
+
+    def data_received(self, data: bytes):
+        if self._connected:
+            self._protocol.data_received(data)
+        else:
+            self._buffer.extend(data)
+
+    def eof_received(self):
+        return self._protocol.eof_received()
