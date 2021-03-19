@@ -104,10 +104,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             self.vapid_private_key = Vapid.from_file(private_key_file=privkey_filename)
         except VapidException as e:
             raise PushkinSetupException("invalid 'vapid_private_key' file") from e
-        vapid_contact_email = self.get_config("vapid_contact_email")
-        if not vapid_contact_email:
+        self.vapid_contact_email = self.get_config("vapid_contact_email")
+        if not self.vapid_contact_email:
             raise PushkinSetupException("'vapid_contact_email' not set in config")
-        self.vapid_claims = {"sub": "mailto:{}".format(vapid_contact_email)}
 
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
@@ -137,6 +136,11 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
 
+        # not that webpush modifies vapid_claims, so make sure it's only used once
+        vapid_claims = {
+            "sub": "mailto:{}".format(self.vapid_contact_email),
+            "exp": self._get_vapid_exp()
+        }
         # we use the semaphore to actually limit the number of concurrent
         # requests, since the HTTPConnectionPool will actually just lead to more
         # requests being created but not pooled – it does not perform limiting.
@@ -151,7 +155,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         subscription_info=subscription_info,
                         data=data,
                         vapid_private_key=self.vapid_private_key,
-                        vapid_claims=self.vapid_claims.copy(),  # make a copy as it is modified by webpush
+                        vapid_claims=vapid_claims,
                         requests_session=self.http_agent_wrapper,
                     )
                     response = await response_wrapper.deferred
@@ -170,6 +174,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             )
             return [device.pushkey]
         return []
+
+    def _get_vapid_exp(self):
+        """
+        Returns the expire value for the vapid claims.
+        
+        Having this in a separate method allows to
+        provide a different time source in unit tests.
+        """
+
+        # current time + 12h
+        return int(time.time()) + (12 * 60 * 60)
 
     @staticmethod
     def _build_payload(n, device):
