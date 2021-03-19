@@ -11,3 +11,4 @@ _trial_temp*
 /build
 /dist
 /.tox
+/.python-version
