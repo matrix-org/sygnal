@@ -18,10 +18,8 @@ Bugfixes
 Improved Documentation
 ----------------------
 
-- Add preliminary documentation ([Troubleshooting](docs/troubleshooting.md) and [Application Developers' Notes](docs/applications.md)). ([\#150](https://github.com/matrix-org/sygnal/issues/150))
-- Add troubleshooting documentation and sample configuration about APNs pushkin's `platform` option. ([\#154](https://github.com/matrix-org/sygnal/issues/154))
+- Add preliminary documentation ([Troubleshooting](docs/troubleshooting.md) and [Application Developers' Notes](docs/applications.md)). ([\#150](https://github.com/matrix-org/sygnal/issues/150), [\#154](https://github.com/matrix-org/sygnal/issues/154), [\#158](https://github.com/matrix-org/sygnal/issues/158))
 - Add a note to the releasing doc asking people to inform EMS and customers during the release process. ([\#155](https://github.com/matrix-org/sygnal/issues/155))
-- Update troubleshooting document with suggestions for `400 BadDeviceToken`. ([\#158](https://github.com/matrix-org/sygnal/issues/158))
 
 
 Internal Changes
