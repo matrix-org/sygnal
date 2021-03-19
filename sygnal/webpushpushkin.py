@@ -155,7 +155,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         requests_session=self.http_agent_wrapper,
                     )
                     response = await response_wrapper.deferred
-                    response_text = (await readBody(response)).decode()
+                    response_text = await response_wrapper.read_body(response)
         finally:
             self.connection_semaphore.release()
 
@@ -279,3 +279,6 @@ class HttpResponseWrapper:
 
     def __init__(self, deferred):
         self.deferred = deferred
+
+    async def read_body(self, response):
+        return (await readBody(response)).decode()
