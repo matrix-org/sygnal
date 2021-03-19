@@ -1,0 +1,1 @@
+Fix bug when using a HTTP proxy where connections would sometimes fail to establish.
