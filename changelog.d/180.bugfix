@@ -1,0 +1,6 @@
+Fix vapid_claims from one webpush request bleeding into others
+
+The vapid_claims dict was reused across requests, but pywebpush actually modified this dictionary.
+This made the pushkin usable with only a single pusher for a single user, any other pushers
+would be rejected by their gateway as the aud claim (derived from the endpoint url)
+didn't match the server name, and the pushkey would be rejected, removing the pusher.
