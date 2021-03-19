@@ -70,7 +70,7 @@ class TimelessEventLoopWrapper:
     ):
         self.call_at(self._time + delay, callback, *args, context=context)
 
-        # We're mean to return a canceller, but can cheat and return a no-op one
+        # We're meant to return a canceller, but can cheat and return a no-op one
         # instead.
         class _Canceller:
             def cancel(self):
