@@ -1,3 +1,38 @@
+Sygnal 0.9.0 (2021-03-19)
+=========================
+
+Features
+--------
+
+- Add experimental support for WebPush pushkins. ([\#177](https://github.com/matrix-org/sygnal/issues/177))
+
+
+Bugfixes
+--------
+
+- Fix erroneous warning log line when setting the `max_connections` option in a GCM app config. ([\#157](https://github.com/matrix-org/sygnal/issues/157))
+- Fixes a bug where the `sygnal_inflight_request_limit_drop` metric would not appear in prometheus until requests were actually dropped. ([\#172](https://github.com/matrix-org/sygnal/issues/172))
+- Fix bug where Sygnal would not recover after losing connection to the database. ([\#179](https://github.com/matrix-org/sygnal/issues/179))
+
+
+Improved Documentation
+----------------------
+
+- Add preliminary documentation (Troubleshooting and Application Developers' Notes). ([\#150](https://github.com/matrix-org/sygnal/issues/150))
+- Add troubleshooting documentation and sample configuration about APNs pushkin's `platform` option. ([\#154](https://github.com/matrix-org/sygnal/issues/154))
+- Add a note to the releasing doc asking people to inform EMS and customers during the release process. ([\#155](https://github.com/matrix-org/sygnal/issues/155))
+- Update troubleshooting document with suggestions for 400 BadDeviceToken. ([\#158](https://github.com/matrix-org/sygnal/issues/158))
+
+
+Internal Changes
+----------------
+
+- Remove a source of nuisance, noisy (but otherwise harmless) exceptions in tests. ([\#149](https://github.com/matrix-org/sygnal/issues/149))
+- Add tests for HTTP Proxy support. ([\#151](https://github.com/matrix-org/sygnal/issues/151), [\#152](https://github.com/matrix-org/sygnal/issues/152))
+- Remove extraneous log line. ([\#174](https://github.com/matrix-org/sygnal/issues/174))
+- Fix type hints due to Twisted upgrade. ([\#178](https://github.com/matrix-org/sygnal/issues/178))
+
+
 Sygnal 0.8.2 (2020-08-06)
 =========================
 

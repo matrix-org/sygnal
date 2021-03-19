@@ -1,1 +1,0 @@
-Fixes a bug where the `sygnal_inflight_request_limit_drop` metric would not appear in prometheus until requests were actually dropped.
