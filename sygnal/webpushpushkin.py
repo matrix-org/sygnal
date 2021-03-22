@@ -100,7 +100,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         allowed_endpoints = self.get_config("allowed_endpoints")
         if allowed_endpoints:
             if not isinstance(allowed_endpoints, list):
-                raise PushkinSetupException("'allowed_endpoints' should be a list or not set")
+                raise PushkinSetupException(
+                    "'allowed_endpoints' should be a list or not set"
+                )
             self.allowed_endpoints = list(map(glob_to_regex, allowed_endpoints))
         privkey_filename = self.get_config("vapid_private_key")
         if not privkey_filename:
@@ -127,10 +129,21 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         auth = device.data.get("auth")
         endpoint_domain = urlparse(endpoint).netloc
         if self.allowed_endpoints:
-            match = next((regex for regex in self.allowed_endpoints if regex.fullmatch(endpoint_domain)), None)
+            match = next(
+                (
+                    regex
+                    for regex in self.allowed_endpoints
+                    if regex.fullmatch(endpoint_domain)
+                ),
+                None,
+            )
             if not match:
-                logger.error("push gateway %s is not in allowed_endpoints, blocking request", endpoint_domain)
-                return []; # don't reject push key though
+                logger.error(
+                    "push gateway %s is not in allowed_endpoints, blocking request",
+                    endpoint_domain,
+                )
+                return []
+                # don't reject push key though
 
         if not p256dh or not endpoint or not auth:
             logger.warn(
