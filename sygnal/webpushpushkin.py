@@ -129,15 +129,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         auth = device.data.get("auth")
         endpoint_domain = urlparse(endpoint).netloc
         if self.allowed_endpoints:
-            match = next(
-                (
-                    regex
-                    for regex in self.allowed_endpoints
-                    if regex.fullmatch(endpoint_domain)
-                ),
-                None,
+            allowed = any(
+                regex.fullmatch(endpoint_domain) for regex in self.allowed_endpoints
             )
-            if not match:
+            if not allowed:
                 logger.error(
                     "push gateway %s is not in allowed_endpoints, blocking request",
                     endpoint_domain,
