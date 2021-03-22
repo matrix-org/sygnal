@@ -104,6 +104,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                     "'allowed_endpoints' should be a list or not set"
                 )
             self.allowed_endpoints = list(map(glob_to_regex, allowed_endpoints))
+        else:
+            self.allowed_endpoints = None
         privkey_filename = self.get_config("vapid_private_key")
         if not privkey_filename:
             raise PushkinSetupException("'vapid_private_key' not set in config")
