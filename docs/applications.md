@@ -226,6 +226,19 @@ You also need to set an e-mail address in `vapid_contact_email` in the config fi
 where the push gateway operator can reach you in case they need to notify you
 about your usage of their API.
 
+Since for webpush, the push gateway endpoint is variable and comes from the browser
+through the push data, you may not want to have your sygnal instance connect to any
+random addressable server. For this, you can set the `allowed_endpoints` option to
+a list of allowed endpoints. Globs are supported. For example, to allow Firefox,
+Chrome and Opera (Google) and Edge as a push gateway, you can use this:
+
+```yaml
+allowed_endpoints:
+    - "updates.push.services.mozilla.com"
+    - "fcm.googleapis.com"
+    - "*.notify.windows.com"
+```
+
 #### Push key and expected push data
 
 In your web application, [the push manager subscribe method](https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe)
