@@ -70,6 +70,14 @@ class TimelessEventLoopWrapper:
     ):
         self.call_at(self._time + delay, callback, *args, context=context)
 
+        # We're meant to return a canceller, but can cheat and return a no-op one
+        # instead.
+        class _Canceller:
+            def cancel(self):
+                pass
+
+        return _Canceller()
+
     def call_at(
         self,
         when: float,
@@ -113,6 +121,10 @@ class MockTransport(Transport):
 
         # Whether this transport was closed
         self.closed = False
+
+        # We need to explicitly mark that this connection allows start tls,
+        # otherwise `loop.start_tls` will raise an exception.
+        self._start_tls_compatible = True
 
     def reset_mock(self) -> None:
         self.buffer = b""
@@ -177,6 +189,32 @@ class MockProtocol(Protocol):
 
     def data_received(self, data: bytes) -> None:
         self.received_bytes += data
+
+    def connection_made(self, transport: transports.BaseTransport) -> None:
+        assert isinstance(transport, Transport)
+        self.transport = transport
+        if self._to_transmit:
+            transport.write(self._to_transmit)
+
+    def write(self, data: bytes) -> None:
+        if self.transport:
+            self.transport.write(data)
+        else:
+            self._to_transmit += data
+
+
+class EchoProtocol(Protocol):
+    """A protocol that immediately echoes all data it receives"""
+
+    def __init__(self):
+        self._to_transmit = b""
+        self.received_bytes = b""
+        self.transport = None
+
+    def data_received(self, data: bytes) -> None:
+        self.received_bytes += data
+        assert self.transport
+        self.transport.write(data)
 
     def connection_made(self, transport: transports.BaseTransport) -> None:
         assert isinstance(transport, Transport)
