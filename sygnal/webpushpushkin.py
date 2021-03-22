@@ -137,8 +137,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                     "push gateway %s is not in allowed_endpoints, blocking request",
                     endpoint_domain,
                 )
+                # abort, but don't reject push key
                 return []
-                # don't reject push key though
 
         if not p256dh or not endpoint or not auth:
             logger.warn(
