@@ -28,9 +28,9 @@ from twisted.web.http_headers import Headers
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
 
-from .utils import glob_to_regex
 from .exceptions import PushkinSetupException
 from .notifications import ConcurrencyLimitedPushkin
+from .utils import glob_to_regex
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_webpush_queue_time",
