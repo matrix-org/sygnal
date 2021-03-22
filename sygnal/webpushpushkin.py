@@ -141,7 +141,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         # note that webpush modifies vapid_claims, so make sure it's only used once
         vapid_claims = {
             "sub": "mailto:{}".format(self.vapid_contact_email),
-            "exp": self._get_vapid_exp(),
         }
         # we use the semaphore to actually limit the number of concurrent
         # requests, since the HTTPConnectionPool will actually just lead to more
@@ -161,7 +160,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         requests_session=self.http_agent_wrapper,
                     )
                     response = await response_wrapper.deferred
-                    response_text = await response_wrapper.read_body(response)
+                    response_text = (await readBody(response)).decode()
         finally:
             self.connection_semaphore.release()
 
@@ -176,17 +175,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             )
             return [device.pushkey]
         return []
-
-    def _get_vapid_exp(self):
-        """
-        Returns the expire value for the vapid claims.
-
-        Having this in a separate method allows to
-        provide a different time source in unit tests.
-        """
-
-        # current time + 12h
-        return int(time.time()) + (12 * 60 * 60)
 
     @staticmethod
     def _build_payload(n, device):
@@ -296,6 +284,3 @@ class HttpResponseWrapper:
 
     def __init__(self, deferred):
         self.deferred = deferred
-
-    async def read_body(self, response):
-        return (await readBody(response)).decode()
