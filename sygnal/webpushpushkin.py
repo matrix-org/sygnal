@@ -16,6 +16,7 @@ import json
 import logging
 import os.path
 from io import BytesIO
+from urllib.parse import urlparse
 
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
@@ -104,16 +105,15 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             self.vapid_private_key = Vapid.from_file(private_key_file=privkey_filename)
         except VapidException as e:
             raise PushkinSetupException("invalid 'vapid_private_key' file") from e
-        vapid_contact_email = self.get_config("vapid_contact_email")
-        if not vapid_contact_email:
+        self.vapid_contact_email = self.get_config("vapid_contact_email")
+        if not self.vapid_contact_email:
             raise PushkinSetupException("'vapid_contact_email' not set in config")
-        self.vapid_claims = {"sub": "mailto:{}".format(vapid_contact_email)}
 
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
         if not isinstance(device.data, dict):
             logger.warn(
-                "device.data is not a dict for pushkey %s, rejecting pushkey", p256dh
+                "Rejecting pushkey %s; device.data is not a dict", device.pushkey
             )
             return [device.pushkey]
 
@@ -122,8 +122,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         if not p256dh or not endpoint or not auth:
             logger.warn(
-                "subscription info incomplete "
-                + "(p256dh: %s, endpoint: %s, auth: %s), rejecting pushkey",
+                "Rejecting pushkey; subscription info incomplete "
+                + "(p256dh: %s, endpoint: %s, auth: %s)",
                 p256dh,
                 endpoint,
                 auth,
@@ -137,6 +137,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
 
+        # note that webpush modifies vapid_claims, so make sure it's only used once
+        vapid_claims = {
+            "sub": "mailto:{}".format(self.vapid_contact_email),
+        }
         # we use the semaphore to actually limit the number of concurrent
         # requests, since the HTTPConnectionPool will actually just lead to more
         # requests being created but not pooled – it does not perform limiting.
@@ -151,16 +155,23 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         subscription_info=subscription_info,
                         data=data,
                         vapid_private_key=self.vapid_private_key,
-                        vapid_claims=self.vapid_claims,
+                        vapid_claims=vapid_claims,
                         requests_session=self.http_agent_wrapper,
                     )
                     response = await response_wrapper.deferred
-                    await readBody(response)
+                    response_text = (await readBody(response)).decode()
         finally:
             self.connection_semaphore.release()
 
         # assume 4xx is permanent and 5xx is temporary
         if 400 <= response.code < 500:
+            logger.warn(
+                "Rejecting pushkey %s; gateway %s failed with %d: %s",
+                device.pushkey,
+                urlparse(endpoint).netloc,
+                response.code,
+                response_text,
+            )
             return [device.pushkey]
         return []
 
