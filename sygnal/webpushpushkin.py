@@ -138,7 +138,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
 
-        # not that webpush modifies vapid_claims, so make sure it's only used once
+        # note that webpush modifies vapid_claims, so make sure it's only used once
         vapid_claims = {
             "sub": "mailto:{}".format(self.vapid_contact_email),
             "exp": self._get_vapid_exp(),
