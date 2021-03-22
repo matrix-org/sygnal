@@ -16,7 +16,7 @@ import json
 import logging
 import os.path
 from io import BytesIO
-
+from urllib.parse import urlparse
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
 from pywebpush import webpush
@@ -112,7 +112,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         p256dh = device.pushkey
         if not isinstance(device.data, dict):
             logger.warn(
-                "device.data is not a dict for pushkey %s, rejecting pushkey", p256dh
+                "Rejecting pushkey %s; device.data is not a dict", device.pushkey
             )
             return [device.pushkey]
 
@@ -121,8 +121,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         if not p256dh or not endpoint or not auth:
             logger.warn(
-                "subscription info incomplete "
-                + "(p256dh: %s, endpoint: %s, auth: %s), rejecting pushkey",
+                "Rejecting pushkey; subscription info incomplete "
+                + "(p256dh: %s, endpoint: %s, auth: %s)",
                 p256dh,
                 endpoint,
                 auth,
@@ -165,6 +165,13 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         # assume 4xx is permanent and 5xx is temporary
         if 400 <= response.code < 500:
+            logger.warn(
+                "Rejecting pushkey %s; gateway %s failed with %d: %s",
+                device.pushkey,
+                urlparse(endpoint).netloc,
+                response.code,
+                response_text,
+            )
             return [device.pushkey]
         return []
 
