@@ -1,0 +1,1 @@
+Add 'allowed_endpoints' configuration option for webpush pushkins to whitelist the allowed endpoints.
