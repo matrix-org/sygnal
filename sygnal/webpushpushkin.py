@@ -15,6 +15,7 @@
 import json
 import logging
 import os.path
+import time
 from io import BytesIO
 from urllib.parse import urlparse
 from prometheus_client import Gauge, Histogram
@@ -159,7 +160,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         requests_session=self.http_agent_wrapper,
                     )
                     response = await response_wrapper.deferred
-                    await readBody(response)
+                    response_text = await response_wrapper.read_body(response)
         finally:
             self.connection_semaphore.release()
 
@@ -174,6 +175,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             )
             return [device.pushkey]
         return []
+
+    def _get_vapid_exp(self):
+        """
+        Returns the expire value for the vapid claims.
+        
+        Having this in a separate method allows to
+        provide a different time source in unit tests.
+        """
+
+        # current time + 12h
+        return int(time.time()) + (12 * 60 * 60)
 
     @staticmethod
     def _build_payload(n, device):
@@ -283,3 +295,6 @@ class HttpResponseWrapper:
 
     def __init__(self, deferred):
         self.deferred = deferred
+
+    async def read_body(self, response):
+        return (await readBody(response)).decode()
