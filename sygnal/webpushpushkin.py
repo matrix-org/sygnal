@@ -17,6 +17,7 @@ import logging
 import os.path
 from io import BytesIO
 from urllib.parse import urlparse
+from typing import List, Optional, Pattern
 
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
@@ -97,6 +98,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         )
         self.http_agent_wrapper = HttpAgentWrapper(self.http_agent)
 
+        self.allowed_endpoints = None  # type: Optional[List[Pattern]]
         allowed_endpoints = self.get_config("allowed_endpoints")
         if allowed_endpoints:
             if not isinstance(allowed_endpoints, list):
@@ -104,8 +106,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                     "'allowed_endpoints' should be a list or not set"
                 )
             self.allowed_endpoints = list(map(glob_to_regex, allowed_endpoints))
-        else:
-            self.allowed_endpoints = None
         privkey_filename = self.get_config("vapid_private_key")
         if not privkey_filename:
             raise PushkinSetupException("'vapid_private_key' not set in config")
