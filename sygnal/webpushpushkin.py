@@ -16,8 +16,8 @@ import json
 import logging
 import os.path
 from io import BytesIO
-from urllib.parse import urlparse
 from typing import List, Optional, Pattern
+from urllib.parse import urlparse
 
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
