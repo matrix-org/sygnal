@@ -16,6 +16,7 @@ import json
 import logging
 import os.path
 from io import BytesIO
+from typing import List, Optional, Pattern
 from urllib.parse import urlparse
 
 from prometheus_client import Gauge, Histogram
@@ -30,6 +31,7 @@ from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
 
 from .exceptions import PushkinSetupException
 from .notifications import ConcurrencyLimitedPushkin
+from .utils import glob_to_regex
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_webpush_queue_time",
@@ -96,6 +98,14 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         )
         self.http_agent_wrapper = HttpAgentWrapper(self.http_agent)
 
+        self.allowed_endpoints = None  # type: Optional[List[Pattern]]
+        allowed_endpoints = self.get_config("allowed_endpoints")
+        if allowed_endpoints:
+            if not isinstance(allowed_endpoints, list):
+                raise PushkinSetupException(
+                    "'allowed_endpoints' should be a list or not set"
+                )
+            self.allowed_endpoints = list(map(glob_to_regex, allowed_endpoints))
         privkey_filename = self.get_config("vapid_private_key")
         if not privkey_filename:
             raise PushkinSetupException("'vapid_private_key' not set in config")
@@ -119,6 +129,18 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         endpoint = device.data.get("endpoint")
         auth = device.data.get("auth")
+        endpoint_domain = urlparse(endpoint).netloc
+        if self.allowed_endpoints:
+            allowed = any(
+                regex.fullmatch(endpoint_domain) for regex in self.allowed_endpoints
+            )
+            if not allowed:
+                logger.error(
+                    "push gateway %s is not in allowed_endpoints, blocking request",
+                    endpoint_domain,
+                )
+                # abort, but don't reject push key
+                return []
 
         if not p256dh or not endpoint or not auth:
             logger.warn(
@@ -168,7 +190,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             logger.warn(
                 "Rejecting pushkey %s; gateway %s failed with %d: %s",
                 device.pushkey,
-                urlparse(endpoint).netloc,
+                endpoint_domain,
                 response.code,
                 response_text,
             )

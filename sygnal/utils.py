@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 from logging import LoggerAdapter
 
 from twisted.internet.defer import Deferred
@@ -37,3 +38,27 @@ async def twisted_sleep(delay, twisted_reactor):
 class NotificationLoggerAdapter(LoggerAdapter):
     def process(self, msg, kwargs):
         return f"[{self.extra['request_id']}] {msg}", kwargs
+
+
+def glob_to_regex(glob):
+    """Converts a glob to a compiled regex object.
+
+    The regex is anchored at the beginning and end of the string.
+
+    Args:
+        glob (str)
+
+    Returns:
+        re.RegexObject
+    """
+    res = ""
+    for c in glob:
+        if c == "*":
+            res = res + ".*"
+        elif c == "?":
+            res = res + "."
+        else:
+            res = res + re.escape(c)
+
+    # \A anchors at start of string, \Z at end of string
+    return re.compile(r"\A" + res + r"\Z", re.IGNORECASE)
