@@ -179,7 +179,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
     def _get_vapid_exp(self):
         """
         Returns the expire value for the vapid claims.
-        
+
         Having this in a separate method allows to
         provide a different time source in unit tests.
         """
