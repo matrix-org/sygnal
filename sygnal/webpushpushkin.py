@@ -18,6 +18,7 @@ import os.path
 import time
 from io import BytesIO
 from urllib.parse import urlparse
+
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
 from pywebpush import webpush
