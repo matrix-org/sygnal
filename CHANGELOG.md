@@ -1,3 +1,19 @@
+Sygnal 0.9.1 (2021-03-23)
+=========================
+
+Features
+--------
+
+- Add 'allowed_endpoints' configuration option for limiting the endpoints that WebPush pushkins will contact. ([\#182](https://github.com/matrix-org/sygnal/issues/182))
+
+
+Bugfixes
+--------
+
+- Fix vapid_claims from one webpush request bleeding into others ([\#180](https://github.com/matrix-org/sygnal/issues/180))
+- Fix bug when using a HTTP proxy where connections would sometimes fail to establish. ([\#181](https://github.com/matrix-org/sygnal/issues/181))
+
+
 Sygnal 0.9.0 (2021-03-19)
 =========================
 
