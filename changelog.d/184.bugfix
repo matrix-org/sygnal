@@ -1,1 +1,1 @@
-add allowed_endpoints option as understood config option
+Add `allowed_endpoints` option as understood config option for WebPush pushkins.
