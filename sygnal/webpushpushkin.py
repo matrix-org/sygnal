@@ -192,16 +192,33 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         finally:
             self.connection_semaphore.release()
 
-        # assume 4xx is permanent and 5xx is temporary
-        if 400 <= response.code < 500:
+        # permanent errors
+        if response.code is 404 or response.code is 410:
             logger.warn(
-                "Rejecting pushkey %s; gateway %s failed with %d: %s",
+                "Rejecting pushkey %s; subscription is invalid on %s: %d: %s",
                 device.pushkey,
                 endpoint_domain,
                 response.code,
                 response_text,
             )
             return [device.pushkey]
+        # and temporary ones
+        if response.code >= 400:
+            logger.warn(
+                "webpush request failed for pushkey %s; %s responded with %d: %s",
+                device.pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+        elif response.code is not 201:
+            logger.info(
+                "webpush request for pushkey %s didn't respond with 201; %s responded with %d: %s",
+                device.pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
         return []
 
     @staticmethod
