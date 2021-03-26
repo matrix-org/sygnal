@@ -133,6 +133,11 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             )
             return [device.pushkey]
 
+        # drop notifications without an event id if requested,
+        # see https://github.com/matrix-org/sygnal/issues/186
+        if device.data.get("events_only") is True and not n.event_id:
+            return [];
+
         endpoint = device.data.get("endpoint")
         auth = device.data.get("auth")
         endpoint_domain = urlparse(endpoint).netloc
