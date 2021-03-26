@@ -198,7 +198,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             self.connection_semaphore.release()
 
         # permanent errors
-        if response.code is 404 or response.code is 410:
+        if response.code == 404 or response.code == 410:
             logger.warn(
                 "Rejecting pushkey %s; subscription is invalid on %s: %d: %s",
                 device.pushkey,
@@ -216,7 +216,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 response.code,
                 response_text,
             )
-        elif response.code is not 201:
+        elif response.code != 201:
             logger.info(
                 "webpush request for pushkey %s didn't respond with 201; %s responded with %d: %s",
                 device.pushkey,
