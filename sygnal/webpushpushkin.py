@@ -55,6 +55,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_CONNECTIONS = 20
 DEFAULT_TTL = 15 * 60  # in seconds
+MAX_BODY_LENGTH = 2000
+MAX_PAYLOAD_LENGTH = 4096
 
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
@@ -255,7 +257,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             "sender_display_name",
             "user_is_target",
             "type",
-            "content",
         ]:
             value = getattr(n, attr, None)
             if value:
@@ -267,6 +268,20 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 count_value = getattr(counts, attr, None)
                 if count_value is not None:
                     payload[attr] = count_value
+
+        if n.content and isinstance(n.content, dict):
+            content = n.content.copy()
+            # we can't show formatted_body in a notification anyway on web
+            # so remove it
+            content.pop("formatted_body", None)
+            body = content.get("body")
+            # make some attempts to not go over the max payload length
+            if isinstance(body, str) and len(body) > MAX_BODY_LENGTH:
+                content["body"] = body[0: MAX_BODY_LENGTH - 1] + "…"
+            ciphertext = content.get("ciphertext")
+            if isinstance(ciphertext, str) and len(ciphertext) > MAX_BODY_LENGTH:
+                content.pop("ciphertext", None)
+            payload["content"] = content
 
         return payload
 
