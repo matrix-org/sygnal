@@ -54,6 +54,7 @@ ACTIVE_REQUESTS_GAUGE = Gauge(
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_CONNECTIONS = 20
+DEFAULT_TTL = 15 * 60  # in seconds
 
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
@@ -119,6 +120,12 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         self.vapid_contact_email = self.get_config("vapid_contact_email")
         if not self.vapid_contact_email:
             raise PushkinSetupException("'vapid_contact_email' not set in config")
+        self.ttl = self.get_config("ttl")
+        if self.ttl:
+            if not isinstance(self.ttl, int):
+                raise PushkinSetupException("'ttl' must be an int if set")
+        else:
+            self.ttl = DEFAULT_TTL
 
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
@@ -177,6 +184,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                     response_wrapper = webpush(
                         subscription_info=subscription_info,
                         data=data,
+                        ttl=self.ttl,
                         vapid_private_key=self.vapid_private_key,
                         vapid_claims=vapid_claims,
                         requests_session=self.http_agent_wrapper,
@@ -185,7 +193,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                     response_text = (await readBody(response)).decode()
         finally:
             self.connection_semaphore.release()
-
         # assume 4xx is permanent and 5xx is temporary
         if 400 <= response.code < 500:
             logger.warn(
@@ -196,6 +203,13 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 response_text,
             )
             return [device.pushkey]
+        logger.info(
+            "Sent! pushkey %s; gateway %s response: %d: %s",
+            device.pushkey,
+            endpoint_domain,
+            response.code,
+            response_text,
+        )
         return []
 
     @staticmethod
