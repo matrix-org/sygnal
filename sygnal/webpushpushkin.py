@@ -203,13 +203,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 response_text,
             )
             return [device.pushkey]
-        logger.info(
-            "Sent! pushkey %s; gateway %s response: %d: %s",
-            device.pushkey,
-            endpoint_domain,
-            response.code,
-            response_text,
-        )
         return []
 
     @staticmethod
