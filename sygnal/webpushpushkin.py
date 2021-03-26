@@ -191,6 +191,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                     response_text = (await readBody(response)).decode()
         finally:
             self.connection_semaphore.release()
+        
         # assume 4xx is permanent and 5xx is temporary
         if 400 <= response.code < 500:
             logger.warn(
