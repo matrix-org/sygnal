@@ -1,13 +1,59 @@
 # Contributing code to Sygnal
 
-Everyone is welcome to contribute code to [matrix.org
-projects](https://github.com/matrix-org), provided that they are willing to
-license their contributions under the same license as the project itself. We
-follow a simple 'inbound=outbound' model for contributions: the act of
-submitting an 'inbound' contribution means that the contributor agrees to
-license the code under the same terms as the project's overall 'outbound'
-license - in our case, this is almost always Apache Software License v2 (see
-[LICENSE](LICENSE)).
+Everyone is welcome to contribute code to Sygnal, provided you are willing to
+license your contributions under the same license as the project itself. In
+this case, the [Apache Software License v2](LICENSE).
+
+## Preparing your development environment
+
+### Create a virtualenv
+
+To contribute to Sygnal, ensure you have Python 3.7 or newer and then run:
+
+```
+python3 -m venv venv
+./venv/bin/pip install -e .
+./venv/bin/pip install -U black flake8 isort mypy mypy-zope tox
+```
+
+This creates an isolated virtual Python environment ("virtualenv") just for
+use with Sygnal, then installs Sygnal along with its dependencies, and lastly
+installs a handful of useful tools 
+
+Finally, activate the virtualenv by running:
+
+```
+source ./venv/bin/activate
+```
+
+Be sure to do this _every time_ you open a new terminal window for working on
+Sygnal. Activating the venv ensures that any Python commands you run (`pip`,
+`python`, etc.) use the versions inside your venv, and not your system Python.
+
+When you're done, you can close your terminal or run `deactivate` to disable
+the virtualenv.
+
+### Run the tests
+
+To make sure everything is working as expected, run the unit tests:
+
+```
+tox -e py
+```
+
+If you see a message like:
+
+```
+-------------------------------------------------------------------------------
+Ran 46 tests in 0.209s
+
+PASSED (successes=46)
+___________________________________ summary ___________________________________
+  py: commands succeeded
+  congratulations :)
+```
+
+Then all is well and you're ready to work!
 
 ## How to contribute
 

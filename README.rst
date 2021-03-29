@@ -10,6 +10,11 @@ https://matrix.org/docs/spec/push_gateway/r0.1.0
 describes the protocol that Matrix Home Servers use to send notifications to Push Gateways such as Sygnal.
 
 
+Contributing
+============
+Looking to contribute to Sygnal? See `CONTRIBUTING.md <CONTRIBUTING.md>`_
+
+
 Setup
 =====
 Sygnal is configured through a YAML configuration file.
