@@ -1,11 +1,11 @@
 Sygnal v0.9.2 (2021-03-29)
 ==========================
 
-Bugfixes
+Features
 --------
 
 - Add `allowed_endpoints` option as understood config option for WebPush pushkins. ([\#184](https://github.com/matrix-org/sygnal/issues/184))
-- Add `ttl` option as understood config option for WebPush pushkins to make delivery more reliable ([\#185](https://github.com/matrix-org/sygnal/issues/185))
+- Add `ttl` option as an understood config option for WebPush pushkins to make delivery more reliable ([\#185](https://github.com/matrix-org/sygnal/issues/185))
 
 
 Sygnal 0.9.1 (2021-03-23)
