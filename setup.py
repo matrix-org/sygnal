@@ -52,7 +52,7 @@ setup(
         "pywebpush>=1.13.0",
         "py-vapid>=1.7.0",
     ],
-    extras_require: {
+    extras_require = {
         'dev': [
             'black',
             'flake8',
