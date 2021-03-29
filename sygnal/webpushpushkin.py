@@ -121,12 +121,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         self.vapid_contact_email = self.get_config("vapid_contact_email")
         if not self.vapid_contact_email:
             raise PushkinSetupException("'vapid_contact_email' not set in config")
-        self.ttl = self.get_config("ttl")
-        if self.ttl:
-            if not isinstance(self.ttl, int):
-                raise PushkinSetupException("'ttl' must be an int if set")
-        else:
-            self.ttl = DEFAULT_TTL
+        self.ttl = self.get_config("ttl", DEFAULT_TTL)
+        if not isinstance(self.ttl, int):
+            raise PushkinSetupException("'ttl' must be an int if set")
 
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
