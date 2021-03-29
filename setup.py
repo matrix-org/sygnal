@@ -58,9 +58,9 @@ setup(
             'flake8',
             'isort',
             'mypy',
-            'mypy-zope'
+            'mypy-zope',
             'tox'
         ]
-    }
+    },
     long_description=read("README.rst"),
 )
