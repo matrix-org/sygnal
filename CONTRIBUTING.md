@@ -10,7 +10,7 @@ this case, the [Apache Software License v2](LICENSE).
 
 To contribute to Sygnal, ensure you have Python 3.7 or newer and then run:
 
-```
+```bash
 python3 -m venv venv
 ./venv/bin/pip install -e .
 ./venv/bin/pip install -U black flake8 isort mypy mypy-zope tox
@@ -22,7 +22,7 @@ installs a handful of useful tools
 
 Finally, activate the virtualenv by running:
 
-```
+```bash
 source ./venv/bin/activate
 ```
 
@@ -37,7 +37,7 @@ the virtualenv.
 
 To make sure everything is working as expected, run the unit tests:
 
-```
+```bash
 tox -e py
 ```
 
@@ -92,7 +92,7 @@ To help check and fix adherence to the code style, you can run `tox`
 locally. You'll need Python 3.7 or later, and a virtual environment configured and
 active:
 
-```
+```bash
 # Activate the virtual environment
 source ./venv/bin/activate
 
