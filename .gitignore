@@ -5,6 +5,8 @@ sygnal.pid
 sygnal.db
 _trial_temp*
 
+/venv/
+/.venv/
 /.idea
 /.eggs
 /*.egg-info
