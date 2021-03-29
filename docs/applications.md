@@ -239,6 +239,8 @@ allowed_endpoints:
     - "*.notify.windows.com"
 ```
 
+A default time-to-live of 15 minutes is set for webpush, but you can adjust this by setting the `ttl: <number of seconds>` configuration option for the pusher. If notifications can't be delivered by the push gateway aftet this time, they are dropped.
+
 #### Push key and expected push data
 
 In your web application, [the push manager subscribe method](https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe)
