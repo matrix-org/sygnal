@@ -68,6 +68,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         "vapid_private_key",
         "vapid_contact_email",
         "allowed_endpoints",
+        "ttl",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config):
