@@ -54,6 +54,7 @@ ACTIVE_REQUESTS_GAUGE = Gauge(
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_CONNECTIONS = 20
+DEFAULT_TTL = 15 * 60  # in seconds
 
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
@@ -67,6 +68,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         "vapid_private_key",
         "vapid_contact_email",
         "allowed_endpoints",
+        "ttl",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config):
@@ -119,6 +121,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         self.vapid_contact_email = self.get_config("vapid_contact_email")
         if not self.vapid_contact_email:
             raise PushkinSetupException("'vapid_contact_email' not set in config")
+        self.ttl = self.get_config("ttl", DEFAULT_TTL)
+        if not isinstance(self.ttl, int):
+            raise PushkinSetupException("'ttl' must be an int if set")
 
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
@@ -177,6 +182,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                     response_wrapper = webpush(
                         subscription_info=subscription_info,
                         data=data,
+                        ttl=self.ttl,
                         vapid_private_key=self.vapid_private_key,
                         vapid_claims=vapid_claims,
                         requests_session=self.http_agent_wrapper,
