@@ -52,5 +52,15 @@ setup(
         "pywebpush>=1.13.0",
         "py-vapid>=1.7.0",
     ],
+    extras_require: {
+        'dev': [
+            'black',
+            'flake8',
+            'isort',
+            'mypy',
+            'mypy-zope'
+            'tox'
+        ]
+    }
     long_description=read("README.rst"),
 )
