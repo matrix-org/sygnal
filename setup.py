@@ -58,7 +58,7 @@ setup(
         "flake8==3.8.3", 
         "isort~=5.0", 
         "mypy==0.780", 
-        "mypy-zopemypy-zope==0.2.7", 
+        "mypy-zope==0.2.7", 
         "tox",
         ]
     },
