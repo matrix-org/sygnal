@@ -12,8 +12,7 @@ To contribute to Sygnal, ensure you have Python 3.7 or newer and then run:
 
 ```
 python3 -m venv venv
-./venv/bin/pip install -e .
-./venv/bin/pip install -U black flake8 isort mypy mypy-zope tox
+./venv/bin/pip install -e '.[dev]'
 ```
 
 This creates an isolated virtual Python environment ("virtualenv") just for
