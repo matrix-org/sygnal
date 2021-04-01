@@ -10,18 +10,18 @@ this case, the [Apache Software License v2](LICENSE).
 
 To contribute to Sygnal, ensure you have Python 3.7 or newer and then run:
 
-```
+```bash
 python3 -m venv venv
 ./venv/bin/pip install -e '.[dev]'
 ```
 
 This creates an isolated virtual Python environment ("virtualenv") just for
 use with Sygnal, then installs Sygnal along with its dependencies, and lastly
-installs a handful of useful tools 
+installs a handful of useful tools
 
 Finally, activate the virtualenv by running:
 
-```
+```bash
 source ./venv/bin/activate
 ```
 
@@ -36,7 +36,7 @@ the virtualenv.
 
 To make sure everything is working as expected, run the unit tests:
 
-```
+```bash
 tox -e py
 ```
 
@@ -87,27 +87,23 @@ Sygnal follows the [Synapse code style].
 Many of the conventions are enforced by scripts which are run as part of the
 [continuous integration system](#continuous-integration-and-testing).
 
-To help check and fix adherence to the code style, you can run `scripts-dev/lint.sh`
-locally. You'll need Python 3.7 or later, and to install a number of tools:
+To help check and fix adherence to the code style, you can run `tox`
+locally. You'll need Python 3.7 or later, and a virtual environment configured and
+active:
 
+```bash
+# Activate the virtual environment
+source ./venv/bin/activate
+
+# Run the code style check
+tox -e check_codestyle
+
+# Run the types check
+tox -e check_types
 ```
-# Install the dependencies
-pip install -U black flake8 isort mypy mypy-zope
 
-# Run the linter script
-./scripts-dev/lint.sh
-```
-
-**Note that the script does not just test/check, but also reformats code, so you
-may wish to ensure any new code is committed first**.
-
-By default, this script checks all files and can take some time; if you alter
-only certain files, you might wish to specify paths as arguments to reduce the
-run-time:
-
-```
-./scripts-dev/lint.sh path/to/file1.py path/to/file2.py path/to/folder
-```
+These commands will consider the paths and files related to the project (i.e.
+everything in `sygnal/` and in `tests/` as well as the `setup.py` file).
 
 Before pushing new changes, ensure they don't produce linting errors. Commit any
 files that were corrected.

@@ -1,0 +1,1 @@
+Updated Tox to run in the installed version of Python (instead of specifying Python 3.7) and to consider specific paths and folders while running checks, instead of the whole repository (potentially including unwanted files and folders, e.g. the virtual environment).
