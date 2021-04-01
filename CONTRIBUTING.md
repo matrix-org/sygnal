@@ -103,9 +103,6 @@ tox -e check_codestyle
 tox -e check_types
 ```
 
-**Note that the script does not just test/check, but also reformats code, so you
-may wish to ensure any new code is committed first**.
-
 These commands will consider the paths and files related to the project (i.e.
 everything in `sygnal/` and in `tests/` as well as the `setup.py` file).
 
