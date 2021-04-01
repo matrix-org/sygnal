@@ -15,6 +15,12 @@ python3 -m venv venv
 ./venv/bin/pip install -e '.[dev]'
 ```
 
+*Note:*
+Sygnal depends on the `psycopg2` database adapter for PostgreSQL. It is recommended that you install `libq-dev python3-dev build-essential` as root, i.e
+
+```sudo apt install libpq-dev python3-dev build-essential```
+
+
 This creates an isolated virtual Python environment ("virtualenv") just for
 use with Sygnal, then installs Sygnal along with its dependencies, and lastly
 installs a handful of useful tools
