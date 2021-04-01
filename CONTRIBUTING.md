@@ -15,6 +15,9 @@ python3 -m venv venv
 ./venv/bin/pip install -e '.[dev]'
 ```
 
+####*Note:*
+Sygnal depends on the psycop database adapter for PostgreSQL. For the command above to succeed, you may first need to install the development headers for libpq, for example, by running `sudo apt install libpq-dev` on Ubuntu."
+
 This creates an isolated virtual Python environment ("virtualenv") just for
 use with Sygnal, then installs Sygnal along with its dependencies, and lastly
 installs a handful of useful tools
