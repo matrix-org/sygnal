@@ -35,6 +35,7 @@ setup(
     description="Reference Push Gateway for Matrix Notifications",
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
+    python_requires=">=3.7",
     install_requires=[
         "Twisted>=19.2.1",
         "prometheus_client>=0.7.0,<0.8",
