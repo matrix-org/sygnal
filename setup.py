@@ -55,7 +55,7 @@ setup(
     ],
     extras_require={
         "dev": [
-            "black==19.10b0",
+            "black==20.8b1",
             "flake8==3.8.3",
             "isort~=5.0",
             "mypy==0.780",
