@@ -199,33 +199,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         finally:
             self.connection_semaphore.release()
 
-        # permanent errors
-        if response.code == 404 or response.code == 410:
-            logger.warn(
-                "Rejecting pushkey %s; subscription is invalid on %s: %d: %s",
-                device.pushkey,
-                endpoint_domain,
-                response.code,
-                response_text,
-            )
+        reject_pushkey = self._handle_response(
+            response, response_text, device.pushkey, endpoint_domain)
+        if reject_pushkey:
             return [device.pushkey]
-        # and temporary ones
-        if response.code >= 400:
-            logger.warn(
-                "webpush request failed for pushkey %s; %s responded with %d: %s",
-                device.pushkey,
-                endpoint_domain,
-                response.code,
-                response_text,
-            )
-        elif response.code != 201:
-            logger.info(
-                "webpush request for pushkey %s didn't respond with 201; %s responded with %d: %s",
-                device.pushkey,
-                endpoint_domain,
-                response.code,
-                response_text,
-            )
         return []
 
     @staticmethod
@@ -284,6 +261,56 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             payload["content"] = content
 
         return payload
+
+    def _handle_response(self, response, response_text, pushkey, endpoint_domain):
+        """
+        Logs and determines the outcome of the response
+
+        Returns:
+            Boolean whether the puskey should be rejected
+        """
+        ttl_response_headers = response.headers.getRawHeaders(b"TTL")
+        if ttl_response_headers:
+            try:
+                ttl_given = int(ttl_response_headers[0])
+                if ttl_given != self.ttl:
+                    logger.info(
+                        "requested TTL of %d to endpoint %s but got %d",
+                        self.ttl,
+                        endpoint_domain,
+                        ttl_given,
+                    )
+            except:
+                pass
+
+        # permanent errors
+        if response.code == 404 or response.code == 410:
+            logger.warn(
+                "Rejecting pushkey %s; subscription is invalid on %s: %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+            return True
+        # and temporary ones
+        if response.code >= 400:
+            logger.warn(
+                "webpush request failed for pushkey %s; %s responded with %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+        elif response.code != 201:
+            logger.info(
+                "webpush request for pushkey %s didn't respond with 201; %s responded with %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+        return False
 
 
 class HttpAgentWrapper:
