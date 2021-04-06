@@ -11,7 +11,7 @@ jobs:
       - run: python -m pip install tox
       - run: tox -e check_codestyle
   
-  check-types-(:mypy:):
+  check-types-mypy:
     runs-on: ubuntu-latest
     steps: 
       - uses: actions/checkout@v2
@@ -21,7 +21,7 @@ jobs:
       - run: python -m pip install tox  
       - run: tox -e check_types
 
-  run-unit-tests-(on SQlite):
+  run-unit-tests-sqlite:
     needs: [check-code-style, check-types-(:mypy:)]
     runs-on: ubuntu-latest
     steps: 
