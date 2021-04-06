@@ -1,55 +1,49 @@
 name: CI-Checks
-on: 
-  push:
-    branches-ignore:
-      -master
-      -release-*
-jobs:
-  check-newsfile:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.7'
-      - run: python -m pip install towncrier
-      - run: python -m towncrier.check
-    # plugins:
-    #   - docker#v3.0.1:
-    #       image: "python:3.7"
-    #       mount-buildkite-agent: false
-    # branches: "!master !release-*"
+on: [push]
+jobs: 
+  check-code-style:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+         with:
+            python-version: '3.7'
+    - run: python -m pip install tox
+    - run: tox -e check_codestyle
+  
+  check-types-(:mypy:):
+  runs-on: ubuntu-latest
+  steps: 
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+         with:
+            python-version: '3.7'
+    - run: python -m pip install tox  
+    - run: tox -e check_types
 
-  # - command:
-  #     - "python -m pip install tox"
-  #     - "tox -e check_codestyle"
-  #   label: "Check Code Style"
-  #   plugins:
-  #     - docker#v3.0.1:
-  #         image: "python:3.7"
-  #         mount-buildkite-agent: false
-
-  # - command:
-  #     - "python -m pip install tox"
-  #     - "tox -e check_types"
-  #   label: "Check Types (:mypy:)"
-  #   plugins:
-  #     - docker#v3.0.1:
-  #         image: "python:3.7"
-  #         mount-buildkite-agent: false
-
-  # - wait
-
-  # - command:
-  #     - "python -m pip install -e ."
-  #     - "trial tests"
-  #   label: "Run unit tests (on SQLite)"
-  #   plugins:
-  #     - docker#v3.0.1:
-  #         image: "python:3.7"
-  #         mount-buildkite-agent: false
-
-  # - command:
+  run-unit-tests-(on SQlite):
+    needs: [check-code-style, check-types-(:mypy:)]
+  runs-on: ubuntu-latest
+  steps: 
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+         with:
+            python-version: '3.7'
+    - run: python -m pip install -e .
+    - run: trial tests
+  
+  # run-unit-tests-(on :postgres:):
+  #   needs: [run-unit-tests-(on SQlite)]
+  # runs-on: ubuntu-latest
+  # container:  
+  
+  # steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: actions/setup-python@v2
+  #        with:
+  #           python-version: '3.7'
+  #   - uses: actions/ 
+  # # - command:
   #     - "python -m pip install -e ."
   #     - "trial tests"
   #   label: "Run unit tests (on :postgres:)"
