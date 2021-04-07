@@ -57,6 +57,7 @@ DEFAULT_MAX_CONNECTIONS = 20
 DEFAULT_TTL = 15 * 60  # in seconds
 # Max payload size is 4096
 MAX_BODY_LENGTH = 1000
+MAX_CIPHERTEXT_LENGTH = 2000
 
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
@@ -256,7 +257,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             if isinstance(body, str) and len(body) > MAX_BODY_LENGTH:
                 content["body"] = body[0 : MAX_BODY_LENGTH - 1] + "…"
             ciphertext = content.get("ciphertext")
-            if isinstance(ciphertext, str) and len(ciphertext) > MAX_BODY_LENGTH:
+            if isinstance(ciphertext, str) and len(ciphertext) > MAX_CIPHERTEXT_LENGTH:
                 content.pop("ciphertext", None)
             payload["content"] = content
 
