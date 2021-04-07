@@ -15,6 +15,8 @@
 import json
 import logging
 import os.path
+from base64 import urlsafe_b64encode
+from hashlib import blake2s
 from io import BytesIO
 from typing import List, Optional, Pattern
 from urllib.parse import urlparse
@@ -175,6 +177,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         # web push only supports normal and low priority, so assume normal if absent
         low_priority = n.prio == "low"
+        # allow dropping earlier notifications in the same room if requested
+        topic = None
+        if n.room_id and device.data.get("only_last_per_room") is True:
+            # ask for a 22 byte hash, so the base64 of it is 32,
+            # the limit webpush allows for the topic
+            topic = urlsafe_b64encode(
+                blake2s(
+                    n.room_id.encode(), digest_size=22, usedforsecurity=False
+                ).digest()
+            )
+
         # note that webpush modifies vapid_claims, so make sure it's only used once
         vapid_claims = {
             "sub": "mailto:{}".format(self.vapid_contact_email),
@@ -197,7 +210,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         requests_session=self.http_request_factory,
                     )
                     response = await request.execute(
-                        self.http_agent, low_priority
+                        self.http_agent, low_priority, topic
                     )
                     response_text = (await readBody(response)).decode()
         finally:
@@ -369,7 +382,7 @@ class HttpDelayedRequest:
         self.data = data
         self.vapid_headers = vapid_headers
 
-    def execute(self, http_agent, low_priority):
+    def execute(self, http_agent, low_priority, topic):
         body_producer = FileBodyProducer(BytesIO(self.data))
         # Convert the headers to the camelcase version.
         headers = {
@@ -379,6 +392,8 @@ class HttpDelayedRequest:
             b"TTL": [self.vapid_headers["ttl"]],
             b"Urgency": ["low" if low_priority else "normal"],
         }
+        if topic:
+            headers[b"Topic"] = topic
 
         return http_agent.request(
             b"POST",
