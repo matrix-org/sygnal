@@ -304,7 +304,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             )
         elif response.code != 201:
             logger.info(
-                "webpush request for pushkey %s didn't respond with 201; %s responded with %d: %s",
+                "webpush request for pushkey %s didn't respond with 201; "
+                + "%s responded with %d: %s",
                 pushkey,
                 endpoint_domain,
                 response.code,
