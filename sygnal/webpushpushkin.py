@@ -393,7 +393,7 @@ class HttpDelayedRequest:
             b"Urgency": ["low" if low_priority else "normal"],
         }
         if topic:
-            headers[b"Topic"] = [ topic ]
+            headers[b"Topic"] = [topic]
         return http_agent.request(
             b"POST",
             self.endpoint.encode(),
