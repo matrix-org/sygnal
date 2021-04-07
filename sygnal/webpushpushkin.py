@@ -138,7 +138,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         # drop notifications without an event id if requested,
         # see https://github.com/matrix-org/sygnal/issues/186
         if device.data.get("events_only") is True and not n.event_id:
-            return [];
+            return []
 
         endpoint = device.data.get("endpoint")
         auth = device.data.get("auth")
@@ -182,7 +182,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         with QUEUE_TIME_HISTOGRAM.time():
             with PENDING_REQUESTS_GAUGE.track_inprogress():
                 await self.connection_semaphore.acquire()
-
         try:
             with SEND_TIME_HISTOGRAM.time():
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
@@ -200,7 +199,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             self.connection_semaphore.release()
 
         reject_pushkey = self._handle_response(
-            response, response_text, device.pushkey, endpoint_domain)
+            response, response_text, device.pushkey, endpoint_domain
+        )
         if reject_pushkey:
             return [device.pushkey]
         return []
@@ -254,7 +254,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             body = content.get("body")
             # make some attempts to not go over the max payload length
             if isinstance(body, str) and len(body) > MAX_BODY_LENGTH:
-                content["body"] = body[0: MAX_BODY_LENGTH - 1] + "…"
+                content["body"] = body[0 : MAX_BODY_LENGTH - 1] + "…"
             ciphertext = content.get("ciphertext")
             if isinstance(ciphertext, str) and len(ciphertext) > MAX_BODY_LENGTH:
                 content.pop("ciphertext", None)
@@ -282,7 +282,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                     )
             except:
                 pass
-
         # permanent errors
         if response.code == 404 or response.code == 410:
             logger.warn(
