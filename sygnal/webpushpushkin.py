@@ -55,8 +55,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_CONNECTIONS = 20
 DEFAULT_TTL = 15 * 60  # in seconds
-MAX_BODY_LENGTH = 2000
-MAX_PAYLOAD_LENGTH = 4096
+# Max payload size is 4096
+MAX_BODY_LENGTH = 1000
 
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
