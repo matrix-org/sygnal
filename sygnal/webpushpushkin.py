@@ -281,7 +281,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                         endpoint_domain,
                         ttl_given,
                     )
-            except:
+            except ValueError:
                 pass
         # permanent errors
         if response.code == 404 or response.code == 410:
