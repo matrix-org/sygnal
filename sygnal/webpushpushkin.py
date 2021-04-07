@@ -102,7 +102,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             contextFactory=tls_client_options_factory,
             proxy_url_str=proxy_url,
         )
-        self.http_agent_wrapper = HttpAgentWrapper(self.http_agent)
+        self.http_request_factory = HttpRequestFactory()
 
         self.allowed_endpoints = None  # type: Optional[List[Pattern]]
         allowed_endpoints = self.get_config("allowed_endpoints")
@@ -173,6 +173,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
 
+        # web push only supports normal and low priority, so assume normal if absent
+        low_priority = n.prio == "low"
         # note that webpush modifies vapid_claims, so make sure it's only used once
         vapid_claims = {
             "sub": "mailto:{}".format(self.vapid_contact_email),
@@ -186,15 +188,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         try:
             with SEND_TIME_HISTOGRAM.time():
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
-                    response_wrapper = webpush(
+                    request = webpush(
                         subscription_info=subscription_info,
                         data=data,
                         ttl=self.ttl,
                         vapid_private_key=self.vapid_private_key,
                         vapid_claims=vapid_claims,
-                        requests_session=self.http_agent_wrapper,
+                        requests_session=self.http_request_factory,
                     )
-                    response = await response_wrapper.deferred
+                    response = await request.execute(
+                        self.http_agent, low_priority
+                    )
                     response_text = (await readBody(response)).decode()
         finally:
             self.connection_semaphore.release()
@@ -314,13 +318,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         return False
 
 
-class HttpAgentWrapper:
+class HttpRequestFactory:
     """
     Provide a post method that matches the API expected from pywebpush.
     """
-
-    def __init__(self, http_agent):
-        self.http_agent = http_agent
 
     def post(self, endpoint, data, headers, timeout):
         """
@@ -336,25 +337,15 @@ class HttpAgentWrapper:
             timeout (int)
                 Ignored for now
         """
-        body_producer = FileBodyProducer(BytesIO(data))
-        # Convert the headers to the camelcase version.
-        headers = {
-            b"User-Agent": ["sygnal"],
-            b"Content-Encoding": [headers["content-encoding"]],
-            b"Authorization": [headers["authorization"]],
-            b"TTL": [headers["ttl"]],
-        }
-        deferred = self.http_agent.request(
-            b"POST",
-            endpoint.encode(),
-            headers=Headers(headers),
-            bodyProducer=body_producer,
-        )
-        return HttpResponseWrapper(deferred)
+        return HttpDelayedRequest(endpoint, data, headers)
 
 
-class HttpResponseWrapper:
+class HttpDelayedRequest:
     """
+    Captures the values received from pywebpush for the endpoint request.
+    The request isn't immediately executed, to allow adding headers
+    not supported by pywebpush, like Topic and Urgency.
+
     Provide a response object that matches the API expected from pywebpush.
     pywebpush expects a synchronous API, while we use an asynchronous API.
 
@@ -363,8 +354,6 @@ class HttpResponseWrapper:
     in the background.
 
     Attributes:
-        deferred (Deferred):
-            The deferred to await the actual response after calling pywebpush.
         status_code (int):
             Defined to be 200 so the pywebpush check to see if is below 202
             passes.
@@ -375,5 +364,25 @@ class HttpResponseWrapper:
     status_code = 200
     text = None
 
-    def __init__(self, deferred):
-        self.deferred = deferred
+    def __init__(self, endpoint, data, vapid_headers):
+        self.endpoint = endpoint
+        self.data = data
+        self.vapid_headers = vapid_headers
+
+    def execute(self, http_agent, low_priority):
+        body_producer = FileBodyProducer(BytesIO(self.data))
+        # Convert the headers to the camelcase version.
+        headers = {
+            b"User-Agent": ["sygnal"],
+            b"Content-Encoding": [self.vapid_headers["content-encoding"]],
+            b"Authorization": [self.vapid_headers["authorization"]],
+            b"TTL": [self.vapid_headers["ttl"]],
+            b"Urgency": ["low" if low_priority else "normal"],
+        }
+
+        return http_agent.request(
+            b"POST",
+            endpoint.encode(),
+            headers=Headers(headers),
+            bodyProducer=body_producer,
+        )
