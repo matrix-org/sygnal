@@ -183,9 +183,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             # ask for a 22 byte hash, so the base64 of it is 32,
             # the limit webpush allows for the topic
             topic = urlsafe_b64encode(
-                blake2s(
-                    n.room_id.encode(), digest_size=22, usedforsecurity=False
-                ).digest()
+                blake2s(n.room_id.encode(), digest_size=22).digest()
             )
 
         # note that webpush modifies vapid_claims, so make sure it's only used once
