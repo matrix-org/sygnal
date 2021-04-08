@@ -55,6 +55,9 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_CONNECTIONS = 20
 DEFAULT_TTL = 15 * 60  # in seconds
+# Max payload size is 4096
+MAX_BODY_LENGTH = 1000
+MAX_CIPHERTEXT_LENGTH = 2000
 
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
@@ -133,6 +136,11 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             )
             return [device.pushkey]
 
+        # drop notifications without an event id if requested,
+        # see https://github.com/matrix-org/sygnal/issues/186
+        if device.data.get("events_only") is True and not n.event_id:
+            return []
+
         endpoint = device.data.get("endpoint")
         auth = device.data.get("auth")
         endpoint_domain = urlparse(endpoint).netloc
@@ -175,7 +183,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         with QUEUE_TIME_HISTOGRAM.time():
             with PENDING_REQUESTS_GAUGE.track_inprogress():
                 await self.connection_semaphore.acquire()
-
         try:
             with SEND_TIME_HISTOGRAM.time():
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
@@ -192,15 +199,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         finally:
             self.connection_semaphore.release()
 
-        # assume 4xx is permanent and 5xx is temporary
-        if 400 <= response.code < 500:
-            logger.warn(
-                "Rejecting pushkey %s; gateway %s failed with %d: %s",
-                device.pushkey,
-                endpoint_domain,
-                response.code,
-                response_text,
-            )
+        reject_pushkey = self._handle_response(
+            response, response_text, device.pushkey, endpoint_domain
+        )
+        if reject_pushkey:
             return [device.pushkey]
         return []
 
@@ -233,7 +235,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             "sender_display_name",
             "user_is_target",
             "type",
-            "content",
         ]:
             value = getattr(n, attr, None)
             if value:
@@ -246,7 +247,71 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 if count_value is not None:
                     payload[attr] = count_value
 
+        if n.content and isinstance(n.content, dict):
+            content = n.content.copy()
+            # we can't show formatted_body in a notification anyway on web
+            # so remove it
+            content.pop("formatted_body", None)
+            body = content.get("body")
+            # make some attempts to not go over the max payload length
+            if isinstance(body, str) and len(body) > MAX_BODY_LENGTH:
+                content["body"] = body[0 : MAX_BODY_LENGTH - 1] + "…"
+            ciphertext = content.get("ciphertext")
+            if isinstance(ciphertext, str) and len(ciphertext) > MAX_CIPHERTEXT_LENGTH:
+                content.pop("ciphertext", None)
+            payload["content"] = content
+
         return payload
+
+    def _handle_response(self, response, response_text, pushkey, endpoint_domain):
+        """
+        Logs and determines the outcome of the response
+
+        Returns:
+            Boolean whether the puskey should be rejected
+        """
+        ttl_response_headers = response.headers.getRawHeaders(b"TTL")
+        if ttl_response_headers:
+            try:
+                ttl_given = int(ttl_response_headers[0])
+                if ttl_given != self.ttl:
+                    logger.info(
+                        "requested TTL of %d to endpoint %s but got %d",
+                        self.ttl,
+                        endpoint_domain,
+                        ttl_given,
+                    )
+            except ValueError:
+                pass
+        # permanent errors
+        if response.code == 404 or response.code == 410:
+            logger.warn(
+                "Rejecting pushkey %s; subscription is invalid on %s: %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+            return True
+        # and temporary ones
+        if response.code >= 400:
+            logger.warn(
+                "webpush request failed for pushkey %s; %s responded with %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+        elif response.code != 201:
+            logger.info(
+                "webpush request for pushkey %s didn't respond with 201; "
+                + "%s responded with %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+        return False
 
 
 class HttpAgentWrapper:
