@@ -179,7 +179,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         low_priority = n.prio == "low"
         # allow dropping earlier notifications in the same room if requested
         topic = None
-        if n.room_id and device.data.get("only_last_per_room") == True:
+        if n.room_id and device.data.get("only_last_per_room") is True:
             # ask for a 22 byte hash, so the base64 of it is 32,
             # the limit webpush allows for the topic
             topic = urlsafe_b64encode(
