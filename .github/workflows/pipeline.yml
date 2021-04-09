@@ -32,26 +32,30 @@ jobs:
       - run: python -m pip install -e .
       - run: trial tests
   
-  # run-unit-tests-(on :postgres:):
-  #   needs: [run-unit-tests-sqlite]
-  # runs-on: ubuntu-latest
-  # container:  
+  run-unit-tests-postgres:
+    needs: [check-code-style, check-types-mypy]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres-version }}
+        ports:
+          - 5432:5432
+        env:
+          TEST_USE_POSTGRES: "yes"
+          TEST_POSTGRES_USER: "postgres"
+          TEST_POSTGRES_PASSWORD: "pass"
+          TEST_POSTGRES_HOST: "localhost"
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5  
   
-  # steps:
-  #   - uses: actions/checkout@v2
-  #   - uses: actions/setup-python@v2
-  #     with:
-  #       python-version: '3.7'
-  #   - uses: actions/ 
-  # # - command:
-  #     - "python -m pip install -e ."
-  #     - "trial tests"
-  #   label: "Run unit tests (on :postgres:)"
-  #   plugins:
-  #     - matrix-org/download#v1.1.0:
-  #         urls:
-  #           - https://raw.githubusercontent.com/matrix-org/pipelines/master/sygnal/docker-compose.yml
-  #     - docker-compose#v3.2.0:
-  #         run: testenv
-  #         config:
-  #           - /tmp/download-${BUILDKITE_BUILD_ID}/docker-compose.yml
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+       with:
+         python-version: '3.7'
+      - run: python -m pip install -e .
+      - run: trial tests
+       
