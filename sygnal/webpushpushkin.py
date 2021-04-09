@@ -361,8 +361,8 @@ class HttpDelayedRequest:
     pywebpush expects a synchronous API, while we use an asynchronous API.
 
     To keep pywebpush happy we present it with some hardcoded values that
-    make its assertions pass while the async network call is happening
-    in the background.
+    make its assertions pass even though the HTTP request has not yet been
+    made.
 
     Attributes:
         status_code (int):
