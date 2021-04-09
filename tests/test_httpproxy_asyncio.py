@@ -225,7 +225,10 @@ class AsyncioHttpProxyTLSTest(testutils.TestCase):
         self.proxy_context.set_ciphers("DEFAULT")
 
     def make_fake_proxy(
-        self, host: str, port: int, proxy_credentials: Optional[Tuple[str, str]],
+        self,
+        host: str,
+        port: int,
+        proxy_credentials: Optional[Tuple[str, str]],
     ) -> Tuple[EchoProtocol, MockTransport, "Task[Tuple[BaseTransport, Protocol]]"]:
         # Task[Tuple[MockTransport, MockProtocol]]
 
