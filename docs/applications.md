@@ -270,7 +270,7 @@ forced to show a notification to push messages that clear the unread count.
 ##### only_last_per_room
 
 You can opt in to only receive the last notification per room by setting
-`only_last_per_room: true` in the push data. Note that if a first notification
+`only_last_per_room: true` in the push data. Note that if the first notification
 can be delivered before the second one is sent, you will still get both;
 it only has an effect when notifications are queued up on the gateway.
 
