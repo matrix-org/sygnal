@@ -357,7 +357,7 @@ class HttpDelayedRequest:
     The request isn't immediately executed, to allow adding headers
     not supported by pywebpush, like Topic and Urgency.
 
-    Provide a response object that matches the API expected from pywebpush.
+    Also provides the interface that pywebpush expects from a response object.
     pywebpush expects a synchronous API, while we use an asynchronous API.
 
     To keep pywebpush happy we present it with some hardcoded values that
