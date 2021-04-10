@@ -1,9 +1,6 @@
 Name: Changelog-Checks
-on: 
-  pull_request:
-    branches-ignore:
-      -master
-      -release-*
+on: [pull_request]
+
 jobs:
   check-newsfile:
     runs-on: ubuntu-latest
