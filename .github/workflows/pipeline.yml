@@ -43,7 +43,7 @@ jobs:
         env:
           TEST_USE_POSTGRES: "yes"
           TEST_POSTGRES_USER: "postgres"
-          TEST_POSTGRES_PASSWORD: "pass"
+          TEST_POSTGRES_PASSWORD: "postgres"
           TEST_POSTGRES_HOST: "localhost"
         options: >-
           --health-cmd pg_isready
