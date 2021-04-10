@@ -55,9 +55,14 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.7'
-      env:
-        POSTGRES_HOST: postgres
-        POSTGRES_HOST: localhost
       - run: python -m pip install -e .
       - run: trial tests
+        env:
+          TEST_USE_POSTGRES: "yes"
+          TEST_POSTGRES_USER: "postgres"
+          TEST_POSTGRES_PASSWORD: "pass"
+          TEST_POSTGRES_HOST: "localhost"
+      
+      
+
        
