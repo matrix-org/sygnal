@@ -42,10 +42,8 @@ jobs:
         ports:
           - 5432:5432
         env:
-          TEST_USE_POSTGRES: yes
-          TEST_POSTGRES_USER: postgres
-          TEST_POSTGRES_PASSWORD: postgres
-          TEST_POSTGRES_HOST: localhost
+          POSTGRES_PASSWORD: "postgres"
+          POSTGRES_INITDB_ARGS: "--lc-collate C --lc-ctype C --encoding UTF8"
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -57,6 +55,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.7'
+      env:
+        POSTGRES_HOST: postgres
+        POSTGRES_HOST: localhost
       - run: python -m pip install -e .
       - run: trial tests
        
