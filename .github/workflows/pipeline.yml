@@ -35,6 +35,12 @@ jobs:
   run-unit-tests-postgres:
     needs: [check-code-style, check-types-mypy]
     runs-on: ubuntu-latest
+    env:
+      TEST_USE_POSTGRES: "yes"
+      TEST_POSTGRES_USER: "postgres"
+      TEST_POSTGRES_PASSWORD: "postgres"
+      TEST_POSTGRES_HOST: "localhost"
+    
     services:
       postgres:
         image: postgres:11
