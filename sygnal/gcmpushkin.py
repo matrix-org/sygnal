@@ -32,7 +32,7 @@ from sygnal.exceptions import (
 )
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
+from sygnal.utils import NotificationLoggerAdapter, safe_json_loads, twisted_sleep
 
 from .exceptions import PushkinSetupException
 from .notifications import ConcurrencyLimitedPushkin
@@ -250,7 +250,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             return pushkeys, []
         elif 200 <= response.code < 300:
             try:
-                resp_object = json_decoder.decode(response_text)
+                resp_object = safe_json_loads(response_text)
             except ValueError:
                 raise NotificationDispatchException("Invalid JSON response from GCM.")
             if "results" not in resp_object:

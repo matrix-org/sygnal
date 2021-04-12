@@ -14,6 +14,7 @@
 # limitations under the License.
 import json
 import re
+from functools import partial
 from logging import LoggerAdapter
 
 from twisted.internet.defer import Deferred
@@ -67,8 +68,8 @@ def glob_to_regex(glob):
 
 def _reject_invalid_json(val):
     """Do not allow Infinity, -Infinity, or NaN values in JSON."""
-    raise ValueError("Invalid JSON value: '%s'" % val)
+    raise ValueError(f"Invalid JSON value: {val!r}")
 
 
 # a custom JSON decoder which will reject Python extensions to JSON.
-json_decoder = json.JSONDecoder(parse_constant=_reject_invalid_json)
+safe_json_loads = partial(json.loads, parse_constant=_reject_invalid_json)

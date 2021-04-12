@@ -35,7 +35,7 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from sygnal.notifications import NotificationContext
-from sygnal.utils import NotificationLoggerAdapter, json_decoder
+from sygnal.utils import NotificationLoggerAdapter, safe_json_loads
 
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
@@ -133,7 +133,7 @@ class V1NotifyHandler(Resource):
             log = NotificationLoggerAdapter(logger, {"request_id": request_id})
 
             try:
-                body = json_decoder.decode(request.content.read())
+                body = safe_json_loads(request.content.read())
             except Exception as exc:
                 msg = "Expected JSON request body"
                 log.warning(msg, exc_info=exc)
