@@ -18,7 +18,6 @@ import json
 import logging
 import time
 from io import BytesIO
-from json import JSONDecodeError
 
 from opentracing import logs, tags
 from prometheus_client import Counter, Gauge, Histogram
