@@ -32,7 +32,7 @@ from sygnal.exceptions import (
 )
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from sygnal.utils import NotificationLoggerAdapter, twisted_sleep, json_decoder
+from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
 
 from .exceptions import PushkinSetupException
 from .notifications import ConcurrencyLimitedPushkin
