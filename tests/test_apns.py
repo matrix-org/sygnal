@@ -205,7 +205,8 @@ class ApnsTestCase(testutils.TestCase):
         ((notification_req,), _kwargs) = method.call_args
 
         self.assertEqual(
-            {"aps": {"badge": 2}}, notification_req.message,
+            {"aps": {"badge": 2}},
+            notification_req.message,
         )
 
         self.assertEqual({"rejected": []}, resp)
