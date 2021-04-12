@@ -1,4 +1,4 @@
-name: CI-Checks
+name: Linting and Tests
 on: [push]
 jobs: 
   check-code-style:
@@ -7,7 +7,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.7'
+          python-version: "3.7"
       - run: python -m pip install tox
       - run: tox -e check_codestyle
   
@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.7'
+          python-version: "3.7"
       - run: python -m pip install tox  
       - run: tox -e check_types
 
@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.7'
+          python-version: "3.7"
       - run: python -m pip install -e .
       - run: trial tests
   
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.7'
+          python-version: "3.7"
       - run: python -m pip install -e .
       - run: trial tests
         env:
@@ -62,7 +62,3 @@ jobs:
           TEST_POSTGRES_USER: "postgres"
           TEST_POSTGRES_PASSWORD: "postgres"
           TEST_POSTGRES_HOST: "localhost"
-      
-      
-
-       
