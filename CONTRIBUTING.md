@@ -19,6 +19,16 @@ This creates an isolated virtual Python environment ("virtualenv") just for
 use with Sygnal, then installs Sygnal along with its dependencies, and lastly
 installs a handful of useful tools
 
+If you get `ConnectTimeoutError`, this is caused by slow internet whereby `pip` has a 
+default time out of _15 sec_. Run the following command by specifying timeout to be more
+than 15 sec.
+
+```bash
+python3 -m venv venv
+./venv/bin/pip timeout==1000 install -e '.[dev]'
+```
+
+
 Finally, activate the virtualenv by running:
 
 ```bash
