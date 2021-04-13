@@ -14,7 +14,6 @@
 # limitations under the License.
 import json
 import re
-from functools import partial
 from logging import LoggerAdapter
 
 from twisted.internet.defer import Deferred
@@ -72,4 +71,4 @@ def _reject_invalid_json(val):
 
 
 # a custom JSON decoder which will reject Python extensions to JSON.
-safe_json_loads = partial(json.loads, parse_constant=_reject_invalid_json)
+json_decoder = json.JSONDecoder(parse_constant=_reject_invalid_json)
