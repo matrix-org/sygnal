@@ -255,7 +255,24 @@ so it can be used to pass identifiers specific to your client
 
 ##### events_only
 
-As of the time of writing, all webpush-supporting browsers require you to set `userVisibleOnly: true` when calling (`pushManager.subscribe`)[https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe], to (prevent abusing webpush to track users)[https://goo.gl/yqv4Q4] without their knowledge. With this (mandatory) flag, the browser will show a "site has been updated in the background" notification if no notifications are visible after your service worker processes a `push` event. This can easily happen when sygnal sends a push message to clear the unread count, which is not specific to an event. With `events_only: true` in the pusher data, sygnal won't forward any push message without a event id. This prevents your service worker being forced to show a notification to push messages that clear the unread count.
+As of the time of writing, all webpush-supporting browsers require you to set 
+`userVisibleOnly: true` when calling (`pushManager.subscribe`)
+[https://developer.mozilla.org/en-US/docs/Web/API/PushManager/subscribe], to 
+(prevent abusing webpush to track users)[https://goo.gl/yqv4Q4] without their 
+knowledge. With this (mandatory) flag, the browser will show a "site has been 
+updated in the background" notification if no notifications are visible after
+your service worker processes a `push` event. This can easily happen when sygnal
+sends a push message to clear the unread count, which is not specific
+to an event. With `events_only: true` in the pusher data, sygnal won't forward
+any push message without a event id. This prevents your service worker being
+forced to show a notification to push messages that clear the unread count.
+
+##### only_last_per_room
+
+You can opt in to only receive the last notification per room by setting
+`only_last_per_room: true` in the push data. Note that if the first notification
+can be delivered before the second one is sent, you will still get both;
+it only has an effect when notifications are queued up on the gateway.
 
 ##### Multiple pushers on one origin
 
