@@ -7,7 +7,7 @@ this case, the [Apache Software License v2](LICENSE).
 ## Preparing your development environment
 
 Sygnal depends on the `psycopg2` database adapter for PostgreSQL. 
-It is recommended that you install `libq-dev python3-dev build-essential`. For example on Debian/Ubuntu these can be installed with:
+You may need to install development headers for Python and libpq. For example on Debian/Ubuntu these can be installed with:
 
 ```bash
 sudo apt install libpq-dev python3-dev build-essential
