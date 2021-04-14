@@ -15,6 +15,8 @@
 import json
 import logging
 import os.path
+from base64 import urlsafe_b64encode
+from hashlib import blake2s
 from io import BytesIO
 from typing import List, Optional, Pattern
 from urllib.parse import urlparse
@@ -102,7 +104,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             contextFactory=tls_client_options_factory,
             proxy_url_str=proxy_url,
         )
-        self.http_agent_wrapper = HttpAgentWrapper(self.http_agent)
+        self.http_request_factory = HttpRequestFactory()
 
         self.allowed_endpoints = None  # type: Optional[List[Pattern]]
         allowed_endpoints = self.get_config("allowed_endpoints")
@@ -173,6 +175,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
 
+        # web push only supports normal and low priority, so assume normal if absent
+        low_priority = n.prio == "low"
+        # allow dropping earlier notifications in the same room if requested
+        topic = None
+        if n.room_id and device.data.get("only_last_per_room") is True:
+            # ask for a 22 byte hash, so the base64 of it is 32,
+            # the limit webpush allows for the topic
+            topic = urlsafe_b64encode(
+                blake2s(n.room_id.encode(), digest_size=22).digest()
+            )
+
         # note that webpush modifies vapid_claims, so make sure it's only used once
         vapid_claims = {
             "sub": "mailto:{}".format(self.vapid_contact_email),
@@ -186,15 +199,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         try:
             with SEND_TIME_HISTOGRAM.time():
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
-                    response_wrapper = webpush(
+                    request = webpush(
                         subscription_info=subscription_info,
                         data=data,
                         ttl=self.ttl,
                         vapid_private_key=self.vapid_private_key,
                         vapid_claims=vapid_claims,
-                        requests_session=self.http_agent_wrapper,
+                        requests_session=self.http_request_factory,
                     )
-                    response = await response_wrapper.deferred
+                    response = await request.execute(
+                        self.http_agent, low_priority, topic
+                    )
                     response_text = (await readBody(response)).decode()
         finally:
             self.connection_semaphore.release()
@@ -314,13 +329,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         return False
 
 
-class HttpAgentWrapper:
+class HttpRequestFactory:
     """
     Provide a post method that matches the API expected from pywebpush.
     """
-
-    def __init__(self, http_agent):
-        self.http_agent = http_agent
 
     def post(self, endpoint, data, headers, timeout):
         """
@@ -336,35 +348,23 @@ class HttpAgentWrapper:
             timeout (int)
                 Ignored for now
         """
-        body_producer = FileBodyProducer(BytesIO(data))
-        # Convert the headers to the camelcase version.
-        headers = {
-            b"User-Agent": ["sygnal"],
-            b"Content-Encoding": [headers["content-encoding"]],
-            b"Authorization": [headers["authorization"]],
-            b"TTL": [headers["ttl"]],
-        }
-        deferred = self.http_agent.request(
-            b"POST",
-            endpoint.encode(),
-            headers=Headers(headers),
-            bodyProducer=body_producer,
-        )
-        return HttpResponseWrapper(deferred)
+        return HttpDelayedRequest(endpoint, data, headers)
 
 
-class HttpResponseWrapper:
+class HttpDelayedRequest:
     """
-    Provide a response object that matches the API expected from pywebpush.
+    Captures the values received from pywebpush for the endpoint request.
+    The request isn't immediately executed, to allow adding headers
+    not supported by pywebpush, like Topic and Urgency.
+
+    Also provides the interface that pywebpush expects from a response object.
     pywebpush expects a synchronous API, while we use an asynchronous API.
 
     To keep pywebpush happy we present it with some hardcoded values that
-    make its assertions pass while the async network call is happening
-    in the background.
+    make its assertions pass even though the HTTP request has not yet been
+    made.
 
     Attributes:
-        deferred (Deferred):
-            The deferred to await the actual response after calling pywebpush.
         status_code (int):
             Defined to be 200 so the pywebpush check to see if is below 202
             passes.
@@ -375,5 +375,26 @@ class HttpResponseWrapper:
     status_code = 200
     text = None
 
-    def __init__(self, deferred):
-        self.deferred = deferred
+    def __init__(self, endpoint, data, vapid_headers):
+        self.endpoint = endpoint
+        self.data = data
+        self.vapid_headers = vapid_headers
+
+    def execute(self, http_agent, low_priority, topic):
+        body_producer = FileBodyProducer(BytesIO(self.data))
+        # Convert the headers to the camelcase version.
+        headers = {
+            b"User-Agent": ["sygnal"],
+            b"Content-Encoding": [self.vapid_headers["content-encoding"]],
+            b"Authorization": [self.vapid_headers["authorization"]],
+            b"TTL": [self.vapid_headers["ttl"]],
+            b"Urgency": ["low" if low_priority else "normal"],
+        }
+        if topic:
+            headers[b"Topic"] = [topic]
+        return http_agent.request(
+            b"POST",
+            self.endpoint.encode(),
+            headers=Headers(headers),
+            bodyProducer=body_producer,
+        )
