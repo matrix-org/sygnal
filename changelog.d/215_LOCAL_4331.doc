@@ -1,0 +1,1 @@
+pip installation timeout error is now fixed by specifying timeout to be greater than 15sec, eg timeout 120 in the pip command #215. Contributed by Omar Mohamed.

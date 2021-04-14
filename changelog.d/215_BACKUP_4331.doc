@@ -1,0 +1,5 @@
+<<<<<<< HEAD
+pip installation timeout error is now fixed by specifying timeout to be greater than 15sec, eg timeout 120 in the pip command #215. Contributed by Omar Mohamed.
+=======
+Document how to work around pip installation timeout errors. Contributed by Omar Mohamed.
+>>>>>>> 7a3d6f8f47229ce8d03499b186ca8f1906797843
