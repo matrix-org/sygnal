@@ -198,7 +198,7 @@ class Sygnal(object):
         clarse = getattr(pushkin_module, to_construct)
         return await clarse.create(app_name, self, app_config)
 
-    async def _make_pushkins_then_start(self, port, bind_addresses, pushgateway_api):
+    async def make_pushkins_then_start(self):
         for app_id, app_cfg in self.config["apps"].items():
             try:
                 self.pushkins[app_id] = await self._make_pushkin(app_id, app_cfg)
@@ -215,7 +215,9 @@ class Sygnal(object):
 
         logger.info("Configured with app IDs: %r", self.pushkins.keys())
 
-        for interface in bind_addresses:
+        pushgateway_api = PushGatewayApiServer(self)
+        port = int(self.config["http"]["port"])
+        for interface in self.config["http"]["bind_addresses"]:
             logger.info("Starting listening on %s port %d", interface, port)
             self.reactor.listenTCP(port, pushgateway_api.site, interface=interface)
 
@@ -223,18 +225,11 @@ class Sygnal(object):
         """
         Attempt to run Sygnal and then exit the application.
         """
-        port = int(self.config["http"]["port"])
-        bind_addresses = self.config["http"]["bind_addresses"]
-        pushgateway_api = PushGatewayApiServer(self)
 
         @defer.inlineCallbacks
         def start():
             try:
-                yield ensureDeferred(
-                    self._make_pushkins_then_start(
-                        port, bind_addresses, pushgateway_api
-                    )
-                )
+                yield ensureDeferred(self.make_pushkins_then_start())
             except Exception:
                 # Print the exception and bail out.
                 print("Error during startup:", file=sys.stderr)
