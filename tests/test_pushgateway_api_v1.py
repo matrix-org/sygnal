@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from twisted.internet.address import IPv6Address
+from twisted.internet.testing import StringTransport
+
 from sygnal.exceptions import (
     NotificationDispatchException,
     TemporaryNotificationDispatchException,
@@ -183,3 +186,49 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             ),
             502,
         )
+
+    def test_overlong_requests_are_rejected(self):
+        # as a control case, first send a regular request.
+
+        # connect the site to a fake transport.
+        transport = StringTransport()
+        protocol = self.site.buildProtocol(IPv6Address("TCP", "::1", "2345"))
+        protocol.makeConnection(transport)
+
+        protocol.dataReceived(
+            b"POST / HTTP/1.1\r\n"
+            b"Connection: close\r\n"
+            b"Transfer-Encoding: chunked\r\n"
+            b"\r\n"
+            b"0\r\n"
+            b"\r\n"
+        )
+
+        # we should get a 404
+        self.assertRegex(transport.value().decode(), r"^HTTP/1\.1 404 ")
+
+        # now send an oversized request
+        transport = StringTransport()
+        protocol = self.site.buildProtocol(IPv6Address("TCP", "::1", "2345"))
+        protocol.makeConnection(transport)
+
+        protocol.dataReceived(
+            b"POST / HTTP/1.1\r\n"
+            b"Connection: close\r\n"
+            b"Transfer-Encoding: chunked\r\n"
+            b"\r\n"
+        )
+
+        # we deliberately send all the data in one big chunk, to ensure that
+        # twisted isn't buffering the data in the chunked transfer decoder.
+        # we start with the chunk size, in hex. (We won't actually send this much)
+        protocol.dataReceived(b"10000000\r\n")
+        sent = 0
+        while not transport.disconnected:
+            self.assertLess(sent, 0x10000000, "connection did not drop")
+            protocol.dataReceived(b"\0" * 1024)
+            sent += 1024
+
+        # default max upload size is 512K, so it should drop on the next buffer after
+        # that.
+        self.assertEqual(sent, 513 * 1024)
