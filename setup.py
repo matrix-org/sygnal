@@ -55,6 +55,7 @@ setup(
     ],
     extras_require={
         "dev": [
+            "coverage~=5.5",
             "black==20.8b1",
             "flake8==3.9.0",
             "isort~=5.0",
