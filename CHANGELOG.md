@@ -4,7 +4,7 @@ Sygnal 0.9.3 (2021-04-22)
 Features
 --------
 
-- Prevent the push key from being rejected for temporary errors and oversized payloads, add TTL logging, and support events_only push data flag. ([\#212](https://github.com/matrix-org/sygnal/issues/212))
+- Prevent the push key from being rejected for temporary errors and oversized payloads, add TTL logging, and support `events_only` push data flag. ([\#212](https://github.com/matrix-org/sygnal/issues/212))
 - WebPush: add support for Urgency and Topic header ([\#213](https://github.com/matrix-org/sygnal/issues/213))
 
 
@@ -24,8 +24,8 @@ Updates to the Docker image
 Improved Documentation
 ----------------------
 
-- Make CONTIBUTING.md more explicit about how to get tests passing. ([\#188](https://github.com/matrix-org/sygnal/issues/188))
-- Update CONTRIBUTING.md to specify how to run code style and type checks with Tox, and add formatting to code block samples. ([\#193](https://github.com/matrix-org/sygnal/issues/193))
+- Make `CONTIBUTING.md` more explicit about how to get tests passing. ([\#188](https://github.com/matrix-org/sygnal/issues/188))
+- Update `CONTRIBUTING.md` to specify how to run code style and type checks with Tox, and add formatting to code block samples. ([\#193](https://github.com/matrix-org/sygnal/issues/193))
 - Document how to work around pip installation timeout errors. Contributed by Omar Mohamed. ([\#215](https://github.com/matrix-org/sygnal/issues/215))
 
 
@@ -36,7 +36,7 @@ Internal Changes
 - Make development dependencies available as extras. Contributed by Hillery Shay. ([\#194](https://github.com/matrix-org/sygnal/issues/194))
 - Update `setup.py` to specify that a minimum version of Python greater or equal to 3.7 is required. Contributed by Tawanda Moyo. ([\#207](https://github.com/matrix-org/sygnal/issues/207))
 - Port CI checks to Github Actions. ([\#210](https://github.com/matrix-org/sygnal/issues/210), [\#219](https://github.com/matrix-org/sygnal/issues/219))
-- Upgrade development dependencies fixes #199. Contributed by Omar Mohamed ([\#214](https://github.com/matrix-org/sygnal/issues/214))
+- Upgrade development dependencies. Contributed by Omar Mohamed ([\#214](https://github.com/matrix-org/sygnal/issues/214))
 - Set up `coverage.py` to run in tox environment, and add html reports ([\#217](https://github.com/matrix-org/sygnal/issues/217))
 
 
