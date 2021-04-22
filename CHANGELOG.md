@@ -32,12 +32,12 @@ Improved Documentation
 Internal Changes
 ----------------
 
-- Updated Tox to run in the installed version of Python (instead of specifying Python 3.7) and to consider specific paths and folders while running checks, instead of the whole repository (potentially including unwanted files and folders, e.g. the virtual environment). ([\#193](https://github.com/matrix-org/sygnal/issues/193))
-- Development dependencies are now avaible as extras. Contributed by Hillery Shay. ([\#194](https://github.com/matrix-org/sygnal/issues/194))
-- setup.py specifies that a minimum version of Python greater or equal to 3.7 is required. Contributed by Tawanda Moyo ([\#207](https://github.com/matrix-org/sygnal/issues/207))
+- Update Tox to run in the installed version of Python (instead of specifying Python 3.7) and to consider specific paths and folders while running checks, instead of the whole repository (potentially including unwanted files and folders, e.g. the virtual environment). ([\#193](https://github.com/matrix-org/sygnal/issues/193))
+- Make development dependencies available as extras. Contributed by Hillery Shay. ([\#194](https://github.com/matrix-org/sygnal/issues/194))
+- Update `setup.py` to specify that a minimum version of Python greater or equal to 3.7 is required. Contributed by Tawanda Moyo. ([\#207](https://github.com/matrix-org/sygnal/issues/207))
 - Port CI checks to Github Actions. ([\#210](https://github.com/matrix-org/sygnal/issues/210), [\#219](https://github.com/matrix-org/sygnal/issues/219))
 - Upgrade development dependencies fixes #199. Contributed by Omar Mohamed ([\#214](https://github.com/matrix-org/sygnal/issues/214))
-- setup coverage.py to run in tox environment and add html reports ([\#217](https://github.com/matrix-org/sygnal/issues/217))
+- Set up `coverage.py` to run in tox environment, and add html reports ([\#217](https://github.com/matrix-org/sygnal/issues/217))
 
 
 Sygnal v0.9.2 (2021-03-29)
