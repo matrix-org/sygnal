@@ -1,3 +1,45 @@
+Sygnal 0.9.3 (2021-04-22)
+=========================
+
+Features
+--------
+
+- Prevent the push key from being rejected for temporary errors and oversized payloads, add TTL logging, and support events_only push data flag. ([\#212](https://github.com/matrix-org/sygnal/issues/212))
+- WebPush: add support for Urgency and Topic header ([\#213](https://github.com/matrix-org/sygnal/issues/213))
+
+
+Bugfixes
+--------
+
+- Fix a long-standing bug where invalid JSON would be accepted over the HTTP interfaces. ([\#216](https://github.com/matrix-org/sygnal/issues/216))
+- Limit the size of requests received from HTTP clients. ([\#220](https://github.com/matrix-org/sygnal/issues/220))
+
+
+Updates to the Docker image
+---------------------------
+
+- Remove manually added GeoTrust Root CA certificate from docker image as Apple is no longer using it. ([\#208](https://github.com/matrix-org/sygnal/issues/208))
+
+
+Improved Documentation
+----------------------
+
+- Make CONTIBUTING.md more explicit about how to get tests passing. ([\#188](https://github.com/matrix-org/sygnal/issues/188))
+- Update CONTRIBUTING.md to specify how to run code style and type checks with Tox, and add formatting to code block samples. ([\#193](https://github.com/matrix-org/sygnal/issues/193))
+- Document how to work around pip installation timeout errors. Contributed by Omar Mohamed. ([\#215](https://github.com/matrix-org/sygnal/issues/215))
+
+
+Internal Changes
+----------------
+
+- Updated Tox to run in the installed version of Python (instead of specifying Python 3.7) and to consider specific paths and folders while running checks, instead of the whole repository (potentially including unwanted files and folders, e.g. the virtual environment). ([\#193](https://github.com/matrix-org/sygnal/issues/193))
+- Development dependencies are now avaible as extras. Contributed by Hillery Shay. ([\#194](https://github.com/matrix-org/sygnal/issues/194))
+- setup.py specifies that a minimum version of Python greater or equal to 3.7 is required. Contributed by Tawanda Moyo ([\#207](https://github.com/matrix-org/sygnal/issues/207))
+- Port CI checks to Github Actions. ([\#210](https://github.com/matrix-org/sygnal/issues/210), [\#219](https://github.com/matrix-org/sygnal/issues/219))
+- Upgrade development dependencies fixes #199. Contributed by Omar Mohamed ([\#214](https://github.com/matrix-org/sygnal/issues/214))
+- setup coverage.py to run in tox environment and add html reports ([\#217](https://github.com/matrix-org/sygnal/issues/217))
+
+
 Sygnal v0.9.2 (2021-03-29)
 ==========================
 

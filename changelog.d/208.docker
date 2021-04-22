@@ -1,1 +1,0 @@
-Remove manually added GeoTrust Root CA certificate from docker image as Apple is no longer using it.
