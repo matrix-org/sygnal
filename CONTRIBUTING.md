@@ -18,7 +18,7 @@ sudo apt install libpq-dev python3-dev build-essential
 
 To contribute to Sygnal, ensure you have Python 3.7 or newer and then run:
 
-```bashgit
+```bash
 python3 -m venv venv
 ./venv/bin/pip install -e '.[dev]'
 ```
