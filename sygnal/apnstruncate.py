@@ -15,10 +15,10 @@
 # Copied and adapted from
 # https://raw.githubusercontent.com/matrix-org/pushbaby/master/pushbaby/truncate.py
 import json
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 
-def json_encode(payload: Dict[str, Any]) -> bytes:
+def json_encode(payload: Any) -> bytes:
     return json.dumps(payload, ensure_ascii=False).encode()
 
 
