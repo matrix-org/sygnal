@@ -26,7 +26,7 @@ class BodyTooLongException(Exception):
     pass
 
 
-def is_too_long(payload, max_length=2048):
+def is_too_long(payload: dict, max_length: int = 2048) -> bool:
     """
     Returns True if the given payload dictionary is too long for a push.
     Note that the maximum is now 2kB "In iOS 8 and later" although in
