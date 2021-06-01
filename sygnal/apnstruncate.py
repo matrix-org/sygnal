@@ -15,7 +15,7 @@
 # Copied and adapted from
 # https://raw.githubusercontent.com/matrix-org/pushbaby/master/pushbaby/truncate.py
 import json
-from typing import Any, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 
 def json_encode(payload: Any) -> bytes:
@@ -26,7 +26,7 @@ class BodyTooLongException(Exception):
     pass
 
 
-def is_too_long(payload: dict, max_length: int = 2048) -> bool:
+def is_too_long(payload: Dict[Any, Any], max_length: int = 2048) -> bool:
     """
     Returns True if the given payload dictionary is too long for a push.
     Note that the maximum is now 2kB "In iOS 8 and later" although in
@@ -38,7 +38,7 @@ def is_too_long(payload: dict, max_length: int = 2048) -> bool:
     return len(json_encode(payload)) > max_length
 
 
-def truncate(payload, max_length=2048):
+def truncate(payload: Dict[Any, Any], max_length: int = 2048) -> Dict[str, Any]:
     """
     Truncate APNs fields to make the payload fit within the max length
     specified.
