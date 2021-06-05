@@ -38,7 +38,7 @@ def is_too_long(payload: Dict[Any, Any], max_length: int = 2048) -> bool:
     return len(json_encode(payload)) > max_length
 
 
-def truncate(payload: Dict[Any, Any], max_length: int = 2048) -> Dict[str, Any]:
+def truncate(payload: Dict[str, Any], max_length: int = 2048) -> Dict[str, Any]:
     """
     Truncate APNs fields to make the payload fit within the max length
     specified.
