@@ -16,7 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import os.path
+from os import PathLike
+from typing import Union
 
 from setuptools import find_packages, setup
 
@@ -25,7 +27,7 @@ from setuptools import find_packages, setup
 # Used for the long_description.  It's nice, because now 1) we have a top level
 # README file and 2) it's easier to type in the README file than to put a raw
 # string in below ...
-def read(fname):
+def read(fname: Union[str, "PathLike[str]"]) -> str:
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
@@ -34,6 +36,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*"]),
     description="Reference Push Gateway for Matrix Notifications",
     use_scm_version=True,
+    python_requires=">=3.7",
     setup_requires=["setuptools_scm"],
     install_requires=[
         "Twisted>=19.2.1",
@@ -54,11 +57,12 @@ setup(
     ],
     extras_require={
         "dev": [
-            "black==19.10b0",
-            "flake8==3.8.3",
+            "coverage~=5.5",
+            "black==20.8b1",
+            "flake8==3.9.0",
             "isort~=5.0",
-            "mypy==0.780",
-            "mypy-zope==0.2.7",
+            "mypy==0.812",
+            "mypy-zope==0.3.0",
             "tox",
         ]
     },

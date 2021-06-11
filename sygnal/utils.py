@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import re
 from logging import LoggerAdapter
 
@@ -62,3 +63,12 @@ def glob_to_regex(glob):
 
     # \A anchors at start of string, \Z at end of string
     return re.compile(r"\A" + res + r"\Z", re.IGNORECASE)
+
+
+def _reject_invalid_json(val):
+    """Do not allow Infinity, -Infinity, or NaN values in JSON."""
+    raise ValueError(f"Invalid JSON value: {val!r}")
+
+
+# a custom JSON decoder which will reject Python extensions to JSON.
+json_decoder = json.JSONDecoder(parse_constant=_reject_invalid_json)

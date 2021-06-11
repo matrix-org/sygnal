@@ -35,7 +35,7 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from sygnal.notifications import NotificationContext
-from sygnal.utils import NotificationLoggerAdapter
+from sygnal.utils import NotificationLoggerAdapter, json_decoder
 
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 from .notifications import Notification
@@ -133,7 +133,7 @@ class V1NotifyHandler(Resource):
             log = NotificationLoggerAdapter(logger, {"request_id": request_id})
 
             try:
-                body = json.loads(request.content.read())
+                body = json_decoder.decode(request.content.read().decode("utf-8"))
             except Exception as exc:
                 msg = "Expected JSON request body"
                 log.warning(msg, exc_info=exc)
@@ -306,6 +306,24 @@ class HealthHandler(Resource):
         return b""
 
 
+class SizeLimitingRequest(server.Request):
+    # Arbitrarily limited to 512 KiB.
+    MAX_REQUEST_SIZE = 512 * 1024
+
+    def handleContentChunk(self, data):
+        # we should have a content by now
+        assert self.content, "handleContentChunk() called before gotLength()"
+        if self.content.tell() + len(data) > self.MAX_REQUEST_SIZE:
+            logger.info(
+                "Aborting connection from %s because the request exceeds maximum size",
+                self.client.host,
+            )
+            self.transport.abortConnection()
+            return
+
+        return super().handleContentChunk(data)
+
+
 class SygnalLoggedSite(server.Site):
     """
     A subclass of Site to perform access logging in a way that makes sense for
@@ -354,5 +372,8 @@ class PushGatewayApiServer(object):
         )
 
         self.site = SygnalLoggedSite(
-            root, reactor=sygnal.reactor, log_formatter=log_formatter
+            root,
+            reactor=sygnal.reactor,
+            log_formatter=log_formatter,
+            requestFactory=SizeLimitingRequest,
         )

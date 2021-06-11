@@ -36,10 +36,6 @@ FROM python:3.7-slim
 RUN apt-get update && apt-get install -y libpq5 && apt-get clean
 COPY --from=builder /install /usr/local
 
-# copy the root certificate used by APNs, since Debian removed it
-COPY docker/GeoTrust_Global_CA.crt /usr/local/share/ca-certificates/GeoTrust_Global_CA.crt
-RUN update-ca-certificates
-
 EXPOSE 5000/tcp
 
 ENTRYPOINT ["python", "-m", "sygnal.sygnal"]

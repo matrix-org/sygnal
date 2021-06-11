@@ -15,6 +15,8 @@
 import json
 import logging
 import os.path
+from base64 import urlsafe_b64encode
+from hashlib import blake2s
 from io import BytesIO
 from typing import List, Optional, Pattern
 from urllib.parse import urlparse
@@ -55,6 +57,9 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_CONNECTIONS = 20
 DEFAULT_TTL = 15 * 60  # in seconds
+# Max payload size is 4096
+MAX_BODY_LENGTH = 1000
+MAX_CIPHERTEXT_LENGTH = 2000
 
 
 class WebpushPushkin(ConcurrencyLimitedPushkin):
@@ -99,7 +104,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             contextFactory=tls_client_options_factory,
             proxy_url_str=proxy_url,
         )
-        self.http_agent_wrapper = HttpAgentWrapper(self.http_agent)
+        self.http_request_factory = HttpRequestFactory()
 
         self.allowed_endpoints = None  # type: Optional[List[Pattern]]
         allowed_endpoints = self.get_config("allowed_endpoints")
@@ -133,6 +138,11 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             )
             return [device.pushkey]
 
+        # drop notifications without an event id if requested,
+        # see https://github.com/matrix-org/sygnal/issues/186
+        if device.data.get("events_only") is True and not n.event_id:
+            return []
+
         endpoint = device.data.get("endpoint")
         auth = device.data.get("auth")
         endpoint_domain = urlparse(endpoint).netloc
@@ -165,6 +175,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         payload = WebpushPushkin._build_payload(n, device)
         data = json.dumps(payload)
 
+        # web push only supports normal and low priority, so assume normal if absent
+        low_priority = n.prio == "low"
+        # allow dropping earlier notifications in the same room if requested
+        topic = None
+        if n.room_id and device.data.get("only_last_per_room") is True:
+            # ask for a 22 byte hash, so the base64 of it is 32,
+            # the limit webpush allows for the topic
+            topic = urlsafe_b64encode(
+                blake2s(n.room_id.encode(), digest_size=22).digest()
+            )
+
         # note that webpush modifies vapid_claims, so make sure it's only used once
         vapid_claims = {
             "sub": "mailto:{}".format(self.vapid_contact_email),
@@ -175,32 +196,28 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         with QUEUE_TIME_HISTOGRAM.time():
             with PENDING_REQUESTS_GAUGE.track_inprogress():
                 await self.connection_semaphore.acquire()
-
         try:
             with SEND_TIME_HISTOGRAM.time():
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
-                    response_wrapper = webpush(
+                    request = webpush(
                         subscription_info=subscription_info,
                         data=data,
                         ttl=self.ttl,
                         vapid_private_key=self.vapid_private_key,
                         vapid_claims=vapid_claims,
-                        requests_session=self.http_agent_wrapper,
+                        requests_session=self.http_request_factory,
                     )
-                    response = await response_wrapper.deferred
+                    response = await request.execute(
+                        self.http_agent, low_priority, topic
+                    )
                     response_text = (await readBody(response)).decode()
         finally:
             self.connection_semaphore.release()
 
-        # assume 4xx is permanent and 5xx is temporary
-        if 400 <= response.code < 500:
-            logger.warn(
-                "Rejecting pushkey %s; gateway %s failed with %d: %s",
-                device.pushkey,
-                endpoint_domain,
-                response.code,
-                response_text,
-            )
+        reject_pushkey = self._handle_response(
+            response, response_text, device.pushkey, endpoint_domain
+        )
+        if reject_pushkey:
             return [device.pushkey]
         return []
 
@@ -233,7 +250,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             "sender_display_name",
             "user_is_target",
             "type",
-            "content",
         ]:
             value = getattr(n, attr, None)
             if value:
@@ -246,16 +262,77 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 if count_value is not None:
                     payload[attr] = count_value
 
+        if n.content and isinstance(n.content, dict):
+            content = n.content.copy()
+            # we can't show formatted_body in a notification anyway on web
+            # so remove it
+            content.pop("formatted_body", None)
+            body = content.get("body")
+            # make some attempts to not go over the max payload length
+            if isinstance(body, str) and len(body) > MAX_BODY_LENGTH:
+                content["body"] = body[0 : MAX_BODY_LENGTH - 1] + "…"
+            ciphertext = content.get("ciphertext")
+            if isinstance(ciphertext, str) and len(ciphertext) > MAX_CIPHERTEXT_LENGTH:
+                content.pop("ciphertext", None)
+            payload["content"] = content
+
         return payload
 
+    def _handle_response(self, response, response_text, pushkey, endpoint_domain):
+        """
+        Logs and determines the outcome of the response
 
-class HttpAgentWrapper:
+        Returns:
+            Boolean whether the puskey should be rejected
+        """
+        ttl_response_headers = response.headers.getRawHeaders(b"TTL")
+        if ttl_response_headers:
+            try:
+                ttl_given = int(ttl_response_headers[0])
+                if ttl_given != self.ttl:
+                    logger.info(
+                        "requested TTL of %d to endpoint %s but got %d",
+                        self.ttl,
+                        endpoint_domain,
+                        ttl_given,
+                    )
+            except ValueError:
+                pass
+        # permanent errors
+        if response.code == 404 or response.code == 410:
+            logger.warn(
+                "Rejecting pushkey %s; subscription is invalid on %s: %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+            return True
+        # and temporary ones
+        if response.code >= 400:
+            logger.warn(
+                "webpush request failed for pushkey %s; %s responded with %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+        elif response.code != 201:
+            logger.info(
+                "webpush request for pushkey %s didn't respond with 201; "
+                + "%s responded with %d: %s",
+                pushkey,
+                endpoint_domain,
+                response.code,
+                response_text,
+            )
+        return False
+
+
+class HttpRequestFactory:
     """
     Provide a post method that matches the API expected from pywebpush.
     """
-
-    def __init__(self, http_agent):
-        self.http_agent = http_agent
 
     def post(self, endpoint, data, headers, timeout):
         """
@@ -271,35 +348,23 @@ class HttpAgentWrapper:
             timeout (int)
                 Ignored for now
         """
-        body_producer = FileBodyProducer(BytesIO(data))
-        # Convert the headers to the camelcase version.
-        headers = {
-            b"User-Agent": ["sygnal"],
-            b"Content-Encoding": [headers["content-encoding"]],
-            b"Authorization": [headers["authorization"]],
-            b"TTL": [headers["ttl"]],
-        }
-        deferred = self.http_agent.request(
-            b"POST",
-            endpoint.encode(),
-            headers=Headers(headers),
-            bodyProducer=body_producer,
-        )
-        return HttpResponseWrapper(deferred)
+        return HttpDelayedRequest(endpoint, data, headers)
 
 
-class HttpResponseWrapper:
+class HttpDelayedRequest:
     """
-    Provide a response object that matches the API expected from pywebpush.
+    Captures the values received from pywebpush for the endpoint request.
+    The request isn't immediately executed, to allow adding headers
+    not supported by pywebpush, like Topic and Urgency.
+
+    Also provides the interface that pywebpush expects from a response object.
     pywebpush expects a synchronous API, while we use an asynchronous API.
 
     To keep pywebpush happy we present it with some hardcoded values that
-    make its assertions pass while the async network call is happening
-    in the background.
+    make its assertions pass even though the HTTP request has not yet been
+    made.
 
     Attributes:
-        deferred (Deferred):
-            The deferred to await the actual response after calling pywebpush.
         status_code (int):
             Defined to be 200 so the pywebpush check to see if is below 202
             passes.
@@ -310,5 +375,26 @@ class HttpResponseWrapper:
     status_code = 200
     text = None
 
-    def __init__(self, deferred):
-        self.deferred = deferred
+    def __init__(self, endpoint, data, vapid_headers):
+        self.endpoint = endpoint
+        self.data = data
+        self.vapid_headers = vapid_headers
+
+    def execute(self, http_agent, low_priority, topic):
+        body_producer = FileBodyProducer(BytesIO(self.data))
+        # Convert the headers to the camelcase version.
+        headers = {
+            b"User-Agent": ["sygnal"],
+            b"Content-Encoding": [self.vapid_headers["content-encoding"]],
+            b"Authorization": [self.vapid_headers["authorization"]],
+            b"TTL": [self.vapid_headers["ttl"]],
+            b"Urgency": ["low" if low_priority else "normal"],
+        }
+        if topic:
+            headers[b"Topic"] = [topic]
+        return http_agent.request(
+            b"POST",
+            self.endpoint.encode(),
+            headers=Headers(headers),
+            bodyProducer=body_producer,
+        )

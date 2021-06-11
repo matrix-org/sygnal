@@ -31,7 +31,6 @@ from twisted.web.http_headers import Headers
 from twisted.web.server import Request
 from zope.interface.declarations import implementer
 
-from sygnal.http import PushGatewayApiServer
 from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
 
 REQ_PATH = b"/_matrix/push/v1/notify"
@@ -130,16 +129,19 @@ class TestCase(unittest.TestCase):
         self.sygnal = Sygnal(config, reactor)
         self.reactor = reactor
         self.sygnal.database.start()
-        self.v1api = PushGatewayApiServer(self.sygnal)
 
-        start_deferred = ensureDeferred(
-            self.sygnal._make_pushkins_then_start(0, [], None)
-        )
+        start_deferred = ensureDeferred(self.sygnal.make_pushkins_then_start())
 
         while not start_deferred.called:
             # we need to advance until the pushkins have started up
             self.sygnal.reactor.advance(1)
             self.sygnal.reactor.wait_for_work(lambda: start_deferred.called)
+
+        # sygnal should have started a single (fake) tcp listener
+        listeners = self.reactor.tcpServers
+        self.assertEqual(len(listeners), 1)
+        (port, site, _backlog, interface) = listeners[0]
+        self.site = site
 
     def tearDown(self):
         super().tearDown()
@@ -205,7 +207,7 @@ class TestCase(unittest.TestCase):
             payload = json.dumps(payload)
         content = BytesIO(payload.encode())
 
-        channel = FakeChannel(self.v1api.site, self.sygnal.reactor)
+        channel = FakeChannel(self.site, self.sygnal.reactor)
         channel.process_request(b"POST", REQ_PATH, content)
 
         while not channel.done:
@@ -245,7 +247,7 @@ class TestCase(unittest.TestCase):
 
         contents = [BytesIO(dump_if_needed(payload).encode()) for payload in payloads]
 
-        channels = [FakeChannel(self.v1api.site, self.sygnal.reactor) for _ in contents]
+        channels = [FakeChannel(self.site, self.sygnal.reactor) for _ in contents]
 
         for channel, content in zip(channels, contents):
             channel.process_request(b"POST", REQ_PATH, content)

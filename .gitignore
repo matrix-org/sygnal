@@ -4,6 +4,7 @@ var/
 sygnal.pid
 sygnal.db
 _trial_temp*
+.coverage*
 
 /venv/
 /.venv/
@@ -14,6 +15,7 @@ _trial_temp*
 /dist
 /.tox
 /.python-version
+/htmlcov
 
 .vscode/
 .idea/
