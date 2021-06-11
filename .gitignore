@@ -14,3 +14,6 @@ _trial_temp*
 /dist
 /.tox
 /.python-version
+
+.vscode/
+.idea/
