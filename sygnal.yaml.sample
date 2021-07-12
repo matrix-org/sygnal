@@ -254,6 +254,9 @@ apps:
   #  # Defaults to 512 if unset.
   #  #
   #  #inflight_request_limit: 512
+
+  # The 'use_db' setting allows one to forego using a database entirely.
+  # use_db: false
   #
   #  # This allows you to specify additional options to send to Firebase.
   #  #

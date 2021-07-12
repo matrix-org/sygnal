@@ -97,6 +97,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "api_key",
         "fcm_options",
         "max_connections",
+        "use_db",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config, canonical_reg_id_store):
@@ -314,6 +315,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             )
 
     async def _dispatch_notification_unlimited(self, n, device, context):
+        return await self._dispatch_notification_unlimited_no_db(n, device, context)
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
         pushkeys = [
@@ -351,7 +353,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 b"Authorization": ["key=%s" % (self.api_key,)],
             }
 
-            # count the number of remapped registration IDs in the request
+            #count the number of remapped registration IDs in the request
             span_parent.set_tag(
                 "gcm_num_remapped_reg_ids_used",
                 [k != v for (k, v) in reg_id_mappings.items()].count(True),
@@ -387,6 +389,89 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     failed += [
                         inverse_reg_id_mappings[canonical_pk]
                         for canonical_pk in new_failed
+                    ]
+                    if len(pushkeys) == 0:
+                        break
+                except TemporaryNotificationDispatchException as exc:
+                    retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
+                    if exc.custom_retry_delay is not None:
+                        retry_delay = exc.custom_retry_delay
+
+                    log.warning(
+                        "Temporary failure, will retry in %d seconds",
+                        retry_delay,
+                        exc_info=True,
+                    )
+
+                    span_parent.log_kv(
+                        {"event": "temporary_fail", "retrying_in": retry_delay}
+                    )
+
+                    await twisted_sleep(
+                        retry_delay, twisted_reactor=self.sygnal.reactor
+                    )
+
+            if len(pushkeys) > 0:
+                log.info("Gave up retrying reg IDs: %r", mapped_pushkeys)
+            # Count the number of failed devices.
+            span_parent.set_tag("gcm_num_failed", len(failed))
+            return failed
+
+    async def _dispatch_notification_unlimited_no_db(self, n, device, context):
+        log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
+
+        pushkeys = [
+            device.pushkey for device in n.devices if device.app_id == self.name
+        ]
+        # Resolve canonical IDs for all pushkeys
+
+        if pushkeys[0] != device.pushkey:
+            # Only send notifications once, to all devices at once.
+            return []
+
+        # The pushkey is kind of secret because you can use it to send push
+        # to someone.
+        # span_tags = {"pushkeys": pushkeys}
+        span_tags = {"gcm_num_devices": len(pushkeys)}
+
+        with self.sygnal.tracer.start_span(
+            "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
+        ) as span_parent:
+
+            data = GcmPushkin._build_data(n, device)
+            headers = {
+                b"User-Agent": ["sygnal"],
+                b"Content-Type": ["application/json"],
+                b"Authorization": ["key=%s" % (self.api_key,)],
+            }
+
+            # TODO: Implement collapse_key to queue only one message per room.
+            failed = []
+
+            body = self.base_request_body.copy()
+            body["data"] = data
+            body["priority"] = "normal" if n.prio == "low" else "high"
+
+            for retry_number in range(0, MAX_TRIES):
+                if len(pushkeys) == 1:
+                    body["to"] = pushkeys[0]
+                else:
+                    body["registration_ids"] = pushkeys
+
+                log.info("Sending (attempt %i) => %r", retry_number, pushkeys)
+
+                try:
+                    span_tags = {"retry_num": retry_number}
+
+                    with self.sygnal.tracer.start_span(
+                        "gcm_dispatch_try", tags=span_tags, child_of=span_parent
+                    ) as span:
+                        new_failed, new_pushkeys = await self._request_dispatch(
+                            n, log, body, headers, pushkeys, span
+                        )
+                    pushkeys = new_pushkeys
+                    failed += [
+                        pk for pk in new_failed
                     ]
                     if len(pushkeys) == 0:
                         break
