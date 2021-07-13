@@ -138,7 +138,7 @@ class GcmTestCase(testutils.TestCase):
         """
         gcm = self.sygnal.pushkins["com.example.gcm"]
         # Skip this test if we are not using a DB
-        if gcm.cfg["use_db"] == False:
+        if gcm.cfg["use_db"] is False:
             self.skipTest("not relevant without DB")
         gcm.preload_with_response(
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg42"}]}
@@ -218,7 +218,7 @@ class GcmTestCase(testutils.TestCase):
         """
         gcm = self.sygnal.pushkins["com.example.gcm"]
         # Skip this test if we are not using a DB
-        if gcm.cfg["use_db"] == False:
+        if gcm.cfg["use_db"] is False:
             self.skipTest("not relevant without DB")
         gcm.preload_with_response(
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg42"}]}
@@ -260,4 +260,3 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": []})
         self.assertEqual(gcm.last_request_body["mutable_content"], True)
         self.assertEqual(gcm.last_request_body["content_available"], True)
-

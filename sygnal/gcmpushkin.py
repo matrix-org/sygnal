@@ -129,7 +129,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             proxy_url_str=proxy_url,
         )
 
-
         self.db = sygnal.database
         self.canonical_reg_id_store = canonical_reg_id_store
 
@@ -164,7 +163,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         logger.debug("Finished setting up CanonicalRegId Store")
 
         return cls(name, sygnal, config, canonical_reg_id_store)
-
 
     async def _perform_http_request(self, body, headers):
         """
@@ -281,7 +279,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             for i, result in enumerate(resp_object["results"]):
                 span.set_tag("gcm_regid_updated", "registration_id" in result)
                 # Skip this stanza unless we are using database
-                if self.get_config("use_db") == True:
+                if self.get_config("use_db") is True:
                     if "registration_id" in result:
                         await self.canonical_reg_id_store.set_canonical_id(
                             pushkeys[i], result["registration_id"]
@@ -322,7 +320,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
         # If we are not using the database, call a version of this function
         # with the calls to the DB removed
-        if self.get_config("use_db") == False:
+        if self.get_config("use_db") is False:
             return await self._dispatch_notification_unlimited_no_db(n, device, context)
 
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
@@ -362,7 +360,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 b"Authorization": ["key=%s" % (self.api_key,)],
             }
 
-            #count the number of remapped registration IDs in the request
+            # count the number of remapped registration IDs in the request
             span_parent.set_tag(
                 "gcm_num_remapped_reg_ids_used",
                 [k != v for (k, v) in reg_id_mappings.items()].count(True),
@@ -479,9 +477,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                             n, log, body, headers, pushkeys, span
                         )
                     pushkeys = new_pushkeys
-                    failed += [
-                        pk for pk in new_failed
-                    ]
+                    failed += [pk for pk in new_failed]
                     if len(pushkeys) == 0:
                         break
                 except TemporaryNotificationDispatchException as exc:
