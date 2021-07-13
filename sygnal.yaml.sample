@@ -227,7 +227,7 @@ apps:
   #  #inflight_request_limit: 512
   #
   #  # Specifies whether to use the production or sandbox APNs server. Note that
-  #  # sandbox tokens should only be used with the sandbox server and vice versa. 
+  #  # sandbox tokens should only be used with the sandbox server and vice versa.
   #  #
   #  # Valid options are:
   #  #   * production
@@ -254,9 +254,6 @@ apps:
   #  # Defaults to 512 if unset.
   #  #
   #  #inflight_request_limit: 512
-
-  # The 'use_db' setting allows one to forego using a database entirely.
-  # use_db: false
   #
   #  # This allows you to specify additional options to send to Firebase.
   #  #
@@ -275,3 +272,7 @@ apps:
   #  #fcm_options:
   #  #  content_available: true
   #  #  mutable_content: true
+  #
+  #  # The 'use_db' setting allows one to forego using a database entirely.
+  #  # False is the default value, uncomment if you want to use the DB
+  #  # use_db: True

@@ -53,6 +53,7 @@ CONFIG_DEFAULTS: dict = {
     # This is defined so the key is known to check_config, but it will not
     # define a default value.
     "database": None,
+    "use_db": False,
 }
 
 
