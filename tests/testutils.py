@@ -20,7 +20,6 @@ from time import time_ns
 from typing import BinaryIO, Dict, List, Optional, Union
 
 import attr
-import psycopg2
 from twisted.internet._resolver import SimpleResolverComplexifier
 from twisted.internet.defer import ensureDeferred, fail, succeed
 from twisted.internet.error import DNSLookupError
