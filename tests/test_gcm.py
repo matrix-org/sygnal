@@ -129,7 +129,6 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": ["spqr"]})
         self.assertEqual(gcm.num_requests, 1)
 
-
     def test_batching(self):
         """
         Tests that multiple GCM devices have their notification delivered to GCM
@@ -179,7 +178,6 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": ["spqr2"]})
         self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
         self.assertEqual(gcm.num_requests, 1)
-
 
     def test_fcm_options(self):
         """

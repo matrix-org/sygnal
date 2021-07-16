@@ -14,9 +14,7 @@
 # limitations under the License.
 import json
 from io import BytesIO
-from os import environ
 from threading import Condition
-from time import time_ns
 from typing import BinaryIO, Dict, List, Optional, Union
 
 import attr
@@ -33,6 +31,7 @@ from zope.interface.declarations import implementer
 from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
 
 REQ_PATH = b"/_matrix/push/v1/notify"
+
 
 class TestCase(unittest.TestCase):
     def config_setup(self, config):

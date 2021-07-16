@@ -25,7 +25,6 @@ import opentracing
 import prometheus_client
 import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
-from twisted.enterprise.adbapi import ConnectionPool
 from twisted.internet import asyncioreactor, defer
 from twisted.internet.defer import ensureDeferred
 from twisted.python import log as twisted_log

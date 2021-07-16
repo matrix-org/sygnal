@@ -21,7 +21,6 @@ from io import BytesIO
 
 from opentracing import logs, tags
 from prometheus_client import Counter, Gauge, Histogram
-from twisted.enterprise.adbapi import ConnectionPool
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
@@ -352,7 +351,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                         )
                     pushkeys = new_pushkeys
                     failed += [pk for pk in new_failed]
-                
+
                     if len(pushkeys) == 0:
                         break
                 except TemporaryNotificationDispatchException as exc:
@@ -424,4 +423,3 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             data["missed_calls"] = n.counts.missed_calls
 
         return data
-
