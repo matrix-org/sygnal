@@ -99,7 +99,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "max_connections",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
-    def __init__(self, name, sygnal, config, canonical_reg_id_store):
+    def __init__(self, name, sygnal, config):
         super(GcmPushkin, self).__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
@@ -128,9 +128,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             proxy_url_str=proxy_url,
         )
 
-        self.db = sygnal.database
-        self.canonical_reg_id_store = canonical_reg_id_store
-
         self.api_key = self.get_config("api_key")
         if not self.api_key:
             raise PushkinSetupException("No API key set in config")
@@ -154,14 +151,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         Returns:
             an instance of this Pushkin
         """
-        logger.debug("About to set up CanonicalRegId Store")
-        canonical_reg_id_store = CanonicalRegIdStore(
-            sygnal.database, sygnal.database_engine
-        )
-        await canonical_reg_id_store.setup()
-        logger.debug("Finished setting up CanonicalRegId Store")
-
-        return cls(name, sygnal, config, canonical_reg_id_store)
+        return cls(name, sygnal, config)
 
     async def _perform_http_request(self, body, headers):
         """
@@ -277,10 +267,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             new_pushkeys = []
             for i, result in enumerate(resp_object["results"]):
                 span.set_tag("gcm_regid_updated", "registration_id" in result)
-                if "registration_id" in result:
-                    await self.canonical_reg_id_store.set_canonical_id(
-                        pushkeys[i], result["registration_id"]
-                    )
                 if "error" in result:
                     log.warning(
                         "Error for pushkey %s: %s", pushkeys[i], result["error"]
@@ -333,29 +319,12 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         with self.sygnal.tracer.start_span(
             "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
-            reg_id_mappings = await self.canonical_reg_id_store.get_canonical_ids(
-                pushkeys
-            )
-
-            reg_id_mappings = {
-                reg_id: canonical_reg_id or reg_id
-                for (reg_id, canonical_reg_id) in reg_id_mappings.items()
-            }
-
-            inverse_reg_id_mappings = {v: k for (k, v) in reg_id_mappings.items()}
-
             data = GcmPushkin._build_data(n, device)
             headers = {
                 b"User-Agent": ["sygnal"],
                 b"Content-Type": ["application/json"],
                 b"Authorization": ["key=%s" % (self.api_key,)],
             }
-
-            # count the number of remapped registration IDs in the request
-            span_parent.set_tag(
-                "gcm_num_remapped_reg_ids_used",
-                [k != v for (k, v) in reg_id_mappings.items()].count(True),
-            )
 
             # TODO: Implement collapse_key to queue only one message per room.
             failed = []
@@ -365,14 +334,12 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             body["priority"] = "normal" if n.prio == "low" else "high"
 
             for retry_number in range(0, MAX_TRIES):
-                mapped_pushkeys = [reg_id_mappings[pk] for pk in pushkeys]
-
                 if len(pushkeys) == 1:
-                    body["to"] = mapped_pushkeys[0]
+                    body["to"] = pushkeys[0]
                 else:
-                    body["registration_ids"] = mapped_pushkeys
+                    body["registration_ids"] = pushkeys
 
-                log.info("Sending (attempt %i) => %r", retry_number, mapped_pushkeys)
+                log.info("Sending (attempt %i) => %r", retry_number, pushkeys)
 
                 try:
                     span_tags = {"retry_num": retry_number}
@@ -381,13 +348,11 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                         "gcm_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
                         new_failed, new_pushkeys = await self._request_dispatch(
-                            n, log, body, headers, mapped_pushkeys, span
+                            n, log, body, headers, pushkeys, span
                         )
                     pushkeys = new_pushkeys
-                    failed += [
-                        inverse_reg_id_mappings[canonical_pk]
-                        for canonical_pk in new_failed
-                    ]
+                    failed += [pk for pk in new_failed]
+                
                     if len(pushkeys) == 0:
                         break
                 except TemporaryNotificationDispatchException as exc:
