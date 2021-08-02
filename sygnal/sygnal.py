@@ -92,6 +92,12 @@ class Sygnal(object):
             logger.info("Initialising Sentry")
             sentry_sdk.init(sentrycfg["dsn"])
 
+        if config.get("db") is not None:
+            logger.warning(
+                "Config includes the legacy 'db' option, please remove fields"
+                "in config that pertain to the DB"
+            )
+
         promcfg = config["metrics"]["prometheus"]
         if promcfg["enabled"] is True:
             prom_addr = promcfg["address"]

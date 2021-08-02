@@ -71,7 +71,6 @@ class TestGcmPushkin(GcmPushkin):
 
 class GcmTestCase(testutils.TestCase):
     def config_setup(self, config):
-        super(GcmTestCase, self).config_setup(config)
         config["apps"]["com.example.gcm"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
             "api_key": "kii",

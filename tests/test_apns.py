@@ -58,7 +58,6 @@ class ApnsTestCase(testutils.TestCase):
         self.sygnal.pushkins[PUSHKIN_ID]._send_notification = self.apns_pushkin_snotif
 
     def config_setup(self, config):
-        super(ApnsTestCase, self).config_setup(config)
         config["apps"][PUSHKIN_ID] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
 
     def test_payload_truncation(self):

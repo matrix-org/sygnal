@@ -36,7 +36,6 @@ from tests.twisted_test_helpers import (
 
 class AsyncioHttpProxyTest(testutils.TestCase):
     def config_setup(self, config):
-        super().config_setup(config)
         config["apps"]["com.example.spqr"] = {
             "type": "tests.test_pushgateway_api_v1.TestPushkin"
         }
@@ -210,7 +209,6 @@ class AsyncioHttpProxyTLSTest(testutils.TestCase):
     """
 
     def config_setup(self, config):
-        super().config_setup(config)
         config["apps"]["com.example.spqr"] = {
             "type": "tests.test_pushgateway_api_v1.TestPushkin"
         }

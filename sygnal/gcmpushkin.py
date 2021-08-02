@@ -265,7 +265,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # determine which pushkeys to retry or forget about
             new_pushkeys = []
             for i, result in enumerate(resp_object["results"]):
-                span.set_tag("gcm_regid_updated", "registration_id" in result)
                 if "error" in result:
                     log.warning(
                         "Error for pushkey %s: %s", pushkeys[i], result["error"]
@@ -350,7 +349,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                             n, log, body, headers, pushkeys, span
                         )
                     pushkeys = new_pushkeys
-                    failed += [pk for pk in new_failed]
+                    failed += new_failed
 
                     if len(pushkeys) == 0:
                         break
