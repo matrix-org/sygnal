@@ -34,6 +34,9 @@ REQ_PATH = b"/_matrix/push/v1/notify"
 
 
 class TestCase(unittest.TestCase):
+    def config_setup(self, config):
+        pass
+
     def setUp(self):
         reactor = ExtendedMemoryReactorClock()
 
