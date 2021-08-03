@@ -109,13 +109,14 @@ class HTTPProxiedClientFactory(protocol.ClientFactory):
         self.dst_port = dst_port
         self._proxy_auth = proxy_auth
         self.wrapped_factory = wrapped_factory
-        self.on_connection = defer.Deferred()
+        self.on_connection: defer.Deferred = defer.Deferred()
 
     def startedConnecting(self, connector):
         return self.wrapped_factory.startedConnecting(connector)
 
     def buildProtocol(self, addr):
         wrapped_protocol = self.wrapped_factory.buildProtocol(addr)
+        assert wrapped_protocol is not None
 
         return HTTPConnectProtocol(
             self.dst_host,
@@ -220,7 +221,7 @@ class HTTPConnectSetupClient(http.HTTPClient):
         self.host = host
         self.port = port
         self._proxy_auth = proxy_auth
-        self.on_connected = defer.Deferred()
+        self.on_connected: defer.Deferred = defer.Deferred()
 
     def connectionMade(self):
         logger.debug("Connected to proxy, sending CONNECT")
