@@ -65,6 +65,7 @@ class HttpTestCase(testutils.TestCase):
             value._send_notification = self.apns_pushkin_snotif
 
     def config_setup(self, config):
+        super(HttpTestCase, self).config_setup(config)
         config["apps"][PUSHKIN_ID_1] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_2] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_3] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
