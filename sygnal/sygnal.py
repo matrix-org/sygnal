@@ -95,13 +95,13 @@ class Sygnal(object):
         if config.get("db") is not None:
             logger.warning(
                 "Config includes the legacy 'db' option and will be ignored"
-                "as Sygnal no longer uses a DB, this field can be removed"
+                " as Sygnal no longer uses a database, this field can be removed"
             )
 
         if config.get("database") is not None:
             logger.warning(
-                "Config includes the legacy 'db' option and will be ignored"
-                "as Sygnal no longer uses a DB, this field can be removed"
+                "Config includes the legacy 'database' option and will be ignored"
+                " as Sygnal no longer uses a database, this field can be removed"
             )
 
         promcfg = config["metrics"]["prometheus"]
