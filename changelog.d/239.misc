@@ -1,1 +1,1 @@
-Constrain Twisted verison in setup.py and fix type hint errors.
+Fix type hint errors from new upstream Twisted release.
