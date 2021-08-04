@@ -31,7 +31,7 @@ async def twisted_sleep(delay, twisted_reactor):
     Returns:
         a Deferred which fires in `delay` seconds.
     """
-    deferred = Deferred()
+    deferred: Deferred[None] = Deferred()
     twisted_reactor.callLater(delay, deferred.callback, None)
     await deferred
 

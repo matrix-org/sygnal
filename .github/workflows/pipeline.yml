@@ -1,5 +1,9 @@
 name: Linting and Tests
-on: [push]
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
 jobs: 
   check-code-style:
     runs-on: ubuntu-latest
