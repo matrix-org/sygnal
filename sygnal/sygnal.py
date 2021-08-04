@@ -25,7 +25,6 @@ import opentracing
 import prometheus_client
 import yaml
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
-from twisted.enterprise.adbapi import ConnectionPool
 from twisted.internet import asyncioreactor, defer
 from twisted.internet.defer import ensureDeferred
 from twisted.python import log as twisted_log
@@ -50,9 +49,6 @@ CONFIG_DEFAULTS: dict = {
     },
     "proxy": None,
     "apps": {},
-    # This is defined so the key is known to check_config, but it will not
-    # define a default value.
-    "database": None,
 }
 
 
@@ -89,25 +85,24 @@ class Sygnal(object):
                 )
                 config["proxy"] = proxy_url
 
-        # Old format db config
-        if config.get("db") is not None:
-            logger.warning(
-                "Config includes the legacy 'db' option, please migrate"
-                " to 'database' instead"
-            )
-            config["database"] = {
-                "name": "sqlite3",
-                "args": {"dbfile": config["db"]["dbfile"]},
-            }
-        elif config.get("database") is None:
-            config["database"] = {"name": "sqlite3", "args": {"dbfile": "sygnal.db"}}
-
         sentrycfg = config["metrics"]["sentry"]
         if sentrycfg["enabled"] is True:
             import sentry_sdk
 
             logger.info("Initialising Sentry")
             sentry_sdk.init(sentrycfg["dsn"])
+
+        if config.get("db") is not None:
+            logger.warning(
+                "Config includes the legacy 'db' option and will be ignored"
+                " as Sygnal no longer uses a database, this field can be removed"
+            )
+
+        if config.get("database") is not None:
+            logger.warning(
+                "Config includes the legacy 'database' option and will be ignored"
+                " as Sygnal no longer uses a database, this field can be removed"
+            )
 
         promcfg = config["metrics"]["prometheus"]
         if promcfg["enabled"] is True:
@@ -144,34 +139,6 @@ class Sygnal(object):
                 raise RuntimeError(
                     "Unknown OpenTracing implementation: %s.", tracecfg["impl"]
                 )
-
-        db_name = config["database"]["name"]
-
-        if db_name == "psycopg2":
-            logger.info("Using postgresql database")
-
-            # By default enable `cp_reconnect`. We need to fiddle with db_args in case
-            # someone has explicitly set `cp_reconnect`.
-            db_args = dict(config["database"].get("args", {}))
-            db_args.setdefault("cp_reconnect", True)
-
-            self.database_engine = "postgresql"
-            self.database = ConnectionPool(
-                "psycopg2", cp_reactor=self.reactor, **db_args
-            )
-        elif db_name == "sqlite3":
-            logger.info("Using sqlite database")
-            self.database_engine = "sqlite"
-            self.database = ConnectionPool(
-                "sqlite3",
-                config["database"]["args"]["dbfile"],
-                cp_reactor=self.reactor,
-                cp_min=1,
-                cp_max=1,
-                check_same_thread=False,
-            )
-        else:
-            raise Exception("Unsupported database '%s'" % db_name)
 
     async def _make_pushkin(self, app_name, app_config):
         """
@@ -302,15 +269,6 @@ def check_config(config):
         "prometheus", {"enabled", "address", "port"}, cfgpart=config["metrics"]
     )
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
-
-    # If 'db' is defined, it will override the 'database' config.
-    if "db" in config:
-        logger.warning(
-            """The 'db' config field has been replaced by 'database'.
-See the sample config for help."""
-        )
-    else:
-        check_section("database", {"name", "args"})
 
 
 def merge_left_with_defaults(defaults, loaded_config):

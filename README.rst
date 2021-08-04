@@ -23,9 +23,6 @@ To change this, set the ``SYGNAL_CONF`` environment variable to the path to your
 A sample configuration file is provided in this repository;
 see ``sygnal.yaml.sample``.
 
-Sygnal supports using either SQLite3 or PostgreSQL as a database backend. See the ``sygnal.yaml.sample``
-for more information on how to configure.
-
 The `apps:` section is where you set up different apps that are to be handled.
 Each app should be given its own subsection, with the key of that subsection being the app's ``app_id``.
 Keys in this section take the form of the ``app_id``, as specified when setting up a Matrix pusher
