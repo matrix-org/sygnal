@@ -39,7 +39,7 @@ setup(
     python_requires=">=3.7",
     setup_requires=["setuptools_scm"],
     install_requires=[
-        "Twisted>=19.2.1,<21.7.0",
+        "Twisted>=19.2.1",
         "prometheus_client>=0.7.0,<0.8",
         "aioapns>=1.10",
         "cryptography>=2.1.4",
