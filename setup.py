@@ -20,39 +20,54 @@ import os.path
 
 from setuptools import find_packages, setup
 
-#
-# Please see dependencies.py for the list of dependencies!
-#
+INSTALL_REQUIRES = [
+    "Twisted>=19.7",
+    "prometheus_client>=0.7.0,<0.8",
+    "aioapns>=1.10",
+    "cryptography>=2.6.1",
+    "pyyaml>=5.1.1",
+    "service_identity>=18.1.0",
+    "jaeger-client>=4.0.0",
+    "opentracing>=2.2.0",
+    "sentry-sdk>=0.10.2",
+    "zope.interface>=4.6.0",
+    "idna>=2.8",
+    "importlib_metadata",
+    "pywebpush>=1.13.0",
+    "py-vapid>=1.7.0",
+]
 
-here = os.path.abspath(os.path.dirname(__file__))
+EXTRAS_REQUIRE = {
+    "dev": [
+        "coverage~=5.5",
+        "black==21.6b0",
+        "flake8==3.9.0",
+        "isort~=5.0",
+        "mypy==0.812",
+        "mypy-zope==0.3.0",
+        "tox",
+    ]
+}
 
 
 def read_file(path_segments):
     """Read a file from the package. Takes a list of strings to join to
     make the path"""
+    here = os.path.abspath(os.path.dirname(__file__))
     file_path = os.path.join(here, *path_segments)
     with open(file_path) as f:
         return f.read()
 
 
-def exec_file(path_segments):
-    """Execute a single python file to get the variables defined in it"""
-    result: dict = {}
-    code = read_file(path_segments)
-    exec(code, result)
-    return result
-
-
-dependencies = exec_file(("dependencies.py",))
-
-setup(
-    name="matrix-sygnal",
-    packages=find_packages(exclude=["tests", "tests.*"]),
-    description="Reference Push Gateway for Matrix Notifications",
-    use_scm_version=True,
-    python_requires=">=3.7",
-    setup_requires=["setuptools_scm"],
-    install_requires=dependencies["INSTALL_REQUIRES"],
-    extras_require=dependencies["EXTRAS_REQUIRE"],
-    long_description=read_file(("README.rst",)),
-)
+if __name__ == "__main__":
+    setup(
+        name="matrix-sygnal",
+        packages=find_packages(exclude=["tests", "tests.*"]),
+        description="Reference Push Gateway for Matrix Notifications",
+        use_scm_version=True,
+        python_requires=">=3.7",
+        setup_requires=["setuptools_scm"],
+        install_requires=INSTALL_REQUIRES,
+        extras_require=EXTRAS_REQUIRE,
+        long_description=read_file(("README.rst",)),
+    )
