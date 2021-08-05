@@ -18,18 +18,33 @@
 
 import os.path
 from os import PathLike
+from setuptools import find_packages, setup
 from typing import Union
 
-from setuptools import find_packages, setup
+#
+# Please see dependencies.py for the list of dependencies!
+#
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 
-# Utility function to read the README file.
-# Used for the long_description.  It's nice, because now 1) we have a top level
-# README file and 2) it's easier to type in the README file than to put a raw
-# string in below ...
-def read(fname: Union[str, "PathLike[str]"]) -> str:
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+def read_file(path_segments):
+    """Read a file from the package. Takes a list of strings to join to
+    make the path"""
+    file_path = os.path.join(here, *path_segments)
+    with open(file_path) as f:
+        return f.read()
 
+
+def exec_file(path_segments):
+    """Execute a single python file to get the variables defined in it"""
+    result = {}
+    code = read_file(path_segments)
+    exec(code, result)
+    return result
+
+
+dependencies = exec_file(("dependencies.py",))
 
 setup(
     name="matrix-sygnal",
@@ -38,32 +53,7 @@ setup(
     use_scm_version=True,
     python_requires=">=3.7",
     setup_requires=["setuptools_scm"],
-    install_requires=[
-        "Twisted>=19.2.1",
-        "prometheus_client>=0.7.0,<0.8",
-        "aioapns>=1.10",
-        "cryptography>=2.1.4",
-        "pyyaml>=5.1.1",
-        "service_identity>=18.1.0",
-        "jaeger-client>=4.0.0",
-        "opentracing>=2.2.0",
-        "sentry-sdk>=0.10.2",
-        "zope.interface>=4.6.0",
-        "idna>=2.8",
-        "importlib_metadata",
-        "pywebpush>=1.13.0",
-        "py-vapid>=1.7.0",
-    ],
-    extras_require={
-        "dev": [
-            "coverage~=5.5",
-            "black==21.6b0",
-            "flake8==3.9.0",
-            "isort~=5.0",
-            "mypy==0.812",
-            "mypy-zope==0.3.0",
-            "tox",
-        ]
-    },
-    long_description=read("README.rst"),
+    install_requires=dependencies["INSTALL_REQUIRES"],
+    extras_require=dependencies["EXTRAS_REQUIRE"],
+    long_description=read_file(("README.rst",)),
 )
