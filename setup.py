@@ -17,9 +17,8 @@
 # limitations under the License.
 
 import os.path
-from os import PathLike
+
 from setuptools import find_packages, setup
-from typing import Union
 
 #
 # Please see dependencies.py for the list of dependencies!
@@ -38,7 +37,7 @@ def read_file(path_segments):
 
 def exec_file(path_segments):
     """Execute a single python file to get the variables defined in it"""
-    result = {}
+    result: dict = {}
     code = read_file(path_segments)
     exec(code, result)
     return result

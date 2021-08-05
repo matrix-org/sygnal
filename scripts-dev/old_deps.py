@@ -26,9 +26,7 @@ def exec_file(path_segments):
     return result
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     dependencies = exec_file(("..", "dependencies.py"))
     for requirement in dependencies["INSTALL_REQUIRES"]:
         print(requirement.replace(">=", "=="))
-
-
