@@ -47,7 +47,7 @@ jobs:
         with:
           python-version: "3.7"
       - name: Install old dependencies
-        run: python scripts-dev/old_deps.py | pip install -r /proc/self/fd/0
+        run: pip install -r <(./scripts-dev/old_deps.py)
       - name: Install Sygnal
         run: python -m pip install -e .
       - run: trial tests
