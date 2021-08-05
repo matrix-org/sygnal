@@ -1,5 +1,5 @@
 INSTALL_REQUIRES = [
-    "Twisted>=19.2.1",
+    "Twisted>=19.7",
     "prometheus_client>=0.7.0,<0.8",
     "aioapns>=1.10",
     "cryptography>=2.6.1",
