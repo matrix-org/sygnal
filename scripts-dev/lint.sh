@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Runs linting scripts over the local Synapse checkout
+# Runs linting scripts over the local Sygnal checkout
 # isort - sorts import statements
 # black - opinionated code formatter
 # flake8 - lints and finds mistakes
