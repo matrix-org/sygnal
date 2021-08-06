@@ -17,6 +17,7 @@
 # limitations under the License.
 
 import os.path
+from typing import Sequence
 
 from setuptools import find_packages, setup
 
@@ -50,9 +51,12 @@ EXTRAS_REQUIRE = {
 }
 
 
-def read_file(path_segments):
-    """Read a file from the package. Takes a list of strings to join to
-    make the path"""
+def read_file(path_segments: Sequence[str]) -> str:
+    """Read a file from the package.
+
+    Params:
+        path_segments: a list of strings to join to make the path.
+    """
     here = os.path.abspath(os.path.dirname(__file__))
     file_path = os.path.join(here, *path_segments)
     with open(file_path) as f:
