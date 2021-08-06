@@ -84,7 +84,7 @@ else
     files=(
       "sygnal"
       "tests"
-      "scripts-dev/old_deps.py"
+      "scripts-dev"
       "setup.py"
     )
   fi
