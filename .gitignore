@@ -8,6 +8,8 @@ _trial_temp*
 
 /venv/
 /.venv/
+/oldvenv/
+/.oldvenv/
 /.idea
 /.eggs
 /*.egg-info
