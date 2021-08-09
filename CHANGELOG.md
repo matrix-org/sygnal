@@ -14,7 +14,7 @@ Configuration changes are not necessary, as the `database` section will be ignor
 Improved Documentation
 ----------------------
 
-- Update CONTRIBUTING.md to recommend installing libq-dev. Contributed by Tawanda Moyo. ([\#196](https://github.com/matrix-org/sygnal/issues/196))
+- Update CONTRIBUTING.md to recommend installing libpq-dev. Contributed by Tawanda Moyo. ([\#197](https://github.com/matrix-org/sygnal/issues/197))
 
 
 Internal Changes
@@ -22,7 +22,7 @@ Internal Changes
 
 - Improve static type checking. Contributed by Omar Mohamed. ([\#221](https://github.com/matrix-org/sygnal/issues/221), [\#223](https://github.com/matrix-org/sygnal/issues/223), [\#225](https://github.com/matrix-org/sygnal/issues/225), [\#227](https://github.com/matrix-org/sygnal/issues/227))
 - Update towncrier CI check to run against the new default branch name. ([\#226](https://github.com/matrix-org/sygnal/issues/226))
-- Update black to 21.6b0. ([\#228](https://github.com/matrix-org/sygnal/issues/228))
+- Update black to 21.6b0. ([\#233](https://github.com/matrix-org/sygnal/issues/233))
 - Fix type hint errors from new upstream Twisted release. ([\#239](https://github.com/matrix-org/sygnal/issues/239))
 - Fixup GitHub Actions pipeline to always run tests on PRs. ([\#240](https://github.com/matrix-org/sygnal/issues/240))
 - Add CI testing for old dependencies. ([\#242](https://github.com/matrix-org/sygnal/issues/242))
