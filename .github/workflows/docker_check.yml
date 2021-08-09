@@ -1,0 +1,38 @@
+# GitHub actions workflow which builds the docker images.
+# This is useful as it will run in PRs that change the Dockerfile, and can be
+# an early source of warnings that the Dockerfile isn't right.
+
+name: Check Docker image can be built successfully
+
+on:
+  push:
+    paths:
+      - 'docker/Dockerfile'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Inspect builder
+        run: docker buildx inspect
+
+      - name: Build all platforms
+        uses: docker/build-push-action@v2
+        with:
+          push: false
+          labels: "gitsha1=${{ github.sha }}"
+          file: "docker/Dockerfile"
+          platforms: linux/amd64,linux/arm64
