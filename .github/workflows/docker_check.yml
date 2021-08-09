@@ -1,6 +1,7 @@
 # GitHub actions workflow which builds the docker images.
 # This is useful as it will run in PRs that change the Dockerfile, and can be
 # an early source of warnings that the Dockerfile isn't right.
+# This check also triggers when this file itself is modified.
 
 name: Check Docker image can be built successfully
 
@@ -8,6 +9,7 @@ on:
   push:
     paths:
       - 'docker/Dockerfile'
+      - '.github/workflows/docker_check.yml'
 
 permissions:
   contents: read
