@@ -11,7 +11,9 @@
 ###
 FROM python:3.7-slim as builder
 
-# oops, where did that go?
+# Install git; Sygnal uses it to obtain the package version from the state of the
+# git repository.
+RUN apt-get update && apt-get install -y git
 
 # install sygnal and all of the python deps to /install.
 
