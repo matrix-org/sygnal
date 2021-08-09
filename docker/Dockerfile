@@ -11,11 +11,9 @@
 ###
 FROM python:3.7-slim as builder
 
-# build things which have slow build steps, before we copy sygnal, so that
-# the layer can be cached.
-#
-# (we really just care about caching a wheel here, as the "pip install" below
-# will install them again.)
+# we need git for installing Sygnal, because the package version is obtained
+# from the state of the git repository
+RUN apt-get update && apt-get install -y git
 
 # install sygnal and all of the python deps to /install.
 
