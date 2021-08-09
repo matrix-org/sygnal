@@ -1,3 +1,33 @@
+Sygnal 0.10.0 (2021-08-09)
+==========================
+
+Database Removal
+----------------
+
+Sygnal is now stateless, and does not rely on a database of any kind.
+You may remove your existing SQLite or PostgreSQL databases once you are satisfied that this release is working as intended.
+Configuration changes are not necessary, as the `database` section will be ignored if present.
+
+- Remove legacy database to ease horizontal scaling. Contributed by H. Shay. ([\#236](https://github.com/matrix-org/sygnal/issues/236))
+
+
+Improved Documentation
+----------------------
+
+- Update CONTRIBUTING.md to recommend installing libq-dev. Contributed by Tawanda Moyo. ([\#196](https://github.com/matrix-org/sygnal/issues/196))
+
+
+Internal Changes
+----------------
+
+- Improve static type checking. Contributed by Omar Mohamed. ([\#221](https://github.com/matrix-org/sygnal/issues/221), [\#223](https://github.com/matrix-org/sygnal/issues/223), [\#225](https://github.com/matrix-org/sygnal/issues/225), [\#227](https://github.com/matrix-org/sygnal/issues/227))
+- Update towncrier CI check to run against the new default branch name. ([\#226](https://github.com/matrix-org/sygnal/issues/226))
+- Update black to 21.6b0. ([\#228](https://github.com/matrix-org/sygnal/issues/228))
+- Fix type hint errors from new upstream Twisted release. ([\#239](https://github.com/matrix-org/sygnal/issues/239))
+- Fixup GitHub Actions pipeline to always run tests on PRs. ([\#240](https://github.com/matrix-org/sygnal/issues/240))
+- Add CI testing for old dependencies. ([\#242](https://github.com/matrix-org/sygnal/issues/242))
+
+
 Sygnal 0.9.3 (2021-04-22)
 =========================
 
