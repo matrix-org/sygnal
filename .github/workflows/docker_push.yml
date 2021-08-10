@@ -5,7 +5,8 @@ name: Build and push docker images
 on:
   push:
     tags: ["v*"]
-    branches: [ master, main ]
+    # uncomment this to enable all pushes to main
+    #branches: [ master, main ]
   workflow_dispatch:
 
 permissions:
@@ -34,6 +35,9 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
+      # The following line can be used to tag builds with the SHA hash of the commit.
+      # This would be useful if we wanted to re-enable building for all commits on `main`.
+      # type=sha,enable=true,priority=100,prefix=,suffix=,format=long
       - name: Calculate docker image tags
         id: set-tag
         uses: docker/metadata-action@v3
@@ -41,7 +45,6 @@ jobs:
           images: reivilibre/sygnal
           tags: |
             type=ref,event=tag
-            type=sha,enable=true,priority=100,prefix=,suffix=,format=long
 
       # we explicitly check out the repository (and use `context: .` in buildx)
       # because we need to preserve the git metadata so that setuptools_scm
