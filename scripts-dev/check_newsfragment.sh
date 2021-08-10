@@ -7,10 +7,6 @@ echo -e "+++ \033[32mChecking newsfragment\033[m"
 
 set -e
 
-# make sure that origin/develop is up to date
-# XXX TODO git remote set-branches --add origin develop
-# XXX TODO git fetch -q origin develop
-
 pr="$1"
 
 # Print a link to the contributing guide if the user makes a mistake
