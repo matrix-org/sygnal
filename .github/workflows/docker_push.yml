@@ -63,6 +63,6 @@ jobs:
           context: .
           push: true
           labels: "gitsha1=${{ github.sha }}"
-          tags: "matrixdotorg/sygnal:${{ steps.set-tag.outputs.tag }}"
+          tags: "reivilibre/sygnal:${{ steps.set-tag.outputs.tag }}"
           file: "docker/Dockerfile"
           platforms: linux/amd64,linux/arm64
