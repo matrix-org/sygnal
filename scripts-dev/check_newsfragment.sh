@@ -13,7 +13,7 @@ pr="$1"
 CONTRIBUTING_GUIDE_TEXT="!! Please see the contributing guide for help writing your changelog entry:
 https://github.com/matrix-org/sygnal/blob/main/CONTRIBUTING.md#changelog"
 
-# If towncrier returns a non-zero exit code, print the contributing guide and exit
+# If towncrier returns a non-zero exit code, print the contributing guide link and exit
 python -m towncrier.check --compare-with="origin/main" || (echo -e "$CONTRIBUTING_GUIDE_TEXT" >&2 && exit 1)
 
 echo
