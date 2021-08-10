@@ -34,21 +34,14 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Calculate docker image tag
+      - name: Calculate docker image tags
         id: set-tag
-        run: |
-          case "${GITHUB_REF}" in
-              refs/heads/master|refs/heads/main)
-                  tag=latest
-                  ;;
-              refs/tags/*)
-                  tag=${GITHUB_REF#refs/tags/}
-                  ;;
-              *)
-                  tag=${GITHUB_SHA}
-                  ;;
-          esac
-          echo "::set-output name=tag::$tag"
+        uses: docker/metadata-action@v3
+        with:
+          images: reivilibre/sygnal
+          tags: |
+            type=ref,event=tag
+            type=sha,enable=true,priority=100,prefix=,suffix=,format=long
 
       # we explicitly check out the repository (and use `context: .` in buildx)
       # because we need to preserve the git metadata so that setuptools_scm
@@ -63,6 +56,6 @@ jobs:
           context: .
           push: true
           labels: "gitsha1=${{ github.sha }}"
-          tags: "reivilibre/sygnal:${{ steps.set-tag.outputs.tag }}"
+          tags: "${{ steps.set-tag.outputs.tags }}"
           file: "docker/Dockerfile"
           platforms: linux/amd64,linux/arm64
