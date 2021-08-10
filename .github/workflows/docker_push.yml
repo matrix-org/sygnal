@@ -42,7 +42,7 @@ jobs:
         id: set-tag
         uses: docker/metadata-action@v3
         with:
-          images: reivilibre/sygnal
+          images: matrixdotorg/sygnal
           tags: |
             type=ref,event=tag
 
