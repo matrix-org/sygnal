@@ -47,6 +47,7 @@ EXTRAS_REQUIRE = {
         "mypy==0.812",
         "mypy-zope==0.3.0",
         "tox",
+        "towncrier",
     ]
 }
 
