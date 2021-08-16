@@ -1,1 +1,0 @@
-Automatically build the Docker image for each release and push it to Docker Hub using GitHub Actions.

@@ -1,3 +1,24 @@
+Sygnal 0.10.1 (2021-08-16)
+==========================
+
+This release only makes changes to the way Docker images are built and released; it is otherwise identical to 0.10.0. Administrators who do not use Docker as their installation method have no need to upgrade from 0.10.0.
+
+
+Updates to the Docker image
+---------------------------
+
+- Fix the docker image build from failing due to `git` not being installed. This issue was introduced in v0.10.0. ([\#246](https://github.com/matrix-org/sygnal/issues/246))
+- CI now checks that the Docker image still builds after the Dockerfile is modified. ([\#248](https://github.com/matrix-org/sygnal/issues/248))
+- Automatically build the Docker image for each release and push it to Docker Hub using GitHub Actions. ([\#249](https://github.com/matrix-org/sygnal/issues/249))
+
+
+Internal Changes
+----------------
+
+- Add a lint script (scripts-dev/lint.sh) for developers. ([\#243](https://github.com/matrix-org/sygnal/issues/243))
+- Add more comprehensive Newsfile (changelog fragment) checks in CI. ([\#250](https://github.com/matrix-org/sygnal/issues/250))
+
+
 Sygnal 0.10.0 (2021-08-09)
 ==========================
 

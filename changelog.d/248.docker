@@ -1,1 +1,0 @@
-CI now checks that the Docker image still builds after the Dockerfile is modified.
