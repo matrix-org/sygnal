@@ -14,7 +14,7 @@
 # limitations under the License.
 import json
 
-from sygnal.gcmpushkin import GcmPushkin
+from sygnal.fcmpushkin import GcmPushkin
 
 from tests import testutils
 from tests.testutils import DummyResponse

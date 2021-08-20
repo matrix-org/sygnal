@@ -37,30 +37,30 @@ from .exceptions import PushkinSetupException
 from .notifications import ConcurrencyLimitedPushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(
-    "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"
+    "sygnal_gcm_queue_time", "Time taken waiting for a connection to FCM"
 )
 
 SEND_TIME_HISTOGRAM = Histogram(
-    "sygnal_gcm_request_time", "Time taken to send HTTP request to GCM"
+    "sygnal_gcm_request_time", "Time taken to send HTTP request to FCM"
 )
 
 PENDING_REQUESTS_GAUGE = Gauge(
-    "sygnal_pending_gcm_requests", "Number of GCM requests waiting for a connection"
+    "sygnal_pending_gcm_requests", "Number of FCM requests waiting for a connection"
 )
 
 ACTIVE_REQUESTS_GAUGE = Gauge(
-    "sygnal_active_gcm_requests", "Number of GCM requests in flight"
+    "sygnal_active_gcm_requests", "Number of FCM requests in flight"
 )
 
 RESPONSE_STATUS_CODES_COUNTER = Counter(
-    "sygnal_gcm_status_codes",
-    "Number of HTTP response status codes received from GCM",
+    "sygnal_fcm_status_codes",
+    "Number of HTTP response status codes received from FCM",
     labelnames=["pushkin", "code"],
 )
 
 logger = logging.getLogger(__name__)
 
-GCM_URL = b"https://fcm.googleapis.com/fcm/send"
+FCM_URL = b"https://fcm.googleapis.com/fcm/send"
 MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
 MAX_BYTES_PER_FIELD = 1024
@@ -68,7 +68,7 @@ MAX_BYTES_PER_FIELD = 1024
 # The error codes that mean a registration ID will never
 # succeed and we should reject it upstream.
 # We include NotRegistered here too for good measure, even
-# though gcm-client 'helpfully' extracts these into a separate
+# though fcm-client 'helpfully' extracts these into a separate
 # list.
 BAD_PUSHKEY_FAILURE_CODES = [
     "MissingRegistration",
@@ -86,9 +86,9 @@ BAD_MESSAGE_FAILURE_CODES = ["MessageTooBig", "InvalidDataKey", "InvalidTtl"]
 DEFAULT_MAX_CONNECTIONS = 20
 
 
-class GcmPushkin(ConcurrencyLimitedPushkin):
+class FcmPushkin(ConcurrencyLimitedPushkin):
     """
-    Pushkin that relays notifications to Google/Firebase Cloud Messaging.
+    Pushkin that relays notifications to Firebase Cloud Messaging.
     """
 
     UNDERSTOOD_CONFIG_FIELDS = {
@@ -99,7 +99,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config):
-        super(GcmPushkin, self).__init__(name, sygnal, config)
+        super(FcmPushkin, self).__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
         if len(nonunderstood) > 0:

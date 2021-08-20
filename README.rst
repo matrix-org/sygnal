@@ -63,11 +63,14 @@ apns
     
     * the 'platform' parameter which determines whether the production or sandbox APNS environment is used. Valid values are 'production' or 'sandbox'. If not provided, 'production' is used.
 
-gcm
-  This sends messages via Google/Firebase Cloud Messaging (GCM/FCM) and hence can be used
+fcm
+  This sends messages via Firebase Cloud Messaging (FCM) and hence can be used
   to deliver notifications to Android apps. It expects the 'api_key' parameter
   to contain the 'Server key', which can be acquired from Firebase Console at:
   ``https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/``
+  Please note that the legacy key 'gcm' can be used here in place of fcm, however,
+  both keys refer to Firebase Cloud Messaging and the gcm key will soon be
+  depreciated and dropped in future releases.
 
 
 Using an HTTP Proxy for outbound traffic
