@@ -1,1 +1,0 @@
-Addresses #230, refactors sygnal to use fcm as app type rather than gcm, and warns in documents about the future depreciation of gcm as an app type.
