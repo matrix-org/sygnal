@@ -151,6 +151,8 @@ class Sygnal(object):
             A pushkin of the desired type.
         """
         app_type = app_config["type"]
+        if app_type == "gcm":
+            app_type = "fcm"
         if "." in app_type:
             kind_split = app_type.rsplit(".", 1)
             to_import = kind_split[0]

@@ -37,8 +37,8 @@ HTTPFactory = Factory.forProtocol(HTTPChannel)
 class SygnalTwistedProxyTests(TestCase):
     def config_setup(self, config):
         super(SygnalTwistedProxyTests, self).config_setup(config)
-        config["apps"]["com.example.gcm"] = {
-            "type": "tests.test_gcm.TestGcmPushkin",
+        config["apps"]["com.example.fcm"] = {
+            "type": "tests.test_fcm.TestFcmPushkin",
             "api_key": "kii",
         }
 

@@ -18,13 +18,13 @@ from sygnal.utils import twisted_sleep
 
 from tests.testutils import TestCase
 
-DEVICE_GCM1_EXAMPLE = {
-    "app_id": "com.example.gcm",
+DEVICE_FCM1_EXAMPLE = {
+    "app_id": "com.example.fcm",
     "pushkey": "spqrg",
     "pushkey_ts": 42,
 }
-DEVICE_GCM2_EXAMPLE = {
-    "app_id": "com.example.gcm",
+DEVICE_FCM2_EXAMPLE = {
+    "app_id": "com.example.fcm",
     "pushkey": "spqrh",
     "pushkey_ts": 42,
 }
@@ -48,7 +48,7 @@ class SlowConcurrencyLimitedDummyPushkin(ConcurrencyLimitedPushkin):
 class ConcurrencyLimitTestCase(TestCase):
     def config_setup(self, config):
         super(ConcurrencyLimitTestCase, self).config_setup(config)
-        config["apps"]["com.example.gcm"] = {
+        config["apps"]["com.example.fcm"] = {
             "type": "tests.test_concurrency_limit.SlowConcurrencyLimitedDummyPushkin",
             "inflight_request_limit": 1,
         }
@@ -61,7 +61,7 @@ class ConcurrencyLimitTestCase(TestCase):
         """
         Tests that a push notification succeeds if it is under the limit.
         """
-        resp = self._request(self._make_dummy_notification([DEVICE_GCM1_EXAMPLE]))
+        resp = self._request(self._make_dummy_notification([DEVICE_FCM1_EXAMPLE]))
 
         self.assertEqual(resp, {"rejected": []})
 
@@ -71,7 +71,7 @@ class ConcurrencyLimitTestCase(TestCase):
         pushkins (so do not hit a per-pushkin limit).
         """
         resp = self._request(
-            self._make_dummy_notification([DEVICE_GCM1_EXAMPLE, DEVICE_APNS_EXAMPLE])
+            self._make_dummy_notification([DEVICE_FCM1_EXAMPLE, DEVICE_APNS_EXAMPLE])
         )
 
         self.assertEqual(resp, {"rejected": []})
@@ -83,8 +83,8 @@ class ConcurrencyLimitTestCase(TestCase):
         """
         resp = self._multi_requests(
             [
-                self._make_dummy_notification([DEVICE_GCM1_EXAMPLE]),
-                self._make_dummy_notification([DEVICE_GCM2_EXAMPLE]),
+                self._make_dummy_notification([DEVICE_FCM1_EXAMPLE]),
+                self._make_dummy_notification([DEVICE_FCM2_EXAMPLE]),
             ]
         )
 

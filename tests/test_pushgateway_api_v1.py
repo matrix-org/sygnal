@@ -164,7 +164,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
 
     def test_remote_errors_give_502(self):
         """
-        Test that errors caused by remote services such as GCM or APNS
+        Test that errors caused by remote services such as FCM or APNS
         lead to a 502 Bad Gateway response.
         """
 

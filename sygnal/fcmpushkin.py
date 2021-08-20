@@ -37,19 +37,19 @@ from .exceptions import PushkinSetupException
 from .notifications import ConcurrencyLimitedPushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(
-    "sygnal_gcm_queue_time", "Time taken waiting for a connection to FCM"
+    "sygnal_fcm_queue_time", "Time taken waiting for a connection to FCM"
 )
 
 SEND_TIME_HISTOGRAM = Histogram(
-    "sygnal_gcm_request_time", "Time taken to send HTTP request to FCM"
+    "sygnal_fcm_request_time", "Time taken to send HTTP request to FCM"
 )
 
 PENDING_REQUESTS_GAUGE = Gauge(
-    "sygnal_pending_gcm_requests", "Number of FCM requests waiting for a connection"
+    "sygnal_pending_fcm_requests", "Number of FCM requests waiting for a connection"
 )
 
 ACTIVE_REQUESTS_GAUGE = Gauge(
-    "sygnal_active_gcm_requests", "Number of FCM requests in flight"
+    "sygnal_active_fcm_requests", "Number of FCM requests in flight"
 )
 
 RESPONSE_STATUS_CODES_COUNTER = Counter(
@@ -177,14 +177,14 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
                     response = await self.http_agent.request(
                         b"POST",
-                        GCM_URL,
+                        FCM_URL,
                         headers=Headers(headers),
                         bodyProducer=body_producer,
                     )
                     response_text = (await readBody(response)).decode()
         except Exception as exception:
             raise TemporaryNotificationDispatchException(
-                "GCM request failure"
+                "FCM request failure"
             ) from exception
         finally:
             self.connection_semaphore.release()
@@ -201,7 +201,7 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
             pushkin=self.name, code=response.code
         ).inc()
 
-        log.debug("GCM request took %f seconds", time.time() - poke_start_time)
+        log.debug("FCM request took %f seconds", time.time() - poke_start_time)
 
         span.set_tag(tags.HTTP_STATUS_CODE, response.code)
 
@@ -217,7 +217,7 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
                 span.log_kv({"event": "gcm_retry_after", "retry_after": retry_after})
 
             raise TemporaryNotificationDispatchException(
-                "GCM server error, hopefully temporary.", custom_retry_delay=retry_after
+                "FCM server error, hopefully temporary.", custom_retry_delay=retry_after
             )
         elif response.code == 400:
             log.error(
@@ -241,7 +241,7 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
             try:
                 resp_object = json_decoder.decode(response_text)
             except ValueError:
-                raise NotificationDispatchException("Invalid JSON response from GCM.")
+                raise NotificationDispatchException("Invalid JSON response from FCM.")
             if "results" not in resp_object:
                 log.error(
                     "%d from server but response contained no 'results' key: %r",
@@ -269,7 +269,7 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
                     log.warning(
                         "Error for pushkey %s: %s", pushkeys[i], result["error"]
                     )
-                    span.set_tag("gcm_error", result["error"])
+                    span.set_tag("fcm_error", result["error"])
                     if result["error"] in BAD_PUSHKEY_FAILURE_CODES:
                         log.info(
                             "Reg ID %r has permanently failed with code %r: "
@@ -294,7 +294,7 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
             return failed, new_pushkeys
         else:
             raise NotificationDispatchException(
-                f"Unknown GCM response code {response.code}"
+                f"Unknown FCM response code {response.code}"
             )
 
     async def _dispatch_notification_unlimited(self, n, device, context):
@@ -312,12 +312,12 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
         # The pushkey is kind of secret because you can use it to send push
         # to someone.
         # span_tags = {"pushkeys": pushkeys}
-        span_tags = {"gcm_num_devices": len(pushkeys)}
+        span_tags = {"fcm_num_devices": len(pushkeys)}
 
         with self.sygnal.tracer.start_span(
-            "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
+            "fcm_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
-            data = GcmPushkin._build_data(n, device)
+            data = FcmPushkin._build_data(n, device)
             headers = {
                 b"User-Agent": ["sygnal"],
                 b"Content-Type": ["application/json"],
@@ -343,7 +343,7 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
                     span_tags = {"retry_num": retry_number}
 
                     with self.sygnal.tracer.start_span(
-                        "gcm_dispatch_try", tags=span_tags, child_of=span_parent
+                        "fcm_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
                         new_failed, new_pushkeys = await self._request_dispatch(
                             n, log, body, headers, pushkeys, span
@@ -375,7 +375,7 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
             if len(pushkeys) > 0:
                 log.info("Gave up retrying reg IDs: %r", pushkeys)
             # Count the number of failed devices.
-            span_parent.set_tag("gcm_num_failed", len(failed))
+            span_parent.set_tag("fcm_num_failed", len(failed))
             return failed
 
     @staticmethod
@@ -409,7 +409,7 @@ class FcmPushkin(ConcurrencyLimitedPushkin):
             if hasattr(n, attr):
                 data[attr] = getattr(n, attr)
                 # Truncate fields to a sensible maximum length. If the whole
-                # body is too long, GCM will reject it.
+                # body is too long, FCM will reject it.
                 if data[attr] is not None and len(data[attr]) > MAX_BYTES_PER_FIELD:
                     data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
 
