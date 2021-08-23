@@ -21,7 +21,7 @@ echo "--------------------------"
 echo
 
 matched=0
-for f in `git diff --name-only FETCH_HEAD... -- changelog.d`; do
+for f in `git diff --name-only origin/main... -- changelog.d`; do
     # check that any modified newsfiles on this branch end with a full stop.
     lastchar=`tr -d '\n' < $f | tail -c 1`
     if [ $lastchar != '.' -a $lastchar != '!' ]; then
