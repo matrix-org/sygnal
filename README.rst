@@ -69,8 +69,8 @@ fcm
   to contain the 'Server key', which can be acquired from Firebase Console at:
   ``https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/``
   Please note that the legacy key 'gcm' can be used here in place of fcm, however,
-  both keys refer to Firebase Cloud Messaging and the gcm key will soon be
-  depreciated and dropped in future releases.
+  both keys refer to Firebase Cloud Messaging. The gcm key is deprecated and
+  will be dropped in future releases.
 
 
 Using an HTTP Proxy for outbound traffic
