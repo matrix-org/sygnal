@@ -5,7 +5,7 @@
 
 echo -e "+++ \033[32mChecking newsfragment\033[m"
 
-set -e
+set -ex
 
 pr="$1"
 
@@ -29,6 +29,8 @@ for f in `git diff --name-only FETCH_HEAD... -- changelog.d`; do
         echo -e "$CONTRIBUTING_GUIDE_TEXT" >&2
         exit 1
     fi
+
+    echo "dbg $f"
 
     # see if this newsfile corresponds to the right PR
     [[ -n "$pr" && "$f" == changelog.d/"$pr".* ]] && matched=1
