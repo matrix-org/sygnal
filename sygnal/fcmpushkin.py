@@ -67,9 +67,6 @@ MAX_BYTES_PER_FIELD = 1024
 
 # The error codes that mean a registration ID will never
 # succeed and we should reject it upstream.
-# We include NotRegistered here too for good measure, even
-# though fcm-client 'helpfully' extracts these into a separate
-# list.
 BAD_PUSHKEY_FAILURE_CODES = [
     "MissingRegistration",
     "InvalidRegistration",

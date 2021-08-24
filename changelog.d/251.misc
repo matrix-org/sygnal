@@ -1,1 +1,1 @@
-Addresses #230, refactors sygnal to use fcm as app type rather than gcm, and warns in documents about the deprecation of gcm as an app type.
+Rename the 'gcm' app type to 'fcm' to reduce confusion (Google Cloud Messaging changed name to Firebase Cloud Messaging in 2016). The app type 'gcm' is deprecated and will be removed in a future release. 

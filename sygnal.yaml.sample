@@ -198,13 +198,12 @@ apps:
   #  # The default is 'production'. Uncomment to use the sandbox instance.
   #  #platform: sandbox
 
-  # This is an example FCM/GCM push configuration. Note that the gcm type is a legacy
-  # setting as we now use Firebase Cloud Messaging (fcm) exclusively. Setting gcm as the
-  # app type is still accepted but understand that under the hood we are using fcm.
-  # The gcm app type is deprecated.
+  # This is an example FCM push configuration.
+  # FCM was formerly known as GCM.
+  # The deprecated app type 'gcm' is equivalent but will be removed from a future Sygnal release.
   #
   #com.example.myapp.android:
-  #  type: fcm or gcm
+  #  type: fcm
   #  api_key: your_api_key_for_fcm
   #
   #  # This is the maximum number of connections to FCM servers at any one time

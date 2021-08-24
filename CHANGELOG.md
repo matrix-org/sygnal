@@ -1,4 +1,4 @@
-This release deprecates the use of gcm as an app type and refactors Sygnal to use fcm as an app type exclusively. Due to these changes, some prometheus metrics names were updated to refer to Firebase Cloud Messaging (fcm) instead of the legacy Google Cloud Messaging (GCM) services. You can find a list of the changed metric names below:
+This release deprecates the use of 'gcm' as an app type and refactors Sygnal to use 'fcm' as an app type exclusively. Due to these changes, some Prometheus metrics' names were updated to refer to Firebase Cloud Messaging (FCM) instead of the legacy Google Cloud Messaging (GCM) services. You can find a list of the changed metric names below:
 
     sygnal_gcm_queue_time -> sygnal_fcm_queue_time
     sygnal_gcm_request_time -> sygnal_fcm_request_time
