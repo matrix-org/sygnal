@@ -1,15 +1,1 @@
-Addresses #230, refactors sygnal to use fcm as app type rather than gcm, and warns in documents about the future deprcation of gcm as an app type. Due to these changes, some prometheus metrics names were updated to refer to Firebase Cloud Messaging (fcm) instead of the legacy Google Cloud Messaging (GCM) services. You can find a list of the changed metric names below:
-
-    sygnal_gcm_queue_time -> sygnal_fcm_queue_time
-    sygnal_gcm_request_time -> sygnal_fcm_request_time
-    sygnal_pending_gcm_requests -> sygnal_pending_fcm_requests
-    sygnal_active_gcm_requests -> sygnal_active_fcm_requests
-    sygnal_gcm_status_codes -> sygnal_fcm_status_codes
-
-Additionally, tag identifiers in OpenTracing Spans were also updated:
-
-    gcm_error -> fcm_error
-    gcm_num_devices -> fcm_num_devices
-    gcm_num_failed -> fcm_num_failed
-
-If you make use of either Prometheus (and thus Grafana, etc) metrics or use OpenTracing with Sygnal, please ensure your queries are up to date.
+Addresses #230, refactors sygnal to use fcm as app type rather than gcm, and warns in documents about the deprecation of gcm as an app type.

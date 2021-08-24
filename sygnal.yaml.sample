@@ -201,7 +201,7 @@ apps:
   # This is an example FCM/GCM push configuration. Note that the gcm type is a legacy
   # setting as we now use Firebase Cloud Messaging (fcm) exclusively. Setting gcm as the
   # app type is still accepted but understand that under the hood we are using fcm.
-  # The gcm app type will be deprecated in future releases.
+  # The gcm app type is deprecated.
   #
   #com.example.myapp.android:
   #  type: fcm or gcm
