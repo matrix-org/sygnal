@@ -120,7 +120,7 @@ If you are using Firebase for your iOS app, you will get Firebase tokens
 (looking a bit like `blahblahblah:APA91blahblahblah`… note the presence of a
 colon which is not valid base64).
 
-In this case, you need to **configure Sygnal to use a FCM (gcm) pushkin rather
+In this case, you need to **configure Sygnal to use a FCM pushkin rather
 than an APNs one, as Firebase talks to APNs on your behalf**.
 Instead of configuring Sygnal with your APNs secrets, you need to configure
 Firebase with your APNs secrets, and Sygnal with your Firebase secrets.
