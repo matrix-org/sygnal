@@ -1,0 +1,1 @@
+Use OpenSSL security level 1 (rather than 2) to prevent developer APNs certificates being rejected with a 'CA MD too weak' error.
