@@ -30,6 +30,7 @@ COPY --from=builder /install /usr/local
 
 # Work around 'CA MD too weak' errors when using APNs developer certificates,
 # by reducing the OpenSSL security level to 1 (from 2).
+# See https://github.com/matrix-org/sygnal/issues/260.
 RUN sed -i 's/DEFAULT@SECLEVEL=2/DEFAULT@SECLEVEL=1/' /etc/ssl/openssl.cnf
 
 EXPOSE 5000/tcp
