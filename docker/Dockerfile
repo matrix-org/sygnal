@@ -28,6 +28,10 @@ RUN pip install --prefix="/install" --no-warn-script-location /sygnal
 FROM python:3.7-slim
 COPY --from=builder /install /usr/local
 
+# Work around 'CA MD too weak' errors when using certificates provided by
+# Apple, by reducing the OpenSSL security level to 1 (from 2).
+RUN sed -i 's/DEFAULT@SECLEVEL=2/DEFAULT@SECLEVEL=1/' /etc/ssl/openssl.cnf
+
 EXPOSE 5000/tcp
 
 ENTRYPOINT ["python", "-m", "sygnal.sygnal"]
