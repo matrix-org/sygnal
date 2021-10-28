@@ -1,0 +1,1 @@
+Add `build-system` metadata to `pyproject.toml` to fix compatibility with Pip 21.3.
