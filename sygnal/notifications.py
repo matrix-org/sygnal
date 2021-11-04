@@ -94,7 +94,7 @@ class Notification:
         self.devices = [Device(d) for d in notif["devices"]]
 
 
-class Pushkin(object):
+class Pushkin:
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         self.name = name
         self.cfg = config
@@ -188,7 +188,7 @@ class ConcurrencyLimitedPushkin(Pushkin):
         raise NotImplementedError
 
 
-class NotificationContext(object):
+class NotificationContext:
     def __init__(self, request_id, opentracing_span, start_time):
         """
         Args:
