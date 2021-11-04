@@ -15,10 +15,10 @@
 # Copied and adapted from
 # https://raw.githubusercontent.com/matrix-org/pushbaby/master/pushbaby/truncate.py
 import json
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
-def json_encode(payload: Any) -> bytes:
+def json_encode(payload) -> bytes:
     return json.dumps(payload, ensure_ascii=False).encode()
 
 
@@ -38,7 +38,9 @@ def is_too_long(payload: Dict[Any, Any], max_length: int = 2048) -> bool:
     return len(json_encode(payload)) > max_length
 
 
-def truncate(payload: Dict[str, Any], max_length: int = 2048) -> Dict[str, Any]:
+def truncate(
+    payload: Dict[str, Any], max_length: int = 2048
+) -> Optional[Dict[str, Any]]:
     """
     Truncate APNs fields to make the payload fit within the max length
     specified.
@@ -85,7 +87,7 @@ def truncate(payload: Dict[str, Any], max_length: int = 2048) -> Dict[str, Any]:
     return payload
 
 
-def _choppables_for_aps(aps):
+def _choppables_for_aps(aps: dict) -> List[Union[Tuple[str], Tuple[str, int]]]:
     ret: List[Union[Tuple[str], Tuple[str, int]]] = []
     if "alert" not in aps:
         return ret
@@ -102,7 +104,7 @@ def _choppables_for_aps(aps):
     return ret
 
 
-def _choppable_get(aps, choppable):
+def _choppable_get(aps: dict, choppable: Union[Tuple[str], Tuple[str, int]]):
     if choppable[0] == "alert":
         return aps["alert"]
     elif choppable[0] == "alert.body":
@@ -111,7 +113,9 @@ def _choppable_get(aps, choppable):
         return aps["alert"]["loc-args"][choppable[1]]
 
 
-def _choppable_put(aps, choppable, val):
+def _choppable_put(
+    aps: dict, choppable: Union[Tuple[str], Tuple[str, int]], val: str
+) -> None:
     if choppable[0] == "alert":
         aps["alert"] = val
     elif choppable[0] == "alert.body":
@@ -120,7 +124,7 @@ def _choppable_put(aps, choppable, val):
         aps["alert"]["loc-args"][choppable[1]] = val
 
 
-def _longest_choppable(aps):
+def _longest_choppable(aps: dict) -> Union[Tuple[str], Tuple[str, int], None]:
     longest = None
     length_of_longest = 0
     for c in _choppables_for_aps(aps):
