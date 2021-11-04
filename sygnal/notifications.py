@@ -19,10 +19,13 @@ from typing import Any, Dict, List, Optional
 
 from prometheus_client import Counter
 
-from .exceptions import InvalidNotificationException, NotificationDispatchException
+from sygnal.exceptions import (
+    InvalidNotificationException,
+    NotificationDispatchException,
+)
 
 if typing.TYPE_CHECKING:
-    from .sygnal import Sygnal
+    from sygnal.sygnal import Sygnal
 
 
 class Tweaks:

@@ -28,12 +28,11 @@ from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 
+from sygnal.exceptions import PushkinSetupException
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-
-from .exceptions import PushkinSetupException
-from .notifications import ConcurrencyLimitedPushkin
-from .utils import glob_to_regex
+from sygnal.notifications import ConcurrencyLimitedPushkin
+from sygnal.utils import glob_to_regex
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_webpush_queue_time",
