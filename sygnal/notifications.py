@@ -14,20 +14,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import typing
-from typing import Any, Dict, List, Optional
 
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+
+from opentracing import Span
 from prometheus_client import Counter
 
 from .exceptions import InvalidNotificationException, NotificationDispatchException
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from .sygnal import Sygnal
 
 
 class Tweaks:
-    def __init__(self, raw):
-        self.sound = None
+    def __init__(self, raw) -> None:
+        self.sound: Optional[str] = None
 
         if "sound" in raw:
             self.sound = raw["sound"]
@@ -35,11 +36,11 @@ class Tweaks:
 
 class Device:
     def __init__(self, raw):
-        self.app_id = None
-        self.pushkey = None
-        self.pushkey_ts = 0
-        self.data = None
-        self.tweaks = None
+        self.app_id: Optional[str] = None
+        self.pushkey: Optional[str] = None
+        self.pushkey_ts: float = 0
+        self.data: Optional[dict] = None
+        self.tweaks: Optional[Tweaks] = None
 
         if "app_id" not in raw:
             raise InvalidNotificationException("Device with no app_id")
@@ -59,8 +60,8 @@ class Device:
 
 class Counts:
     def __init__(self, raw):
-        self.unread = None
-        self.missed_calls = None
+        self.unread: Optional[int] = None
+        self.missed_calls: Optional[int] = None
 
         if "unread" in raw:
             self.unread = raw["unread"]
@@ -100,19 +101,19 @@ class Pushkin(object):
         self.cfg = config
         self.sygnal = sygnal
 
-    def get_config(self, key: str, default=None):
+    def get_config(self, key: str, default=None) -> Optional[Union[str, int, Dict]]:
         if key not in self.cfg:
             return default
         return self.cfg[key]
 
     async def dispatch_notification(
         self, n: Notification, device: Device, context: "NotificationContext"
-    ) -> List[str]:
+    ) -> Optional[List[str]]:
         """
         Args:
             n: The notification to dispatch via this pushkin
             device: The device to dispatch the notification for.
-            context (NotificationContext): the request context
+            context: the request context
 
         Returns:
             A list of rejected pushkeys, to be reported back to the homeserver
@@ -167,7 +168,7 @@ class ConcurrencyLimitedPushkin(Pushkin):
 
     async def dispatch_notification(
         self, n: Notification, device: Device, context: "NotificationContext"
-    ) -> List[str]:
+    ):
         if self._concurrent_now >= self._concurrent_limit:
             self.dropped_requests_counter.inc()
             raise NotificationDispatchException(
@@ -183,20 +184,20 @@ class ConcurrencyLimitedPushkin(Pushkin):
 
     async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: "NotificationContext"
-    ) -> List[str]:
+    ):
         # to be overridden by Pushkins!
         raise NotImplementedError
 
 
 class NotificationContext(object):
-    def __init__(self, request_id, opentracing_span, start_time):
+    def __init__(self, request_id: str, opentracing_span: Span, start_time: float):
         """
         Args:
-            request_id (str): An ID for the request, or None to have it
+            request_id: An ID for the request, or None to have it
                 generated automatically.
-            opentracing_span (Span): The span for the API request triggering
+            opentracing_span: The span for the API request triggering
                 the notification.
-            start_time (float): Start timer value, `time.perf_counter()`
+            start_time: Start timer value, `time.perf_counter()`
         """
         self.request_id = request_id
         self.opentracing_span = opentracing_span
