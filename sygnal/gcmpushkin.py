@@ -27,14 +27,18 @@ from twisted.web.http_headers import Headers
 
 from sygnal.exceptions import (
     NotificationDispatchException,
+    PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
-
-from .exceptions import PushkinSetupException
-from .notifications import ConcurrencyLimitedPushkin
+from sygnal.notifications import ConcurrencyLimitedPushkin
+from sygnal.utils import (
+    NotificationLoggerAdapter,
+    glob_to_regex,
+    json_decoder,
+    twisted_sleep,
+)
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"
@@ -300,13 +304,22 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     async def _dispatch_notification_unlimited(self, n, device, context):
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
+        # `_dispatch_notification_unlimited` gets called once for each device in the
+        # `Notification` with a matching app ID. We do something a little dirty and
+        # perform all of our dispatches the first time we get called for a
+        # `Notification` and do nothing for the rest of the times we get called.
+        app_id_pattern = glob_to_regex(self.name, ignore_case=False)
         pushkeys = [
-            device.pushkey for device in n.devices if device.app_id == self.name
+            device.pushkey
+            for device in n.devices
+            if app_id_pattern.match(device.app_id)
         ]
-        # Resolve canonical IDs for all pushkeys
+        # `pushkeys` ought to never be empty here. At the very least it should contain
+        # `device`'s pushkey.
 
         if pushkeys[0] != device.pushkey:
-            # Only send notifications once, to all devices at once.
+            # We've already been asked to dispatch for this `Notification` and have
+            # previously sent out the notification to all devices.
             return []
 
         # The pushkey is kind of secret because you can use it to send push
