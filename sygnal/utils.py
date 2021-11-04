@@ -41,28 +41,22 @@ class NotificationLoggerAdapter(LoggerAdapter):
         return f"[{self.extra['request_id']}] {msg}", kwargs
 
 
-def glob_to_regex(glob):
+def glob_to_regex(glob: str, ignore_case: bool) -> re.Pattern:
     """Converts a glob to a compiled regex object.
 
     The regex is anchored at the beginning and end of the string.
 
     Args:
-        glob (str)
+        glob
 
     Returns:
-        re.RegexObject
+        re.Pattern
     """
-    res = ""
-    for c in glob:
-        if c == "*":
-            res = res + ".*"
-        elif c == "?":
-            res = res + "."
-        else:
-            res = res + re.escape(c)
-
-    # \A anchors at start of string, \Z at end of string
-    return re.compile(r"\A" + res + r"\Z", re.IGNORECASE)
+    regex = re.escape(glob)
+    # `*` and `?` wildcards have been escaped. Now turn them back into regex.
+    regex = regex.replace("\\*", ".*")
+    regex = regex.replace("\\?", ".")
+    return re.compile(rf"\A{regex}\Z", re.IGNORECASE if ignore_case else 0)
 
 
 def _reject_invalid_json(val):

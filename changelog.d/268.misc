@@ -1,0 +1,1 @@
+Improve `glob_to_regex` performance and add case sensitivity flag.
