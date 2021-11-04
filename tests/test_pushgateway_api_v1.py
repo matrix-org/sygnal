@@ -79,7 +79,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
         """
         Set up a TestPushkin for the test.
         """
-        super(PushGatewayApiV1TestCase, self).config_setup(config)
+        super().config_setup(config)
         config["apps"]["com.example.spqr"] = {
             "type": "tests.test_pushgateway_api_v1.TestPushkin"
         }

@@ -152,7 +152,7 @@ class ConcurrencyLimitedPushkin(Pushkin):
     )
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
-        super(ConcurrencyLimitedPushkin, self).__init__(name, sygnal, config)
+        super().__init__(name, sygnal, config)
         self._concurrent_limit = config.get(
             "inflight_request_limit",
             ConcurrencyLimitedPushkin.DEFAULT_CONCURRENCY_LIMIT,

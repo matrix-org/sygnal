@@ -47,7 +47,7 @@ class SlowConcurrencyLimitedDummyPushkin(ConcurrencyLimitedPushkin):
 
 class ConcurrencyLimitTestCase(TestCase):
     def config_setup(self, config):
-        super(ConcurrencyLimitTestCase, self).config_setup(config)
+        super().config_setup(config)
         config["apps"]["com.example.gcm"] = {
             "type": "tests.test_concurrency_limit.SlowConcurrencyLimitedDummyPushkin",
             "inflight_request_limit": 1,
