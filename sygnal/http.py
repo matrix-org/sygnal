@@ -16,10 +16,10 @@
 # limitations under the License.
 import json
 import logging
-import re
 import sys
 import time
 import traceback
+from typing import List
 from uuid import uuid4
 
 from opentracing import Format, logs, tags
@@ -34,11 +34,12 @@ from twisted.web.http import (
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from sygnal.notifications import NotificationContext
-from sygnal.utils import NotificationLoggerAdapter, json_decoder
-
-from .exceptions import InvalidNotificationException, NotificationDispatchException
-from .notifications import Notification
+from sygnal.exceptions import (
+    InvalidNotificationException,
+    NotificationDispatchException,
+)
+from sygnal.notifications import Notification, NotificationContext, Pushkin
+from sygnal.utils import NotificationLoggerAdapter, glob_to_regex, json_decoder
 
 logger = logging.getLogger(__name__)
 
@@ -202,12 +203,11 @@ class V1NotifyHandler(Resource):
             if not root_span_accounted_for:
                 root_span.finish()
 
-    def find_pushkins(self, appid):
+    def find_pushkins(self, appid: str) -> List[Pushkin]:
         """Finds matching pushkins in self.sygnal.pushkins according to the appid.
 
-
         Args:
-            appid (str): app identifier to search in self.sygnal.pushkins.
+            appid: app identifier to search in self.sygnal.pushkins.
 
         Returns:
             list of `Pushkin`: If it finds a specific pushkin with
@@ -218,13 +218,13 @@ class V1NotifyHandler(Resource):
         if appid in self.sygnal.pushkins:
             return [self.sygnal.pushkins[appid]]
 
-        result = []
-        for key, value in self.sygnal.pushkins.items():
-            # The ".+" symbol is used in place of "*" symbol
-            regex = key.replace("*", ".+")
-            if re.search(regex, appid):
-                result.append(value)
-        return result
+        # otherwise, find any pushkins whose appid patterns match
+        pushkins = []
+        for pushkin_appid, pushkin in self.sygnal.pushkins.items():
+            pattern = glob_to_regex(pushkin_appid, ignore_case=False)
+            if pattern.match(appid):
+                pushkins.append(pushkin)
+        return pushkins
 
     async def _handle_dispatch(self, root_span, request, log, notif, context):
         """
