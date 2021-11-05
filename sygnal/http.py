@@ -39,7 +39,7 @@ from sygnal.exceptions import (
     NotificationDispatchException,
 )
 from sygnal.notifications import Notification, NotificationContext, Pushkin
-from sygnal.utils import NotificationLoggerAdapter, glob_to_regex, json_decoder
+from sygnal.utils import NotificationLoggerAdapter, json_decoder
 
 logger = logging.getLogger(__name__)
 
@@ -219,12 +219,11 @@ class V1NotifyHandler(Resource):
             return [self.sygnal.pushkins[appid]]
 
         # otherwise, find any pushkins whose appid patterns match
-        pushkins = []
-        for pushkin_appid, pushkin in self.sygnal.pushkins.items():
-            pattern = glob_to_regex(pushkin_appid, ignore_case=False)
-            if pattern.match(appid):
-                pushkins.append(pushkin)
-        return pushkins
+        return [
+            pushkin
+            for pushkin in self.sygnal.pushkins.values()
+            if pushkin.handles_appid(appid)
+        ]
 
     async def _handle_dispatch(self, root_span, request, log, notif, context):
         """
