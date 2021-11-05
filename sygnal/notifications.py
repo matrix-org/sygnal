@@ -14,59 +14,48 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+import abc
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, overload
 
 from opentracing import Span
 from prometheus_client import Counter
+from typing_extensions import Type
 
-from .exceptions import InvalidNotificationException, NotificationDispatchException
+from .exceptions import (
+    InvalidNotificationException,
+    NotificationDispatchException,
+    PushkinSetupException,
+)
 
 if TYPE_CHECKING:
-    from .sygnal import Sygnal
+    from sygnal.sygnal import Sygnal
+
+T = TypeVar("T")
 
 
 class Tweaks:
-    def __init__(self, raw) -> None:
-        self.sound: Optional[str] = None
-
-        if "sound" in raw:
-            self.sound = raw["sound"]
+    def __init__(self, raw: Dict[str, Any]):
+        self.sound: Optional[str] = raw.get("sound")
 
 
 class Device:
-    def __init__(self, raw):
-        self.app_id: Optional[str] = None
-        self.pushkey: Optional[str] = None
-        self.pushkey_ts: float = 0
-        self.data: Optional[dict] = None
-        self.tweaks: Optional[Tweaks] = None
-
+    def __init__(self, raw: Dict[str, Any]):
         if "app_id" not in raw:
             raise InvalidNotificationException("Device with no app_id")
         if "pushkey" not in raw:
             raise InvalidNotificationException("Device with no pushkey")
-        if "pushkey_ts" in raw:
-            self.pushkey_ts = raw["pushkey_ts"]
-        if "tweaks" in raw:
-            self.tweaks = Tweaks(raw["tweaks"])
-        else:
-            self.tweaks = Tweaks({})
-        self.app_id = raw["app_id"]
-        self.pushkey = raw["pushkey"]
-        if "data" in raw:
-            self.data = raw["data"]
+
+        self.app_id: str = raw["app_id"]
+        self.pushkey: str = raw["pushkey"]
+        self.pushkey_ts: int = raw.get("pushkey_ts", 0)
+        self.data: Optional[Dict[str, Any]] = raw.get("data")
+        self.tweaks = Tweaks(raw.get("tweaks", {}))
 
 
 class Counts:
-    def __init__(self, raw):
-        self.unread: Optional[int] = None
-        self.missed_calls: Optional[int] = None
-
-        if "unread" in raw:
-            self.unread = raw["unread"]
-        if "missed_calls" in raw:
-            self.missed_calls = raw["missed_calls"]
+    def __init__(self, raw: Dict[str, Any]):
+        self.unread: Optional[int] = raw.get("unread")
+        self.missed_calls: Optional[int] = raw.get("missed_calls")
 
 
 class Notification:
@@ -95,20 +84,36 @@ class Notification:
         self.devices = [Device(d) for d in notif["devices"]]
 
 
-class Pushkin(object):
+class Pushkin(abc.ABC):
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         self.name = name
         self.cfg = config
         self.sygnal = sygnal
 
-    def get_config(self, key: str, default=None) -> Optional[Union[str, int, Dict]]:
+    @overload
+    def get_config(self, key: str, type_: Type[T], default: T) -> T:
+        ...
+
+    @overload
+    def get_config(self, key: str, type_: Type[T], default: None = None) -> Optional[T]:
+        ...
+
+    def get_config(
+        self, key: str, type_: Type[T], default: Optional[T] = None
+    ) -> Optional[T]:
         if key not in self.cfg:
             return default
+        if not isinstance(self.cfg[key], type_):
+            raise PushkinSetupException(
+                f"{key} is of incorrect type, please check that the entry for {key} is "
+                f"formatted correctly in the config file. "
+            )
         return self.cfg[key]
 
+    @abc.abstractmethod
     async def dispatch_notification(
         self, n: Notification, device: Device, context: "NotificationContext"
-    ) -> Optional[List[str]]:
+    ) -> List[str]:
         """
         Args:
             n: The notification to dispatch via this pushkin
@@ -118,7 +123,7 @@ class Pushkin(object):
         Returns:
             A list of rejected pushkeys, to be reported back to the homeserver
         """
-        pass
+        ...
 
     @classmethod
     async def create(cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
@@ -168,7 +173,7 @@ class ConcurrencyLimitedPushkin(Pushkin):
 
     async def dispatch_notification(
         self, n: Notification, device: Device, context: "NotificationContext"
-    ):
+    ) -> List[str]:
         if self._concurrent_now >= self._concurrent_limit:
             self.dropped_requests_counter.inc()
             raise NotificationDispatchException(
@@ -184,7 +189,7 @@ class ConcurrencyLimitedPushkin(Pushkin):
 
     async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: "NotificationContext"
-    ):
+    ) -> List[str]:
         # to be overridden by Pushkins!
         raise NotImplementedError
 
