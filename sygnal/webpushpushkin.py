@@ -76,7 +76,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config):
-        super(WebpushPushkin, self).__init__(name, sygnal, config)
+        super().__init__(name, sygnal, config)
 
         nonunderstood = self.cfg.keys() - self.UNDERSTOOD_CONFIG_FIELDS
         if nonunderstood:
