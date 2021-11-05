@@ -18,7 +18,7 @@ import json
 import logging
 import time
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
@@ -44,7 +44,7 @@ from .notifications import (
 )
 
 if TYPE_CHECKING:
-    from .sygnal import Sygnal
+    from sygnal.sygnal import Sygnal
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"
@@ -119,9 +119,10 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             )
 
         self.http_pool = HTTPConnectionPool(reactor=sygnal.reactor)
-        self.max_connections = cast(
-            int, self.get_config("max_connections", DEFAULT_MAX_CONNECTIONS)
+        self.max_connections = self.get_config(
+            "max_connections", int, DEFAULT_MAX_CONNECTIONS
         )
+
         self.connection_semaphore = DeferredSemaphore(self.max_connections)
         self.http_pool.maxPersistentPerHost = self.max_connections
 
@@ -137,14 +138,14 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             proxy_url_str=proxy_url,
         )
 
-        self.api_key = self.get_config("api_key")
+        self.api_key = self.get_config("api_key", str)
         if not self.api_key:
             raise PushkinSetupException("No API key set in config")
 
         # Use the fcm_options config dictionary as a foundation for the body;
         # this lets the Sygnal admin choose custom FCM options
         # (e.g. content_available).
-        self.base_request_body: dict = cast(dict, self.get_config("fcm_options", {}))
+        self.base_request_body = self.get_config("fcm_options", dict, {})
         if not isinstance(self.base_request_body, dict):
             raise PushkinSetupException(
                 "Config field fcm_options, if set, must be a dictionary of options"
@@ -166,7 +167,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
     async def _perform_http_request(
         self, body: Dict, headers: Dict[bytes, List[str]]
-    ) -> Optional[Tuple[IResponse, str]]:
+    ) -> Tuple[IResponse, str]:
         """
         Perform an HTTP request to the FCM server with the body and headers
         specified.
@@ -212,7 +213,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         headers: Dict[bytes, List[str]],
         pushkeys: List[str],
         span: Span,
-    ) -> Optional[Tuple[list, list]]:
+    ) -> Tuple[list, list]:
         poke_start_time = time.time()
 
         failed = []
@@ -321,7 +322,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
     async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: NotificationContext
-    ) -> Union[int, list]:
+    ) -> List[str]:
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
         pushkeys = [
@@ -349,7 +350,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             }
 
             # TODO: Implement collapse_key to queue only one message per room.
-            failed: list = []
+            failed: List[str] = []
 
             body = self.base_request_body.copy()
             body["data"] = data
@@ -403,7 +404,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             return failed
 
     @staticmethod
-    def _build_data(n: Notification, device: Device) -> Dict:
+    def _build_data(n: Notification, device: Device) -> Dict[str, Any]:
         """
         Build the payload data to be sent.
         Args:
