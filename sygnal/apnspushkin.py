@@ -20,11 +20,12 @@ import copy
 import logging
 import os
 from datetime import timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
 
 import aioapns
 from aioapns import APNs, NotificationRequest
+from aioapns.common import NotificationResult
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509 import load_pem_x509_certificate
 from opentracing import Span, logs, tags
@@ -47,7 +48,7 @@ from sygnal.notifications import (
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 if TYPE_CHECKING:
-    from .sygnal import Sygnal
+    from sygnal.sygnal import Sygnal
 
 
 logger = logging.getLogger(__name__)
@@ -108,7 +109,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 nonunderstood,
             )
 
-        platform = self.get_config("platform")
+        platform = self.get_config("platform", str)
         if not platform or platform == "production" or platform == "prod":
             self.use_sandbox = False
         elif platform == "sandbox":
@@ -116,29 +117,29 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         else:
             raise PushkinSetupException(f"Invalid platform: {platform}")
 
-        certfile = self.get_config("certfile")
-        keyfile = self.get_config("keyfile")
+        certfile = self.get_config("certfile", str)
+        keyfile = self.get_config("keyfile", str)
         if not certfile and not keyfile:
             raise PushkinSetupException(
                 "You must provide a path to an APNs certificate, or an APNs token."
             )
 
         if certfile:
-            if not os.path.exists(cast(str, certfile)):
+            if not os.path.exists(certfile):
                 raise PushkinSetupException(
                     f"The APNs certificate '{certfile}' does not exist."
                 )
         else:
             # keyfile
-            if not os.path.exists(cast(str, keyfile)):
+            if not os.path.exists(keyfile):
                 raise PushkinSetupException(
                     f"The APNs key file '{keyfile}' does not exist."
                 )
-            if not self.get_config("key_id"):
+            if not self.get_config("key_id", str):
                 raise PushkinSetupException("You must supply key_id.")
-            if not self.get_config("team_id"):
+            if not self.get_config("team_id", str):
                 raise PushkinSetupException("You must supply team_id.")
-            if not self.get_config("topic"):
+            if not self.get_config("topic", str):
                 raise PushkinSetupException("You must supply topic.")
 
         # use the Sygnal global proxy configuration
@@ -160,16 +161,16 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 loop=loop,
             )
 
-            self._report_certificate_expiration(cast(str, certfile))
+            self._report_certificate_expiration(certfile)
         else:
             # max_connection_attempts is actually the maximum number of
             # additional connection attempts, so =0 means try once only
             # (we will retry at a higher level so not worth doing more here)
             self.apns_client = APNs(
-                key=self.get_config("keyfile"),
-                key_id=self.get_config("key_id"),
-                team_id=self.get_config("team_id"),
-                topic=self.get_config("topic"),
+                key=self.get_config("keyfile", str),
+                key_id=self.get_config("key_id", str),
+                team_id=self.get_config("team_id", str),
+                topic=self.get_config("topic", str),
                 use_sandbox=self.use_sandbox,
                 max_connection_attempts=0,
                 loop=loop,
@@ -196,7 +197,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         device: Device,
         shaved_payload: Dict[str, Any],
         prio: int,
-    ) -> Optional[List]:
+    ) -> List[str]:
         """
         Actually attempts to dispatch the notification once.
         """
@@ -210,7 +211,6 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         log.info(f"Sending as APNs-ID {notif_id}")
         span.set_tag("apns_id", notif_id)
 
-        assert device.pushkey is not None
         device_token = base64.b64decode(device.pushkey).hex()
 
         request = NotificationRequest(
@@ -256,7 +256,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
 
     async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: NotificationContext
-    ) -> Optional[list]:
+    ) -> List[str]:
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
         # The pushkey is kind of secret because you can use it to send push
@@ -278,7 +278,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             if payload is None:
                 # Nothing to do
                 span_parent.log_kv({logs.EVENT: "apns_no_payload"})
-                return None
+                return []
             prio = 10
             if n.prio == "low":
                 prio = 5
@@ -366,7 +366,6 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         Returns:
             The APNs payload as nested dicts.
         """
-        assert n.sender is not None
         from_display = n.sender
         if n.sender_display_name is not None:
             from_display = n.sender_display_name
@@ -498,7 +497,9 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
 
         return payload
 
-    async def _send_notification(self, request: NotificationRequest):
+    async def _send_notification(
+        self, request: NotificationRequest
+    ) -> NotificationResult:
         return await Deferred.fromFuture(
             asyncio.ensure_future(self.apns_client.send_notification(request))
         )
