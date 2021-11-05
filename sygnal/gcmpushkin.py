@@ -27,14 +27,13 @@ from twisted.web.http_headers import Headers
 
 from sygnal.exceptions import (
     NotificationDispatchException,
+    PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
+from sygnal.notifications import ConcurrencyLimitedPushkin
 from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
-
-from .exceptions import PushkinSetupException
-from .notifications import ConcurrencyLimitedPushkin
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"
