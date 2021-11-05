@@ -103,7 +103,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config):
-        super(GcmPushkin, self).__init__(name, sygnal, config)
+        super().__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
         if len(nonunderstood) > 0:

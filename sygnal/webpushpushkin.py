@@ -28,12 +28,11 @@ from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 
+from sygnal.exceptions import PushkinSetupException
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-
-from .exceptions import PushkinSetupException
-from .notifications import ConcurrencyLimitedPushkin
-from .utils import glob_to_regex
+from sygnal.notifications import ConcurrencyLimitedPushkin
+from sygnal.utils import glob_to_regex
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_webpush_queue_time",
@@ -77,7 +76,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name, sygnal, config):
-        super(WebpushPushkin, self).__init__(name, sygnal, config)
+        super().__init__(name, sygnal, config)
 
         nonunderstood = self.cfg.keys() - self.UNDERSTOOD_CONFIG_FIELDS
         if nonunderstood:

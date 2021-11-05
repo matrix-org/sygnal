@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 @implementer(IPolicyForHTTPS)
-class ClientTLSOptionsFactory(object):
+class ClientTLSOptionsFactory:
     """Factory for Twisted SSLClientConnectionCreators that are used to make connections
     to remote servers for federation.
     Uses one of two OpenSSL context objects for all connections, depending on whether
@@ -91,7 +91,7 @@ class ClientTLSOptionsFactory(object):
 
 
 @implementer(IOpenSSLClientConnectionCreator)
-class SSLClientConnectionCreator(object):
+class SSLClientConnectionCreator:
     """Creates openssl connection objects for client connections.
 
     Replaces twisted.internet.ssl.ClientTLSOptions
@@ -116,7 +116,7 @@ class SSLClientConnectionCreator(object):
         return connection
 
 
-class ConnectionVerifier(object):
+class ConnectionVerifier:
     """Set the SNI, and do cert verification
 
     This is a thing which is attached to the TLSMemoryBIOProtocol, and is called by

@@ -34,11 +34,12 @@ from twisted.web.http import (
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from sygnal.notifications import NotificationContext
+from sygnal.exceptions import (
+    InvalidNotificationException,
+    NotificationDispatchException,
+)
+from sygnal.notifications import Notification, NotificationContext
 from sygnal.utils import NotificationLoggerAdapter, json_decoder
-
-from .exceptions import InvalidNotificationException, NotificationDispatchException
-from .notifications import Notification
 
 logger = logging.getLogger(__name__)
 
@@ -344,7 +345,7 @@ class SygnalLoggedSite(server.Site):
         self.logger.info("Handled request: %s", line)
 
 
-class PushGatewayApiServer(object):
+class PushGatewayApiServer:
     def __init__(self, sygnal):
         """
         Initialises the /_matrix/push/* (Push Gateway API) server.
