@@ -45,12 +45,6 @@ def glob_to_regex(glob: str, ignore_case: bool) -> re.Pattern:
     """Converts a glob to a compiled regex object.
 
     The regex is anchored at the beginning and end of the string.
-
-    Args:
-        glob
-
-    Returns:
-        re.Pattern
     """
     regex = re.escape(glob)
     # `*` and `?` wildcards have been escaped. Now turn them back into regex.
