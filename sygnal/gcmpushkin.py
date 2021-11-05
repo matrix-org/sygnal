@@ -33,12 +33,7 @@ from sygnal.exceptions import (
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
 from sygnal.notifications import ConcurrencyLimitedPushkin
-from sygnal.utils import (
-    NotificationLoggerAdapter,
-    glob_to_regex,
-    json_decoder,
-    twisted_sleep,
-)
+from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"
@@ -308,11 +303,8 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         # `Notification` with a matching app ID. We do something a little dirty and
         # perform all of our dispatches the first time we get called for a
         # `Notification` and do nothing for the rest of the times we get called.
-        app_id_pattern = glob_to_regex(self.name, ignore_case=False)
         pushkeys = [
-            device.pushkey
-            for device in n.devices
-            if app_id_pattern.match(device.app_id)
+            device.pushkey for device in n.devices if self.handles_appid(device.app_id)
         ]
         # `pushkeys` ought to never be empty here. At the very least it should contain
         # `device`'s pushkey.
