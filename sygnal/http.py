@@ -345,7 +345,7 @@ class SygnalLoggedSite(server.Site):
         self.logger.info("Handled request: %s", line)
 
 
-class PushGatewayApiServer(object):
+class PushGatewayApiServer:
     def __init__(self, sygnal):
         """
         Initialises the /_matrix/push/* (Push Gateway API) server.

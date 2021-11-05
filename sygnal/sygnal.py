@@ -52,7 +52,7 @@ CONFIG_DEFAULTS: dict = {
 }
 
 
-class Sygnal(object):
+class Sygnal:
     def __init__(self, config, custom_reactor, tracer=opentracing.tracer):
         """
         Object that holds state for the entirety of a Sygnal instance.
