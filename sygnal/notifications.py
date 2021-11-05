@@ -23,6 +23,7 @@ from sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
 )
+from sygnal.utils import glob_to_regex
 
 if typing.TYPE_CHECKING:
     from sygnal.sygnal import Sygnal
@@ -100,6 +101,7 @@ class Notification:
 class Pushkin:
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         self.name = name
+        self.appid_pattern = glob_to_regex(name, ignore_case=False)
         self.cfg = config
         self.sygnal = sygnal
 
@@ -107,6 +109,10 @@ class Pushkin:
         if key not in self.cfg:
             return default
         return self.cfg[key]
+
+    def handles_appid(self, appid: str) -> bool:
+        """Checks whether the pushkin is responsible for the given app ID"""
+        return self.name == appid or self.appid_pattern.match(appid) is not None
 
     async def dispatch_notification(
         self, n: Notification, device: Device, context: "NotificationContext"
