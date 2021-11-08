@@ -33,29 +33,55 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
+@overload
+def get_key(raw: Dict[str, Any], key: str, type_: Type[T], default: T) -> T:
+    ...
+
+
+@overload
+def get_key(
+    raw: Dict[str, Any], key: str, type_: Type[T], default: None = None
+) -> Optional[T]:
+    ...
+
+
+def get_key(
+    raw: Dict[str, Any], key: str, type_: Type[T], default: Optional[T] = None
+) -> Optional[T]:
+    if key not in raw:
+        return default
+    if not isinstance(raw[key], type_):
+        raise InvalidNotificationException(f"{key} is of invalid type")
+    return raw[key]
+
+
 class Tweaks:
     def __init__(self, raw: Dict[str, Any]):
-        self.sound: Optional[str] = raw.get("sound")
+        self.sound: Optional[str] = get_key(raw, "sound", str)
 
 
 class Device:
     def __init__(self, raw: Dict[str, Any]):
-        if "app_id" not in raw:
-            raise InvalidNotificationException("Device with no app_id")
-        if "pushkey" not in raw:
-            raise InvalidNotificationException("Device with no pushkey")
-
+        if "app_id" not in raw or not isinstance(raw["app_id"], str):
+            raise InvalidNotificationException(
+                "Device with missing or non-string app_id"
+            )
         self.app_id: str = raw["app_id"]
+        if "pushkey" not in raw or not isinstance(raw["pushkey"], str):
+            raise InvalidNotificationException(
+                "Device with missing or non-string pushkey"
+            )
         self.pushkey: str = raw["pushkey"]
-        self.pushkey_ts: int = raw.get("pushkey_ts", 0)
-        self.data: Optional[Dict[str, Any]] = raw.get("data")
-        self.tweaks = Tweaks(raw.get("tweaks", {}))
+
+        self.pushkey_ts: int = get_key(raw, "pushkey_ts", int, 0)
+        self.data: Optional[Dict[str, Any]] = get_key(raw, "data", dict)
+        self.tweaks = Tweaks(get_key(raw, "tweaks", dict, {}))
 
 
 class Counts:
     def __init__(self, raw: Dict[str, Any]):
-        self.unread: Optional[int] = raw.get("unread")
-        self.missed_calls: Optional[int] = raw.get("missed_calls")
+        self.unread: Optional[int] = get_key(raw, "unread", int)
+        self.missed_calls: Optional[int] = get_key(raw, "missed_calls", int)
 
 
 class Notification:
