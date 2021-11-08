@@ -44,6 +44,7 @@ from sygnal.notifications import (
     Device,
     Notification,
     NotificationContext,
+    get_key,
 )
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
@@ -109,7 +110,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 nonunderstood,
             )
 
-        platform = self.get_config("platform", str)
+        platform = get_key(self.cfg, "platform", str)
         if not platform or platform == "production" or platform == "prod":
             self.use_sandbox = False
         elif platform == "sandbox":
@@ -366,9 +367,12 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         Returns:
             The APNs payload as nested dicts.
         """
-        from_display = n.sender
-        if n.sender_display_name is not None:
+        if not n.sender and not n.sender_display_name:
+            from_display = " "
+        elif n.sender_display_name is not None:
             from_display = n.sender_display_name
+        elif n.sender is not None:
+            from_display = n.sender
         from_display = from_display[0 : self.MAX_FIELD_LENGTH]
 
         loc_key = None
