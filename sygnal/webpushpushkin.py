@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Pattern
 from urllib.parse import urlparse
 
 import py_vapid
-import requests
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
 from pywebpush import webpush
@@ -406,7 +405,9 @@ class HttpDelayedRequest:
         self.data = data
         self.vapid_headers = vapid_headers
 
-    def execute(self, http_agent: ProxyAgent, low_priority: bool, topic: bytes) -> IResponse:
+    def execute(
+        self, http_agent: ProxyAgent, low_priority: bool, topic: bytes
+    ) -> IResponse:
         body_producer = FileBodyProducer(BytesIO(self.data))
         # Convert the headers to the camelcase version.
         headers = {
