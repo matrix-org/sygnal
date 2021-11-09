@@ -110,7 +110,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 nonunderstood,
             )
 
-        platform = get_key(self.cfg, "platform", str)
+        platform = self.get_config("platform", str)
         if not platform or platform == "production" or platform == "prod":
             self.use_sandbox = False
         elif platform == "sandbox":
