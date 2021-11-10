@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Optional
+
 from twisted.internet.error import ConnectError
 
 
@@ -32,7 +34,7 @@ class TemporaryNotificationDispatchException(Exception):
     hopefully temporary, so the request should possibly be retried soon.
     """
 
-    def __init__(self, *args: object, custom_retry_delay=None) -> None:
+    def __init__(self, *args: object, custom_retry_delay: Optional[int] = None) -> None:
         super().__init__(*args)
         self.custom_retry_delay = custom_retry_delay
 
