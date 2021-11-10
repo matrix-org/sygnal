@@ -21,10 +21,9 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Pattern
 from urllib.parse import urlparse
 
-import py_vapid
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
-from pywebpush import webpush
+from pywebpush import CaseInsensitiveDict, webpush
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
@@ -85,7 +84,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         "ttl",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
-    def __init__(self, name: str, sygnal: Sygnal, config: Dict[str, Any]):
+    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         super().__init__(name, sygnal, config)
 
         nonunderstood = self.cfg.keys() - self.UNDERSTOOD_CONFIG_FIELDS
@@ -355,7 +354,7 @@ class HttpRequestFactory:
         self,
         endpoint: str,
         data: bytes,
-        headers: py_vapid.CaseInsensitiveDict,
+        headers: CaseInsensitiveDict,
         timeout: int,
     ) -> "HttpDelayedRequest":
         """
@@ -398,9 +397,7 @@ class HttpDelayedRequest:
     status_code: int = 200
     text: Optional[str] = None
 
-    def __init__(
-        self, endpoint: str, data: bytes, vapid_headers: py_vapid.CaseInsensitiveDict
-    ):
+    def __init__(self, endpoint: str, data: bytes, vapid_headers: CaseInsensitiveDict):
         self.endpoint = endpoint
         self.data = data
         self.vapid_headers = vapid_headers
