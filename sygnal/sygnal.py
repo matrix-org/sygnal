@@ -20,6 +20,7 @@ import logging
 import logging.config
 import os
 import sys
+from typing import Any, Dict
 
 import opentracing
 import prometheus_client
@@ -31,6 +32,7 @@ from twisted.python import log as twisted_log
 from twisted.python.failure import Failure
 
 from sygnal.http import PushGatewayApiServer
+from sygnal.notifications import Pushkin
 
 logger = logging.getLogger(__name__)
 
@@ -53,17 +55,22 @@ CONFIG_DEFAULTS: dict = {
 
 
 class Sygnal(object):
-    def __init__(self, config, custom_reactor, tracer=opentracing.tracer):
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        custom_reactor: asyncioreactor.AsyncioSelectorReactor,
+        tracer=opentracing.tracer,
+    ):
         """
         Object that holds state for the entirety of a Sygnal instance.
         Args:
-            config (dict): Configuration for this Sygnal
+            config: Configuration for this Sygnal
             custom_reactor: a Twisted Reactor to use.
             tracer (optional): an OpenTracing tracer. The default is the no-op tracer.
         """
         self.config = config
         self.reactor = custom_reactor
-        self.pushkins = {}
+        self.pushkins: Dict[str, Pushkin] = {}
         self.tracer = tracer
 
         logging_dict_config = config["log"]["setup"]
@@ -140,14 +147,14 @@ class Sygnal(object):
                     "Unknown OpenTracing implementation: %s.", tracecfg["impl"]
                 )
 
-    async def _make_pushkin(self, app_name, app_config):
+    async def _make_pushkin(self, app_name: str, app_config: Dict[str, Any]) -> Pushkin:
         """
         Load and instantiate a pushkin.
         Args:
-            app_name (str): The pushkin's app_id
-            app_config (dict): The pushkin's configuration
+            app_name: The pushkin's app_id
+            app_config: The pushkin's configuration
 
-        Returns (Pushkin):
+        Returns:
             A pushkin of the desired type.
         """
         app_type = app_config["type"]
@@ -211,10 +218,10 @@ class Sygnal(object):
         self.reactor.run()
 
 
-def parse_config():
+def parse_config() -> Dict[str, Any]:
     """
     Find and load Sygnal's configuration file.
-    Returns (dict):
+    Returns:
         A loaded configuration.
     """
     config_path = os.getenv("SYGNAL_CONF", "sygnal.yaml")
@@ -231,7 +238,7 @@ def parse_config():
         raise
 
 
-def check_config(config):
+def check_config(config: Dict[str, Any]) -> None:
     """
     Lightly check the configuration and issue warnings as appropriate.
     Args:
@@ -271,14 +278,16 @@ def check_config(config):
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
 
 
-def merge_left_with_defaults(defaults, loaded_config):
+def merge_left_with_defaults(
+    defaults: Dict[str, Any], loaded_config: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Merge two configurations, with one of them overriding the other.
     Args:
-        defaults (dict): A configuration of defaults
-        loaded_config (dict): A configuration, as loaded from disk.
+        defaults: A configuration of defaults
+        loaded_config: A configuration, as loaded from disk.
 
-    Returns (dict):
+    Returns:
         A merged configuration, with loaded_config preferred over defaults.
     """
     result = defaults.copy()
