@@ -80,7 +80,6 @@ REQUESTS_IN_FLIGHT_GUAGE = Gauge(
     labelnames=["resource"],
 )
 
-
 class V1NotifyHandler(Resource):
     def __init__(self, sygnal: "Sygnal"):
         super().__init__()
@@ -329,7 +328,7 @@ class SizeLimitingRequest(server.Request):
         if self.content.tell() + len(data) > self.MAX_REQUEST_SIZE:
             logger.info(
                 "Aborting connection from %s because the request exceeds maximum size",
-                self.client.host,
+                self.client,
             )
             assert self.transport is not None
             self.transport.abortConnection()
