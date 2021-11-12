@@ -18,7 +18,7 @@ import json
 import logging
 import time
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, AnyStr
 
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
@@ -166,7 +166,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         return cls(name, sygnal, config)
 
     async def _perform_http_request(
-        self, body: Dict, headers: Dict[bytes, List[str]]
+        self, body: Dict, headers: Dict[AnyStr, List[AnyStr]]
     ) -> Tuple[IResponse, str]:
         """
         Perform an HTTP request to the FCM server with the body and headers
@@ -210,10 +210,10 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         n: Notification,
         log: NotificationLoggerAdapter,
         body: dict,
-        headers: Dict[bytes, List[str]],
+        headers: Dict[AnyStr, List[AnyStr]],
         pushkeys: List[str],
         span: Span,
-    ) -> Tuple[list, list]:
+    ) -> Tuple[List[str], List[str]]:
         poke_start_time = time.time()
 
         failed = []
@@ -344,9 +344,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         ) as span_parent:
             data = GcmPushkin._build_data(n, device)
             headers = {
-                b"User-Agent": ["sygnal"],
-                b"Content-Type": ["application/json"],
-                b"Authorization": ["key=%s" % (self.api_key,)],
+                "User-Agent": ["sygnal"],
+                "Content-Type": ["application/json"],
+                "Authorization": ["key=%s" % (self.api_key,)],
             }
 
             # TODO: Implement collapse_key to queue only one message per room.

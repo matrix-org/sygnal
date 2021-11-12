@@ -130,7 +130,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 raise PushkinSetupException(
                     f"The APNs certificate '{certfile}' does not exist."
                 )
-        else:
+        elif keyfile:
             # keyfile
             if not os.path.exists(keyfile):
                 raise PushkinSetupException(
@@ -313,15 +313,11 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                     span_parent.log_kv(
                         {"event": "temporary_fail", "retrying_in": retry_delay}
                     )
+                    await twisted_sleep(
+                        retry_delay, twisted_reactor=self.sygnal.reactor
+                    )
 
-                    if retry_number == self.MAX_TRIES - 1:
-                        raise NotificationDispatchException(
-                            "Retried too many times."
-                        ) from exc
-                    else:
-                        await twisted_sleep(
-                            retry_delay, twisted_reactor=self.sygnal.reactor
-                        )
+            raise NotificationDispatchException("Retried too many times.")
 
     def _get_payload_event_id_only(
         self, n: Notification, device: Device
