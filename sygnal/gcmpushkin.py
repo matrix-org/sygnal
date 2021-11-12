@@ -18,7 +18,7 @@ import json
 import logging
 import time
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, AnyStr
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
 
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
@@ -29,19 +29,18 @@ from twisted.web.iweb import IResponse
 
 from sygnal.exceptions import (
     NotificationDispatchException,
+    PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
-
-from sygnal.exceptions import PushkinSetupException
 from sygnal.notifications import (
     ConcurrencyLimitedPushkin,
     Device,
     Notification,
     NotificationContext,
 )
+from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
 
 if TYPE_CHECKING:
     from sygnal.sygnal import Sygnal
