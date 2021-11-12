@@ -312,9 +312,10 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                     span_parent.log_kv(
                         {"event": "temporary_fail", "retrying_in": retry_delay}
                     )
-                    await twisted_sleep(
-                        retry_delay, twisted_reactor=self.sygnal.reactor
-                    )
+                    if retry_number < self.MAX_TRIES - 1:
+                        await twisted_sleep(
+                            retry_delay, twisted_reactor=self.sygnal.reactor
+                        )
 
             raise NotificationDispatchException("Retried too many times.")
 
