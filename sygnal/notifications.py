@@ -15,11 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import abc
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, overload
 
 from opentracing import Span
 from prometheus_client import Counter
-from typing_extensions import TYPE_CHECKING, Type
+
 from sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
@@ -107,6 +107,7 @@ class Notification:
             self.counts = Counts({})
 
         self.devices = [Device(d) for d in notif["devices"]]
+
 
 class Pushkin(abc.ABC):
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):

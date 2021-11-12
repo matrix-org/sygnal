@@ -44,7 +44,6 @@ from sygnal.notifications import (
     Device,
     Notification,
     NotificationContext,
-    get_key,
 )
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
