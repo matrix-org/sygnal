@@ -19,9 +19,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, overload
 
 from opentracing import Span
 from prometheus_client import Counter
-from typing_extensions import Type
-
-from .exceptions import (
+from typing_extensions import TYPE_CHECKING, Type
+from sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
     PushkinSetupException,
@@ -109,7 +108,6 @@ class Notification:
 
         self.devices = [Device(d) for d in notif["devices"]]
 
-
 class Pushkin(abc.ABC):
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         self.name = name
@@ -184,7 +182,7 @@ class ConcurrencyLimitedPushkin(Pushkin):
     )
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
-        super(ConcurrencyLimitedPushkin, self).__init__(name, sygnal, config)
+        super().__init__(name, sygnal, config)
         self._concurrent_limit = config.get(
             "inflight_request_limit",
             ConcurrencyLimitedPushkin.DEFAULT_CONCURRENCY_LIMIT,

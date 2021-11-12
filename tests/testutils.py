@@ -220,7 +220,7 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
         self.lookups: Dict[str, str] = {}
 
         @implementer(IResolverSimple)
-        class FakeResolver(object):
+        class FakeResolver:
             @staticmethod
             def getHostByName(name, timeout=None):
                 if name not in self.lookups:
@@ -269,7 +269,7 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
             self.work_notifier.release()
 
 
-class DummyResponse(object):
+class DummyResponse:
     def __init__(self, code):
         self.code = code
 
@@ -292,7 +292,7 @@ class HTTPResult:
 
 
 @attr.s
-class FakeChannel(object):
+class FakeChannel:
     """
     A fake Twisted Web Channel (the part that interfaces with the
     wire).

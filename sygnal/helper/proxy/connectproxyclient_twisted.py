@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 @implementer(IStreamClientEndpoint)
-class HTTPConnectProxyEndpoint(object):
+class HTTPConnectProxyEndpoint:
     """An Endpoint implementation which will send a CONNECT request to an http proxy
 
     Wraps an existing HostnameEndpoint for the proxy.

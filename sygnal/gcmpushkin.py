@@ -35,8 +35,8 @@ from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
 from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
 
-from .exceptions import PushkinSetupException
-from .notifications import (
+from sygnal.exceptions import PushkinSetupException
+from sygnal.notifications import (
     ConcurrencyLimitedPushkin,
     Device,
     Notification,
@@ -109,7 +109,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
-        super(GcmPushkin, self).__init__(name, sygnal, config)
+        super().__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
         if len(nonunderstood) > 0:
