@@ -108,11 +108,8 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         self.allowed_endpoints = None  # type: Optional[List[Pattern]]
         allowed_endpoints = self.get_config("allowed_endpoints", list)
         if allowed_endpoints:
-            if not isinstance(allowed_endpoints, list):
-                raise PushkinSetupException(
-                    "'allowed_endpoints' should be a list or not set"
-                )
             self.allowed_endpoints = list(map(glob_to_regex, allowed_endpoints))
+
         privkey_filename = self.get_config("vapid_private_key", str)
         if not privkey_filename:
             raise PushkinSetupException("'vapid_private_key' not set in config")
