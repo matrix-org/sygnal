@@ -40,6 +40,7 @@ from sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
 )
+
 from sygnal.notifications import Notification, NotificationContext, Pushkin
 from sygnal.utils import NotificationLoggerAdapter, json_decoder
 
