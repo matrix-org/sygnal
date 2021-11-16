@@ -58,7 +58,7 @@ class Sygnal(object):
     def __init__(
         self,
         config: Dict[str, Any],
-        custom_reactor: asyncioreactor.AsyncioSelectorReactor,
+        custom_reactor,
         tracer=opentracing.tracer,
     ):
         """
