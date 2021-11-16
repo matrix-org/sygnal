@@ -241,9 +241,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         """
         payload = {}
 
-        default_payload = device.data.get("default_payload")
-        if isinstance(default_payload, dict):
-            payload.update(default_payload)
+        if device.data:
+            default_payload = device.data.get("default_payload")
+            if isinstance(default_payload, dict):
+                payload.update(default_payload)
 
         for attr in [
             "room_id",
