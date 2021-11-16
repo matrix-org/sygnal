@@ -18,21 +18,30 @@ import os.path
 from base64 import urlsafe_b64encode
 from hashlib import blake2s
 from io import BytesIO
-from typing import List, Optional, Pattern
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Pattern
 from urllib.parse import urlparse
 
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
-from pywebpush import webpush
+from pywebpush import CaseInsensitiveDict, webpush
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
+from twisted.web.iweb import IResponse
 
 from sygnal.exceptions import PushkinSetupException
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from sygnal.notifications import ConcurrencyLimitedPushkin
+from sygnal.notifications import (
+    ConcurrencyLimitedPushkin,
+    Device,
+    Notification,
+    NotificationContext,
+)
 from sygnal.utils import glob_to_regex
+
+if TYPE_CHECKING:
+    from sygnal.sygnal import Sygnal
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_webpush_queue_time",
@@ -75,7 +84,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         "ttl",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
-    def __init__(self, name, sygnal, config):
+    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         super().__init__(name, sygnal, config)
 
         nonunderstood = self.cfg.keys() - self.UNDERSTOOD_CONFIG_FIELDS
@@ -124,7 +133,9 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             raise PushkinSetupException("'vapid_contact_email' not set in config")
         self.ttl = self.get_config("ttl", int, DEFAULT_TTL)
 
-    async def _dispatch_notification_unlimited(self, n, device, context):
+    async def _dispatch_notification_unlimited(
+        self, n: Notification, device: Device, context: NotificationContext
+    ) -> List[str]:
         p256dh = device.pushkey
         if not isinstance(device.data, dict):
             logger.warn(
@@ -216,13 +227,13 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         return []
 
     @staticmethod
-    def _build_payload(n, device):
+    def _build_payload(n: Notification, device: Device) -> Dict[str, Any]:
         """
         Build the payload data to be sent.
 
         Args:
             n: Notification to build the payload for.
-            device (Device): Device information to which the constructed payload
+            device: Device information to which the constructed payload
             will be sent.
 
         Returns:
@@ -230,9 +241,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         """
         payload = {}
 
-        default_payload = device.data.get("default_payload")
-        if isinstance(default_payload, dict):
-            payload.update(default_payload)
+        if device.data:
+            default_payload = device.data.get("default_payload")
+            if isinstance(default_payload, dict):
+                payload.update(default_payload)
 
         for attr in [
             "room_id",
@@ -272,7 +284,13 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         return payload
 
-    def _handle_response(self, response, response_text, pushkey, endpoint_domain):
+    def _handle_response(
+        self,
+        response: IResponse,
+        response_text: str,
+        pushkey: str,
+        endpoint_domain: bytes,
+    ) -> bool:
         """
         Logs and determines the outcome of the response
 
@@ -328,18 +346,24 @@ class HttpRequestFactory:
     Provide a post method that matches the API expected from pywebpush.
     """
 
-    def post(self, endpoint, data, headers, timeout):
+    def post(
+        self,
+        endpoint: str,
+        data: bytes,
+        headers: CaseInsensitiveDict,
+        timeout: int,
+    ) -> "HttpDelayedRequest":
         """
         Convert the requests-like API to a Twisted API call.
 
         Args:
-            endpoint (str):
+            endpoint:
                 The full http url to post to
-            data (bytes):
+            data:
                 the (encrypted) binary body of the request
-            headers (py_vapid.CaseInsensitiveDict):
+            headers:
                 A (costume) dictionary with the headers.
-            timeout (int)
+            timeout:
                 Ignored for now
         """
         return HttpDelayedRequest(endpoint, data, headers)
@@ -359,22 +383,24 @@ class HttpDelayedRequest:
     made.
 
     Attributes:
-        status_code (int):
+        status_code:
             Defined to be 200 so the pywebpush check to see if is below 202
             passes.
-        text (str):
+        text:
             Set to None as pywebpush references this field for its logging.
     """
 
-    status_code = 200
-    text = None
+    status_code: int = 200
+    text: Optional[str] = None
 
-    def __init__(self, endpoint, data, vapid_headers):
+    def __init__(self, endpoint: str, data: bytes, vapid_headers: CaseInsensitiveDict):
         self.endpoint = endpoint
         self.data = data
         self.vapid_headers = vapid_headers
 
-    def execute(self, http_agent, low_priority, topic):
+    def execute(
+        self, http_agent: ProxyAgent, low_priority: bool, topic: bytes
+    ) -> IResponse:
         body_producer = FileBodyProducer(BytesIO(self.data))
         # Convert the headers to the camelcase version.
         headers = {
