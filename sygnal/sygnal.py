@@ -20,7 +20,7 @@ import logging
 import logging.config
 import os
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Set
 
 import opentracing
 import prometheus_client
@@ -36,7 +36,7 @@ from sygnal.notifications import Pushkin
 
 logger = logging.getLogger(__name__)
 
-CONFIG_DEFAULTS: dict = {
+CONFIG_DEFAULTS: Dict[str, Any] = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
     "metrics": {
@@ -70,7 +70,7 @@ class Sygnal(object):
         """
         self.config = config
         self.reactor = custom_reactor
-        self.pushkins: Dict[str, Pushkin] = {}
+        self.pushkins: Dict[str, Any] = {}
         self.tracer = tracer
 
         logging_dict_config = config["log"]["setup"]
@@ -172,7 +172,7 @@ class Sygnal(object):
         clarse = getattr(pushkin_module, to_construct)
         return await clarse.create(app_name, self, app_config)
 
-    async def make_pushkins_then_start(self):
+    async def make_pushkins_then_start(self) -> None:
         for app_id, app_cfg in self.config["apps"].items():
             try:
                 self.pushkins[app_id] = await self._make_pushkin(app_id, app_cfg)
@@ -195,7 +195,7 @@ class Sygnal(object):
             logger.info("Starting listening on %s port %d", interface, port)
             self.reactor.listenTCP(port, pushgateway_api.site, interface=interface)
 
-    def run(self):
+    def run(self) -> None:
         """
         Attempt to run Sygnal and then exit the application.
         """
@@ -246,7 +246,9 @@ def check_config(config: Dict[str, Any]) -> None:
     """
     UNDERSTOOD_CONFIG_FIELDS = CONFIG_DEFAULTS.keys()
 
-    def check_section(section_name, known_keys, cfgpart=config):
+    def check_section(
+        section_name: str, known_keys: Set[str], cfgpart: Dict[str, Any] = config
+    ) -> None:
         nonunderstood = set(cfgpart[section_name].keys()).difference(known_keys)
         if len(nonunderstood) > 0:
             logger.warning(
