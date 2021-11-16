@@ -40,7 +40,6 @@ from sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
 )
-
 from sygnal.notifications import Notification, NotificationContext, Pushkin
 from sygnal.utils import NotificationLoggerAdapter, json_decoder
 
@@ -80,6 +79,7 @@ REQUESTS_IN_FLIGHT_GUAGE = Gauge(
     "Number of HTTP requests in flight",
     labelnames=["resource"],
 )
+
 
 class V1NotifyHandler(Resource):
     def __init__(self, sygnal: "Sygnal"):
