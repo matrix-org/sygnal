@@ -44,7 +44,6 @@ from sygnal.notifications import (
     Device,
     Notification,
     NotificationContext,
-    get_key,
 )
 from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
@@ -130,7 +129,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 raise PushkinSetupException(
                     f"The APNs certificate '{certfile}' does not exist."
                 )
-        else:
+        elif keyfile:
             # keyfile
             if not os.path.exists(keyfile):
                 raise PushkinSetupException(
@@ -313,15 +312,12 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                     span_parent.log_kv(
                         {"event": "temporary_fail", "retrying_in": retry_delay}
                     )
-
-                    if retry_number == self.MAX_TRIES - 1:
-                        raise NotificationDispatchException(
-                            "Retried too many times."
-                        ) from exc
-                    else:
+                    if retry_number < self.MAX_TRIES - 1:
                         await twisted_sleep(
                             retry_delay, twisted_reactor=self.sygnal.reactor
                         )
+
+            raise NotificationDispatchException("Retried too many times.")
 
     def _get_payload_event_id_only(
         self, n: Notification, device: Device
