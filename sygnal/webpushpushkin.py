@@ -87,7 +87,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         self.http_pool = HTTPConnectionPool(reactor=sygnal.reactor)
         self.max_connections = self.get_config(
-            "max_connections", DEFAULT_MAX_CONNECTIONS
+            "max_connections", int, DEFAULT_MAX_CONNECTIONS
         )
         self.connection_semaphore = DeferredSemaphore(self.max_connections)
         self.http_pool.maxPersistentPerHost = self.max_connections
@@ -106,14 +106,11 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         self.http_request_factory = HttpRequestFactory()
 
         self.allowed_endpoints = None  # type: Optional[List[Pattern]]
-        allowed_endpoints = self.get_config("allowed_endpoints")
+        allowed_endpoints = self.get_config("allowed_endpoints", list)
         if allowed_endpoints:
-            if not isinstance(allowed_endpoints, list):
-                raise PushkinSetupException(
-                    "'allowed_endpoints' should be a list or not set"
-                )
             self.allowed_endpoints = list(map(glob_to_regex, allowed_endpoints))
-        privkey_filename = self.get_config("vapid_private_key")
+
+        privkey_filename = self.get_config("vapid_private_key", str)
         if not privkey_filename:
             raise PushkinSetupException("'vapid_private_key' not set in config")
         if not os.path.exists(privkey_filename):
@@ -122,12 +119,10 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             self.vapid_private_key = Vapid.from_file(private_key_file=privkey_filename)
         except VapidException as e:
             raise PushkinSetupException("invalid 'vapid_private_key' file") from e
-        self.vapid_contact_email = self.get_config("vapid_contact_email")
+        self.vapid_contact_email = self.get_config("vapid_contact_email", str)
         if not self.vapid_contact_email:
             raise PushkinSetupException("'vapid_contact_email' not set in config")
-        self.ttl = self.get_config("ttl", DEFAULT_TTL)
-        if not isinstance(self.ttl, int):
-            raise PushkinSetupException("'ttl' must be an int if set")
+        self.ttl = self.get_config("ttl", int, DEFAULT_TTL)
 
     async def _dispatch_notification_unlimited(self, n, device, context):
         p256dh = device.pushkey
