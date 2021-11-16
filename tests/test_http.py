@@ -58,14 +58,14 @@ class HttpTestCase(testutils.TestCase):
         patch("sygnal.apnspushkin.ApnsPushkin._report_certificate_expiration").start()
         self.addCleanup(patch.stopall)
 
-        super(HttpTestCase, self).setUp()
+        super().setUp()
 
         self.apns_pushkin_snotif = MagicMock()
         for key, value in self.sygnal.pushkins.items():
             value._send_notification = self.apns_pushkin_snotif
 
     def config_setup(self, config):
-        super(HttpTestCase, self).config_setup(config)
+        super().config_setup(config)
         config["apps"][PUSHKIN_ID_1] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_2] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_3] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
