@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 from aioapns.common import NotificationResult
 
 from sygnal import apnstruncate
+from sygnal.apnspushkin import ApnsPushkin
 
 from tests import testutils
 
@@ -55,7 +56,13 @@ class ApnsTestCase(testutils.TestCase):
         super().setUp()
 
         self.apns_pushkin_snotif = MagicMock()
-        self.sygnal.pushkins[PUSHKIN_ID]._send_notification = self.apns_pushkin_snotif
+        test_pushkin = self.get_test_pushkin(PUSHKIN_ID)
+        test_pushkin._send_notification = self.apns_pushkin_snotif  # type: ignore
+
+    def get_test_pushkin(self, name: str) -> ApnsPushkin:
+        test_pushkin = self.sygnal.pushkins[name]
+        assert isinstance(test_pushkin, ApnsPushkin)
+        return test_pushkin
 
     def config_setup(self, config):
         super().config_setup(config)
@@ -71,7 +78,8 @@ class ApnsTestCase(testutils.TestCase):
         method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
-        self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 240
+        test_pushkin = self.get_test_pushkin(PUSHKIN_ID)
+        test_pushkin.MAX_JSON_BODY_SIZE = 240
 
         # Act
         self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
@@ -94,7 +102,8 @@ class ApnsTestCase(testutils.TestCase):
         method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
-        self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 4096
+        test_pushkin = self.get_test_pushkin(PUSHKIN_ID)
+        test_pushkin.MAX_JSON_BODY_SIZE = 4096
 
         # Act
         self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
