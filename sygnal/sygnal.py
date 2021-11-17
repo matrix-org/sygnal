@@ -54,7 +54,7 @@ CONFIG_DEFAULTS: Dict[str, Any] = {
 }
 
 
-class Sygnal(object):
+class Sygnal:
     def __init__(
         self,
         config: Dict[str, Any],
@@ -70,7 +70,7 @@ class Sygnal(object):
         """
         self.config = config
         self.reactor = custom_reactor
-        self.pushkins: Dict[str, Any] = {}
+        self.pushkins: Dict[str, Pushkin] = {}
         self.tracer = tracer
 
         logging_dict_config = config["log"]["setup"]
