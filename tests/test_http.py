@@ -16,6 +16,8 @@ from unittest.mock import MagicMock, patch
 
 from aioapns.common import NotificationResult
 
+from sygnal.apnspushkin import ApnsPushkin
+
 from tests import testutils
 
 PUSHKIN_ID_1 = "com.example.apns"
@@ -62,7 +64,8 @@ class HttpTestCase(testutils.TestCase):
 
         self.apns_pushkin_snotif = MagicMock()
         for key, value in self.sygnal.pushkins.items():
-            value._send_notification = self.apns_pushkin_snotif
+            assert isinstance(value, ApnsPushkin)
+            value._send_notification = self.apns_pushkin_snotif  # type: ignore
 
     def config_setup(self, config):
         super().config_setup(config)
