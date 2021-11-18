@@ -20,16 +20,25 @@ import logging
 import logging.config
 import os
 import sys
-from typing import Any, Dict, Set
+from typing import Any, Dict, Set, Union, cast
 
+import jaeger_client
 import opentracing
 import prometheus_client
 import yaml
+from opentracing import Tracer
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor, defer
 from twisted.internet.defer import ensureDeferred
+from twisted.internet.interfaces import (
+    IReactorCore,
+    IReactorFDSet,
+    IReactorPluggableNameResolver,
+    IReactorTCP,
+)
 from twisted.python import log as twisted_log
 from twisted.python.failure import Failure
+from zope.interface import Interface
 
 from sygnal.http import PushGatewayApiServer
 from sygnal.notifications import Pushkin
@@ -54,12 +63,18 @@ CONFIG_DEFAULTS: Dict[str, Any] = {
 }
 
 
+class SygnalReactor(
+    IReactorFDSet, IReactorPluggableNameResolver, IReactorTCP, IReactorCore, Interface
+):
+    pass
+
+
 class Sygnal:
     def __init__(
         self,
         config: Dict[str, Any],
-        custom_reactor,
-        tracer=opentracing.tracer,
+        custom_reactor: SygnalReactor,
+        tracer: Union[Tracer, jaeger_client.Tracer] = opentracing.tracer,
     ):
         """
         Object that holds state for the entirety of a Sygnal instance.
@@ -193,7 +208,7 @@ class Sygnal:
         port = int(self.config["http"]["port"])
         for interface in self.config["http"]["bind_addresses"]:
             logger.info("Starting listening on %s port %d", interface, port)
-            self.reactor.listenTCP(port, pushgateway_api.site, interface=interface)
+            self.reactor.listenTCP(port, pushgateway_api.site, 50, interface=interface)
 
     def run(self) -> None:
         """
@@ -331,5 +346,6 @@ if __name__ == "__main__":
     config = parse_config()
     config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
     check_config(config)
-    sygnal = Sygnal(config, custom_reactor=asyncioreactor.AsyncioSelectorReactor())
+    custom_reactor = cast(SygnalReactor, asyncioreactor.AsyncioSelectorReactor())
+    sygnal = Sygnal(config, custom_reactor)
     sygnal.run()
