@@ -65,6 +65,8 @@ class HttpTestCase(testutils.TestCase):
         self.apns_pushkin_snotif = MagicMock()
         for key, value in self.sygnal.pushkins.items():
             assert isinstance(value, ApnsPushkin)
+            # type safety: ignore is used here due to mypy not handling monkeypatching,
+            # see https://github.com/python/mypy/issues/2427
             value._send_notification = self.apns_pushkin_snotif  # type: ignore
 
     def config_setup(self, config):
