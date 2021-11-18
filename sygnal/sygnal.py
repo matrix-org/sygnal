@@ -64,7 +64,11 @@ CONFIG_DEFAULTS: Dict[str, Any] = {
 
 
 class SygnalReactor(
-    IReactorFDSet, IReactorPluggableNameResolver, IReactorTCP, IReactorCore, Interface
+    IReactorFDSet,
+    IReactorPluggableNameResolver,
+    IReactorTCP,
+    IReactorCore,
+    Interface,
 ):
     pass
 
