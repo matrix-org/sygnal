@@ -20,9 +20,8 @@ import logging
 import logging.config
 import os
 import sys
-from typing import Any, Dict, Set, Union, cast
+from typing import Any, Dict, Set, cast
 
-import jaeger_client
 import opentracing
 import prometheus_client
 import yaml
