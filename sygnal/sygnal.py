@@ -78,7 +78,7 @@ class Sygnal:
         self,
         config: Dict[str, Any],
         custom_reactor: SygnalReactor,
-        tracer: Union[Tracer, jaeger_client.Tracer] = opentracing.tracer,
+        tracer: Tracer = opentracing.tracer,
     ):
         """
         Object that holds state for the entirety of a Sygnal instance.

@@ -59,7 +59,7 @@ class ApnsTestCase(testutils.TestCase):
         test_pushkin = self.get_test_pushkin(PUSHKIN_ID)
         # type safety: using ignore here due to mypy not handling monkeypatching,
         # see https://github.com/python/mypy/issues/2427
-        test_pushkin._send_notification = self.apns_pushkin_snotif  # type: ignore
+        test_pushkin._send_notification = self.apns_pushkin_snotif  # type: ignore[assignment]
 
     def get_test_pushkin(self, name: str) -> ApnsPushkin:
         test_pushkin = self.sygnal.pushkins[name]
