@@ -15,7 +15,7 @@
 import json
 import re
 from logging import LoggerAdapter
-from typing import TYPE_CHECKING, Any, MutableMapping, Pattern, Tuple, Union
+from typing import TYPE_CHECKING, Any, MutableMapping, Pattern, Tuple
 
 from twisted.internet.defer import Deferred
 
