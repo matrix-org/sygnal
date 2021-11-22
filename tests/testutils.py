@@ -75,15 +75,15 @@ class TestCase(unittest.TestCase):
 
         config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
 
-        self.sygnal = Sygnal(config, reactor)
+        self.sygnal = Sygnal(config, reactor)  # type: ignore[arg-type]
         self.reactor = reactor
 
         start_deferred = ensureDeferred(self.sygnal.make_pushkins_then_start())
 
         while not start_deferred.called:
             # we need to advance until the pushkins have started up
-            self.sygnal.reactor.advance(1)
-            self.sygnal.reactor.wait_for_work(lambda: start_deferred.called)
+            self.reactor.advance(1)
+            self.reactor.wait_for_work(lambda: start_deferred.called)
 
         # sygnal should have started a single (fake) tcp listener
         listeners = self.reactor.tcpServers
@@ -154,8 +154,8 @@ class TestCase(unittest.TestCase):
 
         while not channel.done:
             # we need to advance until the request has been finished
-            self.sygnal.reactor.advance(1)
-            self.sygnal.reactor.wait_for_work(lambda: channel.done)
+            self.reactor.advance(1)
+            self.reactor.wait_for_work(lambda: channel.done)
 
         assert channel.done
         assert channel.result is not None
@@ -199,6 +199,7 @@ class TestCase(unittest.TestCase):
 
         while not all_channels_done():
             # we need to advance until the request has been finished
+            assert isinstance(self.sygnal.reactor, ExtendedMemoryReactorClock)
             self.sygnal.reactor.advance(1)
             self.sygnal.reactor.wait_for_work(all_channels_done)
 
