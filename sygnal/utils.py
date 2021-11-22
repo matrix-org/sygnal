@@ -17,13 +17,12 @@ import re
 from logging import LoggerAdapter
 from typing import Any, MutableMapping, Pattern, Tuple, Union
 
-from twisted.internet import asyncioreactor
 from twisted.internet.defer import Deferred
 
+from sygnal.sygnal import SygnalReactor
 
-async def twisted_sleep(
-    delay: float, twisted_reactor: asyncioreactor.AsyncioSelectorReactor
-) -> None:
+
+async def twisted_sleep(delay: float, twisted_reactor: SygnalReactor) -> None:
     """
     Creates a Deferred which will fire in a set time.
     This allows you to `await` on it and have an async analogue to
