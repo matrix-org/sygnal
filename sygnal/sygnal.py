@@ -34,6 +34,7 @@ from twisted.internet.interfaces import (
     IReactorFDSet,
     IReactorPluggableNameResolver,
     IReactorTCP,
+    IReactorTime,
 )
 from twisted.python import log as twisted_log
 from twisted.python.failure import Failure
@@ -67,6 +68,7 @@ class SygnalReactor(
     IReactorPluggableNameResolver,
     IReactorTCP,
     IReactorCore,
+    IReactorTime,
     Interface,
 ):
     pass
