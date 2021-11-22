@@ -15,13 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import abc
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, overload
 
 from opentracing import Span
 from prometheus_client import Counter
-from typing_extensions import Type
 
-from .exceptions import (
+from sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
     PushkinSetupException,
@@ -184,7 +183,7 @@ class ConcurrencyLimitedPushkin(Pushkin):
     )
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
-        super(ConcurrencyLimitedPushkin, self).__init__(name, sygnal, config)
+        super().__init__(name, sygnal, config)
         self._concurrent_limit = config.get(
             "inflight_request_limit",
             ConcurrencyLimitedPushkin.DEFAULT_CONCURRENCY_LIMIT,

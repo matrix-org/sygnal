@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 from aioapns.common import NotificationResult
 
 from sygnal import apnstruncate
+from sygnal.apnspushkin import ApnsPushkin
 
 from tests import testutils
 
@@ -52,13 +53,21 @@ class ApnsTestCase(testutils.TestCase):
         patch("sygnal.apnspushkin.ApnsPushkin._report_certificate_expiration").start()
         self.addCleanup(patch.stopall)
 
-        super(ApnsTestCase, self).setUp()
+        super().setUp()
 
         self.apns_pushkin_snotif = MagicMock()
-        self.sygnal.pushkins[PUSHKIN_ID]._send_notification = self.apns_pushkin_snotif
+        test_pushkin = self.get_test_pushkin(PUSHKIN_ID)
+        # type safety: using ignore here due to mypy not handling monkeypatching,
+        # see https://github.com/python/mypy/issues/2427
+        test_pushkin._send_notification = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
+
+    def get_test_pushkin(self, name: str) -> ApnsPushkin:
+        test_pushkin = self.sygnal.pushkins[name]
+        assert isinstance(test_pushkin, ApnsPushkin)
+        return test_pushkin
 
     def config_setup(self, config):
-        super(ApnsTestCase, self).config_setup(config)
+        super().config_setup(config)
         config["apps"][PUSHKIN_ID] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
 
     def test_payload_truncation(self):
@@ -71,7 +80,8 @@ class ApnsTestCase(testutils.TestCase):
         method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
-        self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 240
+        test_pushkin = self.get_test_pushkin(PUSHKIN_ID)
+        test_pushkin.MAX_JSON_BODY_SIZE = 240
 
         # Act
         self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
@@ -94,7 +104,8 @@ class ApnsTestCase(testutils.TestCase):
         method.side_effect = testutils.make_async_magic_mock(
             NotificationResult("notID", "200")
         )
-        self.sygnal.pushkins[PUSHKIN_ID].MAX_JSON_BODY_SIZE = 4096
+        test_pushkin = self.get_test_pushkin(PUSHKIN_ID)
+        test_pushkin.MAX_JSON_BODY_SIZE = 4096
 
         # Act
         self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))

@@ -16,6 +16,8 @@ from unittest.mock import MagicMock, patch
 
 from aioapns.common import NotificationResult
 
+from sygnal.apnspushkin import ApnsPushkin
+
 from tests import testutils
 
 PUSHKIN_ID_1 = "com.example.apns"
@@ -58,14 +60,17 @@ class HttpTestCase(testutils.TestCase):
         patch("sygnal.apnspushkin.ApnsPushkin._report_certificate_expiration").start()
         self.addCleanup(patch.stopall)
 
-        super(HttpTestCase, self).setUp()
+        super().setUp()
 
         self.apns_pushkin_snotif = MagicMock()
         for key, value in self.sygnal.pushkins.items():
-            value._send_notification = self.apns_pushkin_snotif
+            assert isinstance(value, ApnsPushkin)
+            # type safety: ignore is used here due to mypy not handling monkeypatching,
+            # see https://github.com/python/mypy/issues/2427
+            value._send_notification = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
 
     def config_setup(self, config):
-        super(HttpTestCase, self).config_setup(config)
+        super().config_setup(config)
         config["apps"][PUSHKIN_ID_1] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_2] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_3] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}

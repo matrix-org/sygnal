@@ -20,21 +20,31 @@ import logging
 import logging.config
 import os
 import sys
+from typing import Any, Dict, Set, cast
 
 import opentracing
 import prometheus_client
 import yaml
+from opentracing import Tracer
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor, defer
 from twisted.internet.defer import ensureDeferred
+from twisted.internet.interfaces import (
+    IReactorCore,
+    IReactorFDSet,
+    IReactorPluggableNameResolver,
+    IReactorTCP,
+)
 from twisted.python import log as twisted_log
 from twisted.python.failure import Failure
+from zope.interface import Interface
 
 from sygnal.http import PushGatewayApiServer
+from sygnal.notifications import Pushkin
 
 logger = logging.getLogger(__name__)
 
-CONFIG_DEFAULTS: dict = {
+CONFIG_DEFAULTS: Dict[str, Any] = {
     "http": {"port": 5000, "bind_addresses": ["127.0.0.1"]},
     "log": {"setup": {}, "access": {"x_forwarded_for": False}},
     "metrics": {
@@ -52,18 +62,33 @@ CONFIG_DEFAULTS: dict = {
 }
 
 
-class Sygnal(object):
-    def __init__(self, config, custom_reactor, tracer=opentracing.tracer):
+class SygnalReactor(
+    IReactorFDSet,
+    IReactorPluggableNameResolver,
+    IReactorTCP,
+    IReactorCore,
+    Interface,
+):
+    pass
+
+
+class Sygnal:
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        custom_reactor: SygnalReactor,
+        tracer: Tracer = opentracing.tracer,
+    ):
         """
         Object that holds state for the entirety of a Sygnal instance.
         Args:
-            config (dict): Configuration for this Sygnal
+            config: Configuration for this Sygnal
             custom_reactor: a Twisted Reactor to use.
             tracer (optional): an OpenTracing tracer. The default is the no-op tracer.
         """
         self.config = config
         self.reactor = custom_reactor
-        self.pushkins = {}
+        self.pushkins: Dict[str, Pushkin] = {}
         self.tracer = tracer
 
         logging_dict_config = config["log"]["setup"]
@@ -140,14 +165,14 @@ class Sygnal(object):
                     "Unknown OpenTracing implementation: %s.", tracecfg["impl"]
                 )
 
-    async def _make_pushkin(self, app_name, app_config):
+    async def _make_pushkin(self, app_name: str, app_config: Dict[str, Any]) -> Pushkin:
         """
         Load and instantiate a pushkin.
         Args:
-            app_name (str): The pushkin's app_id
-            app_config (dict): The pushkin's configuration
+            app_name: The pushkin's app_id
+            app_config: The pushkin's configuration
 
-        Returns (Pushkin):
+        Returns:
             A pushkin of the desired type.
         """
         app_type = app_config["type"]
@@ -165,7 +190,7 @@ class Sygnal(object):
         clarse = getattr(pushkin_module, to_construct)
         return await clarse.create(app_name, self, app_config)
 
-    async def make_pushkins_then_start(self):
+    async def make_pushkins_then_start(self) -> None:
         for app_id, app_cfg in self.config["apps"].items():
             try:
                 self.pushkins[app_id] = await self._make_pushkin(app_id, app_cfg)
@@ -186,9 +211,9 @@ class Sygnal(object):
         port = int(self.config["http"]["port"])
         for interface in self.config["http"]["bind_addresses"]:
             logger.info("Starting listening on %s port %d", interface, port)
-            self.reactor.listenTCP(port, pushgateway_api.site, interface=interface)
+            self.reactor.listenTCP(port, pushgateway_api.site, 50, interface=interface)
 
-    def run(self):
+    def run(self) -> None:
         """
         Attempt to run Sygnal and then exit the application.
         """
@@ -211,10 +236,10 @@ class Sygnal(object):
         self.reactor.run()
 
 
-def parse_config():
+def parse_config() -> Dict[str, Any]:
     """
     Find and load Sygnal's configuration file.
-    Returns (dict):
+    Returns:
         A loaded configuration.
     """
     config_path = os.getenv("SYGNAL_CONF", "sygnal.yaml")
@@ -231,7 +256,7 @@ def parse_config():
         raise
 
 
-def check_config(config):
+def check_config(config: Dict[str, Any]) -> None:
     """
     Lightly check the configuration and issue warnings as appropriate.
     Args:
@@ -239,7 +264,9 @@ def check_config(config):
     """
     UNDERSTOOD_CONFIG_FIELDS = CONFIG_DEFAULTS.keys()
 
-    def check_section(section_name, known_keys, cfgpart=config):
+    def check_section(
+        section_name: str, known_keys: Set[str], cfgpart: Dict[str, Any] = config
+    ) -> None:
         nonunderstood = set(cfgpart[section_name].keys()).difference(known_keys)
         if len(nonunderstood) > 0:
             logger.warning(
@@ -271,14 +298,16 @@ def check_config(config):
     check_section("sentry", {"enabled", "dsn"}, cfgpart=config["metrics"])
 
 
-def merge_left_with_defaults(defaults, loaded_config):
+def merge_left_with_defaults(
+    defaults: Dict[str, Any], loaded_config: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Merge two configurations, with one of them overriding the other.
     Args:
-        defaults (dict): A configuration of defaults
-        loaded_config (dict): A configuration, as loaded from disk.
+        defaults: A configuration of defaults
+        loaded_config: A configuration, as loaded from disk.
 
-    Returns (dict):
+    Returns:
         A merged configuration, with loaded_config preferred over defaults.
     """
     result = defaults.copy()
@@ -320,5 +349,6 @@ if __name__ == "__main__":
     config = parse_config()
     config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
     check_config(config)
-    sygnal = Sygnal(config, custom_reactor=asyncioreactor.AsyncioSelectorReactor())
+    custom_reactor = cast(SygnalReactor, asyncioreactor.AsyncioSelectorReactor())
+    sygnal = Sygnal(config, custom_reactor)
     sygnal.run()

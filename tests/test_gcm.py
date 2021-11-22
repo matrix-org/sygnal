@@ -81,12 +81,17 @@ class GcmTestCase(testutils.TestCase):
             "fcm_options": {"content_available": True, "mutable_content": True},
         }
 
+    def get_test_pushkin(self, name: str) -> TestGcmPushkin:
+        pushkin = self.sygnal.pushkins[name]
+        assert isinstance(pushkin, TestGcmPushkin)
+        return pushkin
+
     def test_expected(self):
         """
         Tests the expected case: a good response from GCM leads to a good
         response from Sygnal.
         """
-        gcm = self.sygnal.pushkins["com.example.gcm"]
+        gcm = self.get_test_pushkin("com.example.gcm")
         gcm.preload_with_response(
             200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
         )
@@ -101,7 +106,7 @@ class GcmTestCase(testutils.TestCase):
         Tests the expected case: a good response from GCM leads to a good
         response from Sygnal.
         """
-        gcm = self.sygnal.pushkins["com.example.gcm"]
+        gcm = self.get_test_pushkin("com.example.gcm")
         gcm.preload_with_response(
             200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
         )
@@ -118,7 +123,7 @@ class GcmTestCase(testutils.TestCase):
         Tests the rejected case: a pushkey rejected to GCM leads to Sygnal
         informing the homeserver of the rejection.
         """
-        gcm = self.sygnal.pushkins["com.example.gcm"]
+        gcm = self.get_test_pushkin("com.example.gcm")
         gcm.preload_with_response(
             200, {"results": [{"registration_id": "spqr", "error": "NotRegistered"}]}
         )
@@ -133,7 +138,7 @@ class GcmTestCase(testutils.TestCase):
         Tests that multiple GCM devices have their notification delivered to GCM
         together, instead of being delivered separately.
         """
-        gcm = self.sygnal.pushkins["com.example.gcm"]
+        gcm = self.get_test_pushkin("com.example.gcm")
         gcm.preload_with_response(
             200,
             {
@@ -149,6 +154,7 @@ class GcmTestCase(testutils.TestCase):
         )
 
         self.assertEqual(resp, {"rejected": []})
+        assert gcm.last_request_body is not None
         self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
         self.assertEqual(gcm.num_requests, 1)
 
@@ -159,7 +165,7 @@ class GcmTestCase(testutils.TestCase):
         and that if only one device ID is rejected, then only that device is
         reported to the homeserver as rejected.
         """
-        gcm = self.sygnal.pushkins["com.example.gcm"]
+        gcm = self.get_test_pushkin("com.example.gcm")
         gcm.preload_with_response(
             200,
             {
@@ -175,6 +181,7 @@ class GcmTestCase(testutils.TestCase):
         )
 
         self.assertEqual(resp, {"rejected": ["spqr2"]})
+        assert gcm.last_request_body is not None
         self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
         self.assertEqual(gcm.num_requests, 1)
 
@@ -183,7 +190,7 @@ class GcmTestCase(testutils.TestCase):
         Tests that the config option `fcm_options` allows setting a base layer
         of options to pass to FCM, for example ones that would be needed for iOS.
         """
-        gcm = self.sygnal.pushkins["com.example.gcm.ios"]
+        gcm = self.get_test_pushkin("com.example.gcm.ios")
         gcm.preload_with_response(
             200, {"results": [{"registration_id": "spqr_new", "message_id": "msg42"}]}
         )
@@ -191,5 +198,6 @@ class GcmTestCase(testutils.TestCase):
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE_IOS]))
 
         self.assertEqual(resp, {"rejected": []})
+        assert gcm.last_request_body is not None
         self.assertEqual(gcm.last_request_body["mutable_content"], True)
         self.assertEqual(gcm.last_request_body["content_available"], True)
