@@ -47,7 +47,7 @@ class NotificationLoggerAdapter(LoggerAdapter):
         return f"[{self.extra['request_id']}] {msg}", kwargs
 
 
-def glob_to_regex(glob: str) -> Union[Pattern, Pattern[str]]:
+def glob_to_regex(glob: str) -> Pattern:
     """Converts a glob to a compiled regex object.
 
     The regex is anchored at the beginning and end of the string.
