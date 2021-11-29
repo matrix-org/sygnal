@@ -10,10 +10,12 @@ level overview of how notifications work in Matrix.
 protocol that Matrix Home Servers use to send notifications to Push
 Gateways such as Sygnal.
 
+
 Contributing
 ============
 
 Looking to contribute to Sygnal? See [CONTRIBUTING.md](CONTRIBUTING.md)
+
 
 Setup
 =====
@@ -32,6 +34,7 @@ pusher (see
 <https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-pushers-set>).
 
 See the sample configuration for examples.
+
 
 App Types
 ---------
@@ -83,6 +86,7 @@ gcm
     which can be acquired from Firebase Console at:
     `https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/`
 
+
 Using an HTTP Proxy for outbound traffic
 ----------------------------------------
 
@@ -97,6 +101,7 @@ APNs and FCM use HTTPS traffic which is tunnelled in a CONNECT tunnel.)
 
 If you wish, you can instead configure a HTTP CONNECT proxy in
 `sygnal.yaml`.
+
 
 Pusher `data` configuration
 ===========================
@@ -116,6 +121,7 @@ dictionary which is given when configuring the pusher via [POST
     silent/mutable notifications and be able to set some default
     alert/sound/badge fields.
 
+
 Running
 =======
 
@@ -129,6 +135,7 @@ With custom configuration file name:
 
 Python 3.7 or higher is required.
 
+
 Log Rotation
 ============
 
@@ -136,6 +143,7 @@ Sygnal\'s logging appends to files but does not use a rotating logger.
 The recommended configuration is therefore to use `logrotate`. The log
 file will be automatically reopened if the log file changes, for example
 due to `logrotate`.
+
 
 More Documentation
 ==================
