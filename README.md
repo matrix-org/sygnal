@@ -41,50 +41,44 @@ App Types
 
 There are two supported App Types:
 
-apns
 
-:   This sends push notifications to iOS apps via the Apple Push
-    Notification Service (APNS).
+### apns
 
-    Expected configuration depends on which kind of authentication you
-    wish to use:
+This sends push notifications to iOS apps via the Apple Push
+Notification Service (APNS).
 
-    | 
+The expected configuration depends on which kind of authentication you
+wish to use.
 
-    For certificate-based authentication:
+For certificate-based authentication, it expects:
 
-    :   It expects:
+- the `certfile` parameter to be a path relative to sygnal's
+  working directory of a PEM file containing the APNS
+  certificate and unencrypted private key.
 
-        -   the `certfile` parameter to be a path relative to sygnal's
-            working directory of a PEM file containing the APNS
-            certificate and unencrypted private key.
+For token-based authentication, it expects:
 
-    For token-based authentication:
+- the 'keyfile' parameter to be a path relative to Sygnal's
+  working directory of a p8 file
+- the 'key_id' parameter
+- the 'team_id' parameter
+- the 'topic' parameter
 
-    :   It expects:
+For either type, it can accept:
 
-        -   the 'keyfile' parameter to be a path relative to Sygnal's
-            working directory of a p8 file
-        -   the 'key_id' parameter
-        -   the 'team_id' parameter
-        -   the 'topic' parameter
+- the 'platform' parameter which determines whether the
+  production or sandbox APNS environment is used. Valid values
+  are 'production' or 'sandbox'. If not provided,
+  'production' is used.
 
-    For either type:
 
-    :   It can accept:
+### gcm
 
-        -   the 'platform' parameter which determines whether the
-            production or sandbox APNS environment is used. Valid values
-            are 'production' or 'sandbox'. If not provided,
-            'production' is used.
-
-gcm
-
-:   This sends messages via Google/Firebase Cloud Messaging (GCM/FCM)
-    and hence can be used to deliver notifications to Android apps. It
-    expects the 'api_key' parameter to contain the 'Server key',
-    which can be acquired from Firebase Console at:
-    `https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/`
+This sends messages via Google/Firebase Cloud Messaging (GCM/FCM)
+and hence can be used to deliver notifications to Android apps. It
+expects the 'api_key' parameter to contain the 'Server key',
+which can be acquired from Firebase Console at:
+`https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/`
 
 
 Using an HTTP Proxy for outbound traffic
@@ -110,15 +104,15 @@ The following parameters can be specified in the [data]{.title-ref}
 dictionary which is given when configuring the pusher via [POST /_matrix/client/r0/pushers/set](https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set)
 :
 
--   `default_payload`: a dictionary which defines the basic payload to
-    be sent to the notification service. Sygnal will merge information
-    specific to the push event into this dictionary. If unset, the empty
-    dictionary is used.
+- `default_payload`: a dictionary which defines the basic payload to
+  be sent to the notification service. Sygnal will merge information
+  specific to the push event into this dictionary. If unset, the empty
+  dictionary is used.
 
-    This can be useful for clients to specify default push payload
-    content. For instance, iOS clients will have freedom to use
-    silent/mutable notifications and be able to set some default
-    alert/sound/badge fields.
+  This can be useful for clients to specify default push payload
+  content. For instance, iOS clients will have freedom to use
+  silent/mutable notifications and be able to set some default
+  alert/sound/badge fields.
 
 
 Running
@@ -126,11 +120,15 @@ Running
 
 With default configuration file name of `sygnal.yaml`:
 
-:   `python -m sygnal.sygnal`
+```sh
+python -m sygnal.sygnal
+```
 
 With custom configuration file name:
 
-:   `SYGNAL_CONF=/path/to/custom_sygnal.conf python -m sygnal.sygnal`
+```sh
+SYGNAL_CONF=/path/to/custom_sygnal.conf python -m sygnal.sygnal
+```
 
 Python 3.7 or higher is required.
 
