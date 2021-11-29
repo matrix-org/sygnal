@@ -74,5 +74,5 @@ if __name__ == "__main__":
         setup_requires=["setuptools_scm"],
         install_requires=INSTALL_REQUIRES,
         extras_require=EXTRAS_REQUIRE,
-        long_description=read_file(("README.rst",)),
+        long_description=read_file(("README.md",)),
     )
