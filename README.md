@@ -58,18 +58,17 @@ For certificate-based authentication, it expects:
 
 For token-based authentication, it expects:
 
-- the 'keyfile' parameter to be a path relative to Sygnal's
+- the `keyfile` parameter to be a path relative to Sygnal's
   working directory of a p8 file
-- the 'key_id' parameter
-- the 'team_id' parameter
-- the 'topic' parameter
+- the `key_id` parameter
+- the `team_id` parameter
+- the `topic` parameter
 
 For either type, it can accept:
 
-- the 'platform' parameter which determines whether the
-  production or sandbox APNS environment is used. Valid values
-  are 'production' or 'sandbox'. If not provided,
-  'production' is used.
+- the `platform` parameter which determines whether the production or sandbox
+  APNS environment is used.
+  Valid values are 'production' or 'sandbox'. If not provided,' production' is used.
 
 
 ### gcm
@@ -101,8 +100,8 @@ Pusher `data` configuration
 ===========================
 
 The following parameters can be specified in the [data]{.title-ref}
-dictionary which is given when configuring the pusher via [POST /_matrix/client/r0/pushers/set](https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set)
-:
+dictionary which is given when configuring the pusher via
+[POST /_matrix/client/r0/pushers/set](https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set):
 
 - `default_payload`: a dictionary which defines the basic payload to
   be sent to the notification service. Sygnal will merge information
