@@ -26,7 +26,7 @@ working directory. To change this, set the `SYGNAL_CONF` environment
 variable to the path to your configuration file. A sample configuration
 file is provided in this repository; see `sygnal.yaml.sample`.
 
-The [apps:]{.title-ref} section is where you set up different apps that
+The `apps:` section is where you set up different apps that
 are to be handled. Each app should be given its own subsection, with the
 key of that subsection being the app's `app_id`. Keys in this section
 take the form of the `app_id`, as specified when setting up a Matrix
