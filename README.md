@@ -68,7 +68,7 @@ For either type, it can accept:
 
 - the `platform` parameter which determines whether the production or sandbox
   APNS environment is used.
-  Valid values are 'production' or 'sandbox'. If not provided,' production' is used.
+  Valid values are 'production' or 'sandbox'. If not provided, 'production' is used.
 
 
 ### gcm
