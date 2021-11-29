@@ -28,7 +28,7 @@ file is provided in this repository; see `sygnal.yaml.sample`.
 
 The [apps:]{.title-ref} section is where you set up different apps that
 are to be handled. Each app should be given its own subsection, with the
-key of that subsection being the app\'s `app_id`. Keys in this section
+key of that subsection being the app's `app_id`. Keys in this section
 take the form of the `app_id`, as specified when setting up a Matrix
 pusher (see
 <https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-pushers-set>).
@@ -55,7 +55,7 @@ apns
 
     :   It expects:
 
-        -   the `certfile` parameter to be a path relative to sygnal\'s
+        -   the `certfile` parameter to be a path relative to sygnal's
             working directory of a PEM file containing the APNS
             certificate and unencrypted private key.
 
@@ -63,26 +63,26 @@ apns
 
     :   It expects:
 
-        -   the \'keyfile\' parameter to be a path relative to Sygnal\'s
+        -   the 'keyfile' parameter to be a path relative to Sygnal's
             working directory of a p8 file
-        -   the \'key\_id\' parameter
-        -   the \'team\_id\' parameter
-        -   the \'topic\' parameter
+        -   the 'key_id' parameter
+        -   the 'team_id' parameter
+        -   the 'topic' parameter
 
     For either type:
 
     :   It can accept:
 
-        -   the \'platform\' parameter which determines whether the
+        -   the 'platform' parameter which determines whether the
             production or sandbox APNS environment is used. Valid values
-            are \'production\' or \'sandbox\'. If not provided,
-            \'production\' is used.
+            are 'production' or 'sandbox'. If not provided,
+            'production' is used.
 
 gcm
 
 :   This sends messages via Google/Firebase Cloud Messaging (GCM/FCM)
     and hence can be used to deliver notifications to Android apps. It
-    expects the \'api\_key\' parameter to contain the \'Server key\',
+    expects the 'api_key' parameter to contain the 'Server key',
     which can be acquired from Firebase Console at:
     `https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/`
 
@@ -107,8 +107,7 @@ Pusher `data` configuration
 ===========================
 
 The following parameters can be specified in the [data]{.title-ref}
-dictionary which is given when configuring the pusher via [POST
-/\_matrix/client/r0/pushers/set](https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set)
+dictionary which is given when configuring the pusher via [POST /_matrix/client/r0/pushers/set](https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set)
 :
 
 -   `default_payload`: a dictionary which defines the basic payload to
@@ -139,7 +138,7 @@ Python 3.7 or higher is required.
 Log Rotation
 ============
 
-Sygnal\'s logging appends to files but does not use a rotating logger.
+Sygnal's logging appends to files but does not use a rotating logger.
 The recommended configuration is therefore to use `logrotate`. The log
 file will be automatically reopened if the log file changes, for example
 due to `logrotate`.
