@@ -80,7 +80,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
     """
 
     # Errors for which the token should be rejected and not reused
-    # See https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/handling_notification_responses_from_apns
+    # See https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/handling_notification_responses_from_apns  # noqa: E501
     # for the full list of possible errors.
     TOKEN_ERRORS = {
         (400, "BadDeviceToken"),  # Invalid token
