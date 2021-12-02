@@ -79,9 +79,18 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
     Relays notifications to the Apple Push Notification Service.
     """
 
-    # Errors for which the token should be rejected
-    TOKEN_ERROR_REASON = "Unregistered"
-    TOKEN_ERROR_CODE = 410
+    # Errors for which the token should be rejected and not reused
+    # See https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/handling_notification_responses_from_apns
+    # for the full list of possible errors.
+    TOKEN_ERRORS = {
+        (400, "BadDeviceToken"),  # Invalid token
+        # `DeviceTokenNotForTopic` may be due to a bad token or a Sygnal
+        # misconfiguration. It's alright for the homeserver to forget a valid token,
+        # since iOS clients are expected to re-upload their device tokens periodically.
+        (400, "DeviceTokenNotForTopic"),
+        (400, "TopicDisallowed"),
+        (410, "Unregistered"),  # Deactivated token
+    }
 
     MAX_TRIES = 3
     RETRY_DELAY_BASE = 10
@@ -239,10 +248,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         else:
             # .description corresponds to the 'reason' response field
             span.set_tag("apns_reason", response.description)
-            if (
-                code == self.TOKEN_ERROR_CODE
-                or response.description == self.TOKEN_ERROR_REASON
-            ):
+            if (code, response.description) in self.TOKEN_ERRORS:
                 return [device.pushkey]
             else:
                 if 500 <= code < 600:
