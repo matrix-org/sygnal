@@ -17,6 +17,7 @@
 import abc
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, overload
 
+from matrix_common.regex import glob_to_regex
 from opentracing import Span
 from prometheus_client import Counter
 
@@ -25,7 +26,6 @@ from sygnal.exceptions import (
     NotificationDispatchException,
     PushkinSetupException,
 )
-from sygnal.utils import glob_to_regex
 
 if TYPE_CHECKING:
     from sygnal.sygnal import Sygnal
