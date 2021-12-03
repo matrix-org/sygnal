@@ -21,6 +21,7 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Pattern
 from urllib.parse import urlparse
 
+from matrix_common.regex import glob_to_regex
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
 from pywebpush import CaseInsensitiveDict, webpush
@@ -38,7 +39,6 @@ from sygnal.notifications import (
     Notification,
     NotificationContext,
 )
-from sygnal.utils import glob_to_regex
 
 if TYPE_CHECKING:
     from sygnal.sygnal import Sygnal
