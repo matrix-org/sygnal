@@ -15,10 +15,16 @@
 # Copied and adapted from
 # https://raw.githubusercontent.com/matrix-org/pushbaby/master/pushbaby/truncate.py
 import json
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from typing_extensions import Literal
+
+Choppable = Union[
+    Tuple[Literal["alert", "alert.body"]], Tuple[Literal["alert.loc-args"], int]
+]
 
 
-def json_encode(payload: Any) -> bytes:
+def json_encode(payload) -> bytes:
     return json.dumps(payload, ensure_ascii=False).encode()
 
 
@@ -85,8 +91,8 @@ def truncate(payload: Dict[str, Any], max_length: int = 2048) -> Dict[str, Any]:
     return payload
 
 
-def _choppables_for_aps(aps):
-    ret: List[Union[Tuple[str], Tuple[str, int]]] = []
+def _choppables_for_aps(aps: Dict[str, Any]) -> List[Choppable]:
+    ret: List[Choppable] = []
     if "alert" not in aps:
         return ret
 
@@ -102,7 +108,10 @@ def _choppables_for_aps(aps):
     return ret
 
 
-def _choppable_get(aps, choppable):
+def _choppable_get(
+    aps: Dict[str, Any],
+    choppable: Choppable,
+):
     if choppable[0] == "alert":
         return aps["alert"]
     elif choppable[0] == "alert.body":
@@ -111,7 +120,11 @@ def _choppable_get(aps, choppable):
         return aps["alert"]["loc-args"][choppable[1]]
 
 
-def _choppable_put(aps, choppable, val):
+def _choppable_put(
+    aps: Dict[str, Any],
+    choppable: Choppable,
+    val: str,
+) -> None:
     if choppable[0] == "alert":
         aps["alert"] = val
     elif choppable[0] == "alert.body":
@@ -120,7 +133,7 @@ def _choppable_put(aps, choppable, val):
         aps["alert"]["loc-args"][choppable[1]] = val
 
 
-def _longest_choppable(aps):
+def _longest_choppable(aps: Dict[str, Any]) -> Optional[Choppable]:
     longest = None
     length_of_longest = 0
     for c in _choppables_for_aps(aps):

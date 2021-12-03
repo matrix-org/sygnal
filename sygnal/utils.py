@@ -13,13 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import re
 from logging import LoggerAdapter
+from typing import TYPE_CHECKING, Any, MutableMapping, Tuple
 
 from twisted.internet.defer import Deferred
 
+if TYPE_CHECKING:
+    from sygnal.sygnal import SygnalReactor
 
-async def twisted_sleep(delay, twisted_reactor):
+
+async def twisted_sleep(delay: float, twisted_reactor: "SygnalReactor") -> None:
     """
     Creates a Deferred which will fire in a set time.
     This allows you to `await` on it and have an async analogue to
@@ -37,35 +40,13 @@ async def twisted_sleep(delay, twisted_reactor):
 
 
 class NotificationLoggerAdapter(LoggerAdapter):
-    def process(self, msg, kwargs):
+    def process(
+        self, msg: str, kwargs: MutableMapping[str, Any]
+    ) -> Tuple[str, MutableMapping[str, Any]]:
         return f"[{self.extra['request_id']}] {msg}", kwargs
 
 
-def glob_to_regex(glob):
-    """Converts a glob to a compiled regex object.
-
-    The regex is anchored at the beginning and end of the string.
-
-    Args:
-        glob (str)
-
-    Returns:
-        re.RegexObject
-    """
-    res = ""
-    for c in glob:
-        if c == "*":
-            res = res + ".*"
-        elif c == "?":
-            res = res + "."
-        else:
-            res = res + re.escape(c)
-
-    # \A anchors at start of string, \Z at end of string
-    return re.compile(r"\A" + res + r"\Z", re.IGNORECASE)
-
-
-def _reject_invalid_json(val):
+def _reject_invalid_json(val: Any) -> None:
     """Do not allow Infinity, -Infinity, or NaN values in JSON."""
     raise ValueError(f"Invalid JSON value: {val!r}")
 

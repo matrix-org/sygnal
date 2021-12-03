@@ -36,6 +36,7 @@ INSTALL_REQUIRES = [
     "importlib_metadata",
     "pywebpush>=1.13.0",
     "py-vapid>=1.7.0",
+    "matrix-common==1.0.0",
 ]
 
 EXTRAS_REQUIRE = {
