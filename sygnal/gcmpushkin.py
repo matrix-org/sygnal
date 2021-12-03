@@ -18,12 +18,14 @@ import json
 import logging
 import time
 from io import BytesIO
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
 
-from opentracing import logs, tags
+from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
+from twisted.web.iweb import IResponse
 
 from sygnal.exceptions import (
     NotificationDispatchException,
@@ -32,8 +34,16 @@ from sygnal.exceptions import (
 )
 from sygnal.helper.context_factory import ClientTLSOptionsFactory
 from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from sygnal.notifications import ConcurrencyLimitedPushkin
+from sygnal.notifications import (
+    ConcurrencyLimitedPushkin,
+    Device,
+    Notification,
+    NotificationContext,
+)
 from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
+
+if TYPE_CHECKING:
+    from sygnal.sygnal import Sygnal
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"
@@ -97,7 +107,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "max_connections",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
-    def __init__(self, name, sygnal, config):
+    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
         super().__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
@@ -109,8 +119,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
         self.http_pool = HTTPConnectionPool(reactor=sygnal.reactor)
         self.max_connections = self.get_config(
-            "max_connections", DEFAULT_MAX_CONNECTIONS
+            "max_connections", int, DEFAULT_MAX_CONNECTIONS
         )
+
         self.connection_semaphore = DeferredSemaphore(self.max_connections)
         self.http_pool.maxPersistentPerHost = self.max_connections
 
@@ -126,21 +137,23 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             proxy_url_str=proxy_url,
         )
 
-        self.api_key = self.get_config("api_key")
+        self.api_key = self.get_config("api_key", str)
         if not self.api_key:
             raise PushkinSetupException("No API key set in config")
 
         # Use the fcm_options config dictionary as a foundation for the body;
         # this lets the Sygnal admin choose custom FCM options
         # (e.g. content_available).
-        self.base_request_body: dict = self.get_config("fcm_options", {})
+        self.base_request_body = self.get_config("fcm_options", dict, {})
         if not isinstance(self.base_request_body, dict):
             raise PushkinSetupException(
                 "Config field fcm_options, if set, must be a dictionary of options"
             )
 
     @classmethod
-    async def create(cls, name, sygnal, config):
+    async def create(
+        cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]
+    ) -> "GcmPushkin":
         """
         Override this if your pushkin needs to call async code in order to
         be constructed. Otherwise, it defaults to just invoking the Python-standard
@@ -151,13 +164,15 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         """
         return cls(name, sygnal, config)
 
-    async def _perform_http_request(self, body, headers):
+    async def _perform_http_request(
+        self, body: Dict, headers: Dict[AnyStr, List[AnyStr]]
+    ) -> Tuple[IResponse, str]:
         """
         Perform an HTTP request to the FCM server with the body and headers
         specified.
         Args:
-            body (nested dict): Body. Will be JSON-encoded.
-            headers (Headers): HTTP Headers.
+            body: Body. Will be JSON-encoded.
+            headers: HTTP Headers.
 
         Returns:
 
@@ -189,7 +204,15 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             self.connection_semaphore.release()
         return response, response_text
 
-    async def _request_dispatch(self, n, log, body, headers, pushkeys, span):
+    async def _request_dispatch(
+        self,
+        n: Notification,
+        log: NotificationLoggerAdapter,
+        body: dict,
+        headers: Dict[AnyStr, List[AnyStr]],
+        pushkeys: List[str],
+        span: Span,
+    ) -> Tuple[List[str], List[str]]:
         poke_start_time = time.time()
 
         failed = []
@@ -296,7 +319,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 f"Unknown GCM response code {response.code}"
             )
 
-    async def _dispatch_notification_unlimited(self, n, device, context):
+    async def _dispatch_notification_unlimited(
+        self, n: Notification, device: Device, context: NotificationContext
+    ) -> List[str]:
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
         pushkeys = [
@@ -318,13 +343,13 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         ) as span_parent:
             data = GcmPushkin._build_data(n, device)
             headers = {
-                b"User-Agent": ["sygnal"],
-                b"Content-Type": ["application/json"],
-                b"Authorization": ["key=%s" % (self.api_key,)],
+                "User-Agent": ["sygnal"],
+                "Content-Type": ["application/json"],
+                "Authorization": ["key=%s" % (self.api_key,)],
             }
 
             # TODO: Implement collapse_key to queue only one message per room.
-            failed = []
+            failed: List[str] = []
 
             body = self.base_request_body.copy()
             body["data"] = data
@@ -378,12 +403,12 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             return failed
 
     @staticmethod
-    def _build_data(n, device):
+    def _build_data(n: Notification, device: Device) -> Dict[str, Any]:
         """
         Build the payload data to be sent.
         Args:
             n: Notification to build the payload for.
-            device (Device): Device information to which the constructed payload
+            device: Device information to which the constructed payload
             will be sent.
 
         Returns:

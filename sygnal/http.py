@@ -19,14 +19,15 @@ import logging
 import sys
 import time
 import traceback
-from typing import List
+from typing import TYPE_CHECKING, Callable, List, Union
 from uuid import uuid4
 
-from opentracing import Format, logs, tags
+from opentracing import Format, Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import ensureDeferred
 from twisted.web import server
 from twisted.web.http import (
+    Request,
     combinedLogFormatter,
     datetimeToLogString,
     proxiedLogFormatter,
@@ -40,6 +41,9 @@ from sygnal.exceptions import (
 )
 from sygnal.notifications import Notification, NotificationContext, Pushkin
 from sygnal.utils import NotificationLoggerAdapter, json_decoder
+
+if TYPE_CHECKING:
+    from sygnal.sygnal import Sygnal
 
 logger = logging.getLogger(__name__)
 
@@ -77,13 +81,13 @@ REQUESTS_IN_FLIGHT_GUAGE = Gauge(
 
 
 class V1NotifyHandler(Resource):
-    def __init__(self, sygnal):
+    def __init__(self, sygnal: "Sygnal"):
         super().__init__()
         self.sygnal = sygnal
 
     isLeaf = True
 
-    def _make_request_id(self):
+    def _make_request_id(self) -> str:
         """
         Generates a request ID, intended to be unique, for a request so it can
         be followed through logging.
@@ -91,17 +95,17 @@ class V1NotifyHandler(Resource):
         """
         return str(uuid4())
 
-    def render_POST(self, request):
+    def render_POST(self, request: Request) -> Union[int, bytes]:
         response = self._handle_request(request)
         if response != NOT_DONE_YET:
             PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
         return response
 
-    def _handle_request(self, request):
+    def _handle_request(self, request: Request) -> Union[int, bytes]:
         """
         Actually handle the request.
         Args:
-            request (Request): The request, corresponding to a POST request.
+            request: The request, corresponding to a POST request.
 
         Returns:
             Either a str instance or NOT_DONE_YET.
@@ -225,7 +229,14 @@ class V1NotifyHandler(Resource):
             if pushkin.handles_appid(appid)
         ]
 
-    async def _handle_dispatch(self, root_span, request, log, notif, context):
+    async def _handle_dispatch(
+        self,
+        root_span: Span,
+        request: Request,
+        log: NotificationLoggerAdapter,
+        notif: Notification,
+        context: NotificationContext,
+    ) -> None:
         """
         Actually handle the dispatch of notifications to devices, sequentially
         for simplicity.
@@ -233,8 +244,8 @@ class V1NotifyHandler(Resource):
         root_span: the OpenTracing span
         request: the Twisted Web Request
         log: the logger to use
-        notif (Notification): the notification to dispatch
-        context (NotificationContext): the context of the notification
+        notif: the notification to dispatch
+        context: the context of the notification
         """
         try:
             rejected = []
@@ -250,7 +261,7 @@ class V1NotifyHandler(Resource):
                     continue
 
                 if len(found_pushkins) > 1:
-                    log.warning("Got notification for an ambigious app ID %s", appid)
+                    log.warning("Got notification for an ambiguous app ID %s", appid)
                     rejected.append(d.pushkey)
                     continue
 
@@ -297,7 +308,7 @@ class V1NotifyHandler(Resource):
 
 
 class HealthHandler(Resource):
-    def render_GET(self, request):
+    def render_GET(self, request: Request) -> bytes:
         """
         `/health` is used for automatic checking of whether the service is up.
         It should just return a blank 200 OK response.
@@ -309,14 +320,15 @@ class SizeLimitingRequest(server.Request):
     # Arbitrarily limited to 512 KiB.
     MAX_REQUEST_SIZE = 512 * 1024
 
-    def handleContentChunk(self, data):
+    def handleContentChunk(self, data: bytes) -> None:
         # we should have a content by now
         assert self.content, "handleContentChunk() called before gotLength()"
         if self.content.tell() + len(data) > self.MAX_REQUEST_SIZE:
             logger.info(
                 "Aborting connection from %s because the request exceeds maximum size",
-                self.client.host,
+                self.client,
             )
+            assert self.transport is not None
             self.transport.abortConnection()
             return
 
@@ -329,12 +341,14 @@ class SygnalLoggedSite(server.Site):
     Sygnal.
     """
 
-    def __init__(self, *args, log_formatter, **kwargs):
+    def __init__(
+        self, *args, log_formatter: Callable[[str, server.Request], str], **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.log_formatter = log_formatter
         self.logger = logging.getLogger("sygnal.access")
 
-    def log(self, request):
+    def log(self, request: server.Request) -> None:
         """Log this request. Called by request.finish."""
         # this also works around a bug in twisted.web.http.HTTPFactory which uses a
         # monotonic time as an epoch time.
@@ -343,8 +357,8 @@ class SygnalLoggedSite(server.Site):
         self.logger.info("Handled request: %s", line)
 
 
-class PushGatewayApiServer:
-    def __init__(self, sygnal):
+class PushGatewayApiServer(object):
+    def __init__(self, sygnal: "Sygnal"):
         """
         Initialises the /_matrix/push/* (Push Gateway API) server.
         Args:
