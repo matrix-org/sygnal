@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import re
 from logging import LoggerAdapter
-from typing import TYPE_CHECKING, Any, MutableMapping, Pattern, Tuple
+from typing import TYPE_CHECKING, Any, MutableMapping, Tuple
 
 from twisted.internet.defer import Deferred
 
@@ -45,30 +44,6 @@ class NotificationLoggerAdapter(LoggerAdapter):
         self, msg: str, kwargs: MutableMapping[str, Any]
     ) -> Tuple[str, MutableMapping[str, Any]]:
         return f"[{self.extra['request_id']}] {msg}", kwargs
-
-
-def glob_to_regex(glob: str) -> Pattern:
-    """Converts a glob to a compiled regex object.
-
-    The regex is anchored at the beginning and end of the string.
-
-    Args:
-        glob
-
-    Returns:
-        re.RegexObject
-    """
-    res = ""
-    for c in glob:
-        if c == "*":
-            res = res + ".*"
-        elif c == "?":
-            res = res + "."
-        else:
-            res = res + re.escape(c)
-
-    # \A anchors at start of string, \Z at end of string
-    return re.compile(r"\A" + res + r"\Z", re.IGNORECASE)
 
 
 def _reject_invalid_json(val: Any) -> None:
