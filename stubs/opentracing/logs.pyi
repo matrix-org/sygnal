@@ -1,0 +1,5 @@
+ERROR_KIND: str
+ERROR_OBJECT: object
+EVENT: str
+MESSAGE: str
+STACK: str
