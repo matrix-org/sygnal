@@ -225,7 +225,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
         log.debug("GCM request took %f seconds", time.time() - poke_start_time)
 
-        span.set_tag(tags.HTTP_STATUS_CODE, response.code)
+        span.set_tag(str(tags.HTTP_STATUS_CODE), response.code)
 
         if 500 <= response.code < 600:
             log.debug("%d from server, waiting to try again", response.code)
