@@ -299,7 +299,7 @@ class V1NotifyHandler(Resource):
                 request.finish()
 
             PUSHGATEWAY_HTTP_RESPONSES_COUNTER.labels(code=request.code).inc()
-            root_span.set_tag(tags.HTTP_STATUS_CODE, request.code)
+            root_span.set_tag(str(tags.HTTP_STATUS_CODE), request.code)
 
             req_time = time.perf_counter() - context.start_time
             if req_time > 0:
