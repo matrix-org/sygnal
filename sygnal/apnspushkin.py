@@ -230,7 +230,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
 
         code = int(response.status)
 
-        span.set_tag(tags.HTTP_STATUS_CODE, code)
+        span.set_tag(str(tags.HTTP_STATUS_CODE), code)
 
         RESPONSE_STATUS_CODES_COUNTER.labels(pushkin=self.name, code=code).inc()
 
