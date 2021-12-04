@@ -25,7 +25,7 @@ from typing import Any, Dict, Set, cast
 import opentracing
 import prometheus_client
 import yaml
-from opentracing import Tracer
+from opentracing.tracer import Tracer
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor, defer
 from twisted.internet.defer import ensureDeferred
