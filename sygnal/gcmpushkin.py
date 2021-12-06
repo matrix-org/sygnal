@@ -324,13 +324,19 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     ) -> List[str]:
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
+        # `_dispatch_notification_unlimited` gets called once for each device in the
+        # `Notification` with a matching app ID. We do something a little dirty and
+        # perform all of our dispatches the first time we get called for a
+        # `Notification` and do nothing for the rest of the times we get called.
         pushkeys = [
-            device.pushkey for device in n.devices if device.app_id == self.name
+            device.pushkey for device in n.devices if self.handles_appid(device.app_id)
         ]
-        # Resolve canonical IDs for all pushkeys
+        # `pushkeys` ought to never be empty here. At the very least it should contain
+        # `device`'s pushkey.
 
         if pushkeys[0] != device.pushkey:
-            # Only send notifications once, to all devices at once.
+            # We've already been asked to dispatch for this `Notification` and have
+            # previously sent out the notification to all devices.
             return []
 
         # The pushkey is kind of secret because you can use it to send push
