@@ -62,7 +62,8 @@ For token-based authentication, it expects:
   working directory of a p8 file
 - the `key_id` parameter
 - the `team_id` parameter
-- the `topic` parameter
+- the `topic` parameter, which is most commonly the 'Bundle Identifier' for your
+  iOS application
 
 For either type, it can accept:
 
