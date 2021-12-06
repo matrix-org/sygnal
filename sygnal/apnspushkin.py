@@ -83,13 +83,16 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
     # See https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/handling_notification_responses_from_apns  # noqa: E501
     # for the full list of possible errors.
     TOKEN_ERRORS = {
-        (400, "BadDeviceToken"),  # Invalid token
+        # A client has uploaded an invalid token.
+        (400, "BadDeviceToken"),
         # `DeviceTokenNotForTopic` may be due to a bad token or a Sygnal
-        # misconfiguration. It's alright for the homeserver to forget a valid token,
-        # since iOS clients are expected to re-upload their device tokens periodically.
+        # misconfiguration. In the event of a misconfiguration, clients will need to
+        # reupload their tokens to their homeserver. Element iOS and clients based on
+        # matrix-ios-kit already do this periodically.
         (400, "DeviceTokenNotForTopic"),
         (400, "TopicDisallowed"),
-        (410, "Unregistered"),  # Deactivated token
+        # The token is no longer valid, probably because the app has been uninstalled.
+        (410, "Unregistered"),
     }
 
     MAX_TRIES = 3
