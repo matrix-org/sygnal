@@ -157,6 +157,13 @@ com.example.myapp.ios:
 in your Sygnal config file.
 
 
+### 'ValueError: Could not deserialize key data'
+
+This error suggests that your key file (`.p8` file) is not valid.
+If viewed with a text editor, the file should begin with `----- BEGIN PRIVATE KEY -----`.
+If yours doesn't, you probably have the wrong kind of file.
+
+
 # Appendices
 
 ## Sending a notification to Sygnal manually with `curl`
