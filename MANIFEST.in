@@ -1,5 +1,4 @@
 include *.md
-include *.rst
 include sygnal.yaml.sample
 include LICENSE
 recursive-include tests *.py
