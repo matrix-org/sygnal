@@ -252,6 +252,13 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             # .description corresponds to the 'reason' response field
             span.set_tag("apns_reason", response.description)
             if (code, response.description) in self.TOKEN_ERRORS:
+                log.info(
+                    "APNs token %s for pushkin %s was rejected: %d %s",
+                    device_token,
+                    self.name,
+                    code,
+                    response.description,
+                )
                 return [device.pushkey]
             else:
                 if 500 <= code < 600:
