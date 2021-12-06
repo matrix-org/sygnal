@@ -1,0 +1,1 @@
+Fix a bug introduced in 0.5.0 where pushkin names would match substrings of app IDs and treat dots as wildcards.

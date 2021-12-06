@@ -16,7 +16,6 @@
 # limitations under the License.
 import json
 import logging
-import re
 import sys
 import time
 import traceback
@@ -211,7 +210,6 @@ class V1NotifyHandler(Resource):
     def find_pushkins(self, appid: str) -> List[Pushkin]:
         """Finds matching pushkins in self.sygnal.pushkins according to the appid.
 
-
         Args:
             appid: app identifier to search in self.sygnal.pushkins.
 
@@ -224,13 +222,12 @@ class V1NotifyHandler(Resource):
         if appid in self.sygnal.pushkins:
             return [self.sygnal.pushkins[appid]]
 
-        result = []
-        for key, value in self.sygnal.pushkins.items():
-            # The ".+" symbol is used in place of "*" symbol
-            regex = key.replace("*", ".+")
-            if re.search(regex, appid):
-                result.append(value)
-        return result
+        # otherwise, find any pushkins whose appid patterns match
+        return [
+            pushkin
+            for pushkin in self.sygnal.pushkins.values()
+            if pushkin.handles_appid(appid)
+        ]
 
     async def _handle_dispatch(
         self,

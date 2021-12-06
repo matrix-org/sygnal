@@ -17,6 +17,7 @@
 import abc
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, overload
 
+from matrix_common.regex import glob_to_regex
 from opentracing import Span
 from prometheus_client import Counter
 
@@ -112,6 +113,7 @@ class Notification:
 class Pushkin(abc.ABC):
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         self.name = name
+        self.appid_pattern = glob_to_regex(name, ignore_case=False)
         self.cfg = config
         self.sygnal = sygnal
 
@@ -134,6 +136,10 @@ class Pushkin(abc.ABC):
                 f"formatted correctly in the config file. "
             )
         return self.cfg[key]
+
+    def handles_appid(self, appid: str) -> bool:
+        """Checks whether the pushkin is responsible for the given app ID"""
+        return self.name == appid or self.appid_pattern.match(appid) is not None
 
     @abc.abstractmethod
     async def dispatch_notification(
