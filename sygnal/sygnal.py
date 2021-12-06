@@ -153,7 +153,7 @@ class Sygnal:
                         scope_manager=AsyncioScopeManager(),
                     )
 
-                    self.tracer = jaeger_cfg.initialize_tracer()
+                    self.tracer = cast(Tracer, jaeger_cfg.initialize_tracer())
 
                     logger.info("Enabled OpenTracing support with Jaeger")
                 except ModuleNotFoundError:
