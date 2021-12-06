@@ -88,8 +88,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         # `DeviceTokenNotForTopic` may be due to a token for a different app or an
         # incorrect topic in the Sygnal configuration. In the event of a
         # misconfiguration, clients will need to reupload their tokens to their
-        # homeserver. Element iOS and clients based on matrix-ios-kit already do this
-        # periodically.
+        # homeserver.
         (400, "DeviceTokenNotForTopic"),
         (400, "TopicDisallowed"),
         # The token is no longer valid, probably because the app has been uninstalled.
