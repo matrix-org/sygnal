@@ -175,6 +175,29 @@ An example `data` dictionary to specify on `POST /_matrix/client/r0/pushers/set`
 [APNs documentation]: https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CreatingtheNotificationPayload.html
 
 
+#### VoIP (voice calls and video calls) notifications on iOS
+
+iOS is capable of displaying an on-screen call notification (with answer/deny buttons)
+and playing a ringtone.
+
+However, this requires sending a special kind of push notification.
+Sygnal is not able to send this type of push notification because a VoIP call may
+begin as a result of an encrypted message, so Sygnal has no way to know that a given
+message should initiate a VoIP call.
+
+The current workaround is for your iOS application to register a Notification
+Service Extension and to use that Notification Service Extension to trigger a
+VoIP push notification with Sygnal when your application needs to display a call
+notification.
+This is done by calling [`/_matrix/push/v1/notify`](https://spec.matrix.org/latest/push-gateway-api/#post_matrixpushv1notify).
+(There is no interface to do this locally.)
+
+The Notification Service Extension of *Element*, [available here][ElementNSE] may be
+useful for reference.
+
+[ElementNSE]: https://github.com/vector-im/element-ios/blob/034e253fb19092ef16b5262293d5c32db96aec22/RiotNSE/NotificationService.swift
+
+
 ### Firebase Cloud Messaging
 
 The client will receive a message with an FCM `data` payload with this structure:
