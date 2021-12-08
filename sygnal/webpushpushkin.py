@@ -149,17 +149,18 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             return []
 
         endpoint = device.data.get("endpoint")
-        if not isinstance(endpoint, str):
-            # The pushkey is missing the endpoint for delivery.
+        auth = device.data.get("auth")
+
+        if not p256dh or not isinstance(endpoint, str) or not isinstance(auth, str):
             logger.warn(
-                "Rejecting pushkey %s; "
-                "device.data.endpoint is missing or not a string: %r",
-                device.pushkey,
+                "Rejecting pushkey; subscription info incomplete or invalid "
+                + "(p256dh: %s, endpoint: %r, auth: %r)",
+                p256dh,
                 endpoint,
+                auth,
             )
             return [device.pushkey]
 
-        auth = device.data.get("auth")
         endpoint_domain = urlparse(endpoint).netloc
         if self.allowed_endpoints:
             allowed = any(
@@ -172,16 +173,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 )
                 # abort, but don't reject push key
                 return []
-
-        if not p256dh or not endpoint or not auth:
-            logger.warn(
-                "Rejecting pushkey; subscription info incomplete "
-                + "(p256dh: %s, endpoint: %s, auth: %s)",
-                p256dh,
-                endpoint,
-                auth,
-            )
-            return [device.pushkey]
 
         subscription_info = {
             "endpoint": endpoint,
