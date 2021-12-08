@@ -247,7 +247,7 @@ In your web application, [the push manager subscribe method](https://developer.m
 will return
 [a subscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription) 
 with an `endpoint` and `keys` property, the latter containing a `p256dh` and `auth` 
-property. The `p256dh` key is used as the push key, and the push data is expected 
+property. The `p256dh` key is used as the push key, and the push data must contain
 `endpoint` and `auth`. You can also set `default_payload` in the push data;
 any properties set in it will be present in the push messages you receive, 
 so it can be used to pass identifiers specific to your client
