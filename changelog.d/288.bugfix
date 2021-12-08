@@ -1,0 +1,1 @@
+Reject web pushkeys with missing endpoints instead of raising an error.

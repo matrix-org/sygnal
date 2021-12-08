@@ -114,7 +114,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         )
         self.http_request_factory = HttpRequestFactory()
 
-        self.allowed_endpoints = None  # type: Optional[List[Pattern]]
+        self.allowed_endpoints: Optional[List[Pattern[str]]] = None
         allowed_endpoints = self.get_config("allowed_endpoints", list)
         if allowed_endpoints:
             self.allowed_endpoints = list(map(glob_to_regex, allowed_endpoints))
@@ -149,6 +149,16 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
             return []
 
         endpoint = device.data.get("endpoint")
+        if not isinstance(endpoint, str):
+            # The pushkey is missing the endpoint for delivery.
+            logger.warn(
+                "Rejecting pushkey %s; "
+                "device.data.endpoint is missing or not a string: %r",
+                device.pushkey,
+                endpoint,
+            )
+            return [device.pushkey]
+
         auth = device.data.get("auth")
         endpoint_domain = urlparse(endpoint).netloc
         if self.allowed_endpoints:
@@ -289,7 +299,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         response: IResponse,
         response_text: str,
         pushkey: str,
-        endpoint_domain: bytes,
+        endpoint_domain: str,
     ) -> bool:
         """
         Logs and determines the outcome of the response
