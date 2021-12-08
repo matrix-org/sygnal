@@ -49,6 +49,7 @@ EXTRAS_REQUIRE = {
         "mypy-zope==0.3.0",
         "tox",
         "towncrier",
+        "types-opentracing>=2.4.2",
     ]
 }
 
