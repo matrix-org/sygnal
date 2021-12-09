@@ -4,8 +4,8 @@ Sygnal 0.11.0 (2021-12-09)
 Bugfixes
 --------
 
-- Fix a bug introduced in 0.5.0 where pushkin names would match substrings of app IDs and treat dots as wildcards. ([\#269](https://github.com/matrix-org/sygnal/issues/269))
-- Fix a bug introduced in 0.5.0 where GCM pushes would always fail when configured to handle an app ID glob. ([\#270](https://github.com/matrix-org/sygnal/issues/270))
+- Fix a bug introduced in Sygnal 0.5.0 where pushkin names would match substrings of app IDs and treat dots as wildcards. ([\#269](https://github.com/matrix-org/sygnal/issues/269))
+- Fix a bug introduced in Sygnal 0.5.0 where GCM pushes would always fail when configured to handle an app ID glob. ([\#270](https://github.com/matrix-org/sygnal/issues/270))
 - Treat more APNs errors as permanent rejections. ([\#280](https://github.com/matrix-org/sygnal/issues/280))
 - Fix a bug introduced in Sygnal 0.9.1 where web pushkeys with missing endpoints would cause an error. ([\#288](https://github.com/matrix-org/sygnal/issues/288))
 
@@ -26,11 +26,7 @@ Internal Changes
 - Use absolute imports for consistency. ([\#265](https://github.com/matrix-org/sygnal/issues/265))
 - Remove explicit inheritance from `object` that was left over from Python 2. ([\#266](https://github.com/matrix-org/sygnal/issues/266))
 - Use Python 3-style super calls. ([\#267](https://github.com/matrix-org/sygnal/issues/267))
-- Add type hints to webpushpushkin.py. ([\#271](https://github.com/matrix-org/sygnal/issues/271))
-- Add type hints to sygnal/http.py. ([\#273](https://github.com/matrix-org/sygnal/issues/273))
-- Add type hints to sygnal/exceptions.py. ([\#274](https://github.com/matrix-org/sygnal/issues/274))
-- Add type hints to sygnal/sygnal.py. ([\#275](https://github.com/matrix-org/sygnal/issues/275))
-- Add type hints to sygnal/utils.py. ([\#276](https://github.com/matrix-org/sygnal/issues/276))
+- Add type hints to most of the code. ([\#271](https://github.com/matrix-org/sygnal/issues/271), [\#273](https://github.com/matrix-org/sygnal/issues/273), [\#274](https://github.com/matrix-org/sygnal/issues/274), [\#275](https://github.com/matrix-org/sygnal/issues/275), [\#276](https://github.com/matrix-org/sygnal/issues/276))
 - Convert the README to use markdown rather than reStructuredText for consistency and familiarity. ([\#278](https://github.com/matrix-org/sygnal/issues/278))
 - Move `glob_to_regex` to `matrix-python-common`. ([\#281](https://github.com/matrix-org/sygnal/issues/281))
 - Add `opentracing-types` to the dev dependencies. ([\#287](https://github.com/matrix-org/sygnal/issues/287))
