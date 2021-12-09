@@ -1,1 +1,0 @@
-Fix the changelog CI check when running on a fork of the Sygnal repository, rather than a branch.

@@ -1,1 +1,0 @@
-Fix a bug introduced in 0.5.0 where GCM pushes would always fail when configured to handle an app ID glob.

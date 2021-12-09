@@ -1,1 +1,0 @@
-Remove explicit inheritance from `object` that was left over from Python 2.

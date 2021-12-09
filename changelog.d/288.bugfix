@@ -1,1 +1,0 @@
-Fix a bug introduced in Sygnal 0.9.1 where web pushkeys with missing endpoints would cause an error.
