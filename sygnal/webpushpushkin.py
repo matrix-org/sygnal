@@ -114,7 +114,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         )
         self.http_request_factory = HttpRequestFactory()
 
-        self.allowed_endpoints = None  # type: Optional[List[Pattern]]
+        self.allowed_endpoints: Optional[List[Pattern[str]]] = None
         allowed_endpoints = self.get_config("allowed_endpoints", list)
         if allowed_endpoints:
             self.allowed_endpoints = list(map(glob_to_regex, allowed_endpoints))
@@ -150,6 +150,17 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
 
         endpoint = device.data.get("endpoint")
         auth = device.data.get("auth")
+
+        if not p256dh or not isinstance(endpoint, str) or not isinstance(auth, str):
+            logger.warn(
+                "Rejecting pushkey; subscription info incomplete or invalid "
+                + "(p256dh: %s, endpoint: %r, auth: %r)",
+                p256dh,
+                endpoint,
+                auth,
+            )
+            return [device.pushkey]
+
         endpoint_domain = urlparse(endpoint).netloc
         if self.allowed_endpoints:
             allowed = any(
@@ -162,16 +173,6 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
                 )
                 # abort, but don't reject push key
                 return []
-
-        if not p256dh or not endpoint or not auth:
-            logger.warn(
-                "Rejecting pushkey; subscription info incomplete "
-                + "(p256dh: %s, endpoint: %s, auth: %s)",
-                p256dh,
-                endpoint,
-                auth,
-            )
-            return [device.pushkey]
 
         subscription_info = {
             "endpoint": endpoint,
@@ -289,7 +290,7 @@ class WebpushPushkin(ConcurrencyLimitedPushkin):
         response: IResponse,
         response_text: str,
         pushkey: str,
-        endpoint_domain: bytes,
+        endpoint_domain: str,
     ) -> bool:
         """
         Logs and determines the outcome of the response
