@@ -19,7 +19,10 @@ try:
         version,
     )
 except ImportError:
-    from importlib_metadata import PackageNotFoundError, version  # type: ignore[misc]
+    from importlib_metadata import (  # type: ignore[misc,no-redef]
+        PackageNotFoundError,
+        version,
+    )
 
 try:
     __version__ = version(__name__)
