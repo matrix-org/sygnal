@@ -15,9 +15,13 @@
 # Copied and adapted from
 # https://raw.githubusercontent.com/matrix-org/pushbaby/master/pushbaby/truncate.py
 import json
-from typing import Any, Dict, List, Optional, Tuple, Union
+import sys
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-from typing_extensions import Literal
+if TYPE_CHECKING or sys.version_info < (3, 8, 0):
+    from typing_extensions import Literal
+else:
+    from typing import Literal
 
 Choppable = Union[
     Tuple[Literal["alert", "alert.body"]], Tuple[Literal["alert.loc-args"], int]

@@ -38,7 +38,7 @@ INSTALL_REQUIRES = [
     "sentry-sdk>=0.10.2",
     "service_identity>=18.1.0",
     "Twisted>=19.7",
-    "typing-extensions>=3.7.4",
+    'typing-extensions>=3.7.4;python_version<"3.8"',
     "zope.interface>=4.6.0",
 ]
 
