@@ -22,33 +22,33 @@ from typing import Sequence
 from setuptools import find_packages, setup
 
 INSTALL_REQUIRES = [
-    "Twisted>=19.7",
-    "prometheus_client>=0.7.0,<0.8",
     "aioapns>=1.10",
     "cryptography>=2.6.1",
-    "pyyaml>=5.1.1",
-    "service_identity>=18.1.0",
-    "jaeger-client>=4.0.0",
-    "opentracing>=2.2.0",
-    "sentry-sdk>=0.10.2",
-    "zope.interface>=4.6.0",
     "idna>=2.8",
     "importlib_metadata",
-    "pywebpush>=1.13.0",
-    "py-vapid>=1.7.0",
+    "jaeger-client>=4.0.0",
     "matrix-common==1.0.0",
+    "opentracing>=2.2.0",
+    "prometheus_client>=0.7.0,<0.8",
+    "py-vapid>=1.7.0",
+    "pywebpush>=1.13.0",
+    "pyyaml>=5.1.1",
+    "sentry-sdk>=0.10.2",
+    "service_identity>=18.1.0",
+    "Twisted>=19.7",
+    "zope.interface>=4.6.0",
 ]
 
 EXTRAS_REQUIRE = {
     "dev": [
-        "coverage~=5.5",
         "black==21.6b0",
+        "coverage~=5.5",
         "flake8==3.9.0",
         "isort~=5.0",
-        "mypy==0.812",
         "mypy-zope==0.3.0",
-        "tox",
+        "mypy==0.812",
         "towncrier",
+        "tox",
         "types-opentracing>=2.4.2",
     ]
 }
