@@ -1,4 +1,4 @@
-Sygnal 0.11.0 (2021-12-09)
+Sygnal 0.11.0 (2021-12-15)
 ==========================
 
 Bugfixes
@@ -30,6 +30,7 @@ Internal Changes
 - Convert the README to use markdown rather than reStructuredText for consistency and familiarity. ([\#278](https://github.com/matrix-org/sygnal/issues/278))
 - Move `glob_to_regex` to `matrix-python-common`. ([\#281](https://github.com/matrix-org/sygnal/issues/281))
 - Add `opentracing-types` to the dev dependencies. ([\#287](https://github.com/matrix-org/sygnal/issues/287))
+- Add missing dependencies to `setup.py`. ([\#290](https://github.com/matrix-org/sygnal/issues/290))
 
 
 Sygnal 0.10.1 (2021-08-16)
