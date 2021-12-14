@@ -26,7 +26,7 @@ INSTALL_REQUIRES = [
     "attrs>=19.2.0",
     "cryptography>=2.6.1",
     "idna>=2.8",
-    "importlib_metadata",
+    'importlib_metadata;python_version<"3.8"',
     "jaeger-client>=4.0.0",
     "matrix-common==1.0.0",
     "opentracing>=2.2.0",
