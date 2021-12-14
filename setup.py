@@ -53,6 +53,7 @@ EXTRAS_REQUIRE = {
         "towncrier",
         "tox",
         "types-opentracing>=2.4.2",
+        "typing-extensions>=3.7.4",
     ]
 }
 
