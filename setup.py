@@ -23,6 +23,7 @@ from setuptools import find_packages, setup
 
 INSTALL_REQUIRES = [
     "aioapns>=1.10",
+    "attrs>=19.2.0",
     "cryptography>=2.6.1",
     "idna>=2.8",
     "importlib_metadata",
@@ -31,11 +32,13 @@ INSTALL_REQUIRES = [
     "opentracing>=2.2.0",
     "prometheus_client>=0.7.0,<0.8",
     "py-vapid>=1.7.0",
+    "pyOpenSSL>=17.5.0",
     "pywebpush>=1.13.0",
     "pyyaml>=5.1.1",
     "sentry-sdk>=0.10.2",
     "service_identity>=18.1.0",
     "Twisted>=19.7",
+    "typing-extensions>=3.7.4",
     "zope.interface>=4.6.0",
 ]
 
