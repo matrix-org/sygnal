@@ -14,7 +14,10 @@
 # limitations under the License.
 
 try:
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import (  # type: ignore[attr-defined]
+        PackageNotFoundError,
+        version,
+    )
 except ImportError:
     from importlib_metadata import PackageNotFoundError, version  # type: ignore[misc]
 
