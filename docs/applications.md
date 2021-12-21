@@ -185,11 +185,23 @@ Sygnal is not able to send this type of push notification because a VoIP call ma
 begin as a result of an encrypted message, so Sygnal has no way to know that a given
 message should initiate a VoIP call.
 
-The current workaround is for your iOS application to register a Notification Service Extension
+
+##### Recent iOS (≥ 14.5) versions
+
+As of iOS 14.5, your iOS application can register a Notification Service Extension that,
+upon receiving a relevant VoIP notification, calls [`reportNewIncomingVoIPPushPayload`][iOSReportVoIP]
+to trigger a VoIP notification display on the device.
+
+[iOSReportVoIP]
+
+
+##### Old iOS (< 14.5) versions
+
+For old iOS versions, a workaround is for your iOS application to register a Notification Service Extension
 that, upon receiving a relevant VoIP notification, makes an HTTP request to Sygnal's
 [`/_matrix/push/v1/notify`](https://spec.matrix.org/latest/push-gateway-api/#post_matrixpushv1notify)
 endpoint in order to trigger the correct type of notification.
-(There is no interface to do this on-device.)
+(There was no interface to do this on-device.)
 
 The Notification Service Extension of *Element iOS*, [available here][ElementNSE],
 may be useful for reference.
