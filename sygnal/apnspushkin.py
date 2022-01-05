@@ -351,7 +351,9 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         payload = {}
 
         if device.data:
-            payload.update(device.data.get("default_payload", {}))
+            default_payload = device.data.get("default_payload")
+            if isinstance(default_payload, dict):
+                payload.update(default_payload)
 
         if n.room_id:
             payload["room_id"] = n.room_id

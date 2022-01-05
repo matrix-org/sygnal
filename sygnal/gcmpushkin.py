@@ -423,7 +423,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         data = {}
 
         if device.data:
-            data.update(device.data.get("default_payload", {}))
+            default_payload = device.data.get("default_payload")
+            if isinstance(default_payload, dict):
+                data.update(default_payload)
 
         for attr in [
             "event_id",
