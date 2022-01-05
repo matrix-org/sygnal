@@ -1,0 +1,1 @@
+Fix a bug introduced in Sygnal 0.7.0 where a dict method is called on an object before it is determined to be a dict, causing TypeErrors.
