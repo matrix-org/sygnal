@@ -192,7 +192,7 @@ As of iOS 14.5, your iOS application can register a Notification Service Extensi
 upon receiving a relevant VoIP notification, calls [`reportNewIncomingVoIPPushPayload`][iOSReportVoIP]
 to trigger a VoIP notification display on the device.
 
-[iOSReportVoIP]
+[iOSReportVoIP]: https://developer.apple.com/documentation/callkit/cxprovider/3727263-reportnewincomingvoippushpayload
 
 
 ##### Old iOS (< 14.5) versions
