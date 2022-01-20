@@ -34,6 +34,16 @@ DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD = {
         }
     },
 }
+
+DEVICE_EXAMPLE_WITH_BAD_DEFAULT_PAYLOAD = {
+    "app_id": "com.example.gcm",
+    "pushkey": "badpayload",
+    "pushkey_ts": 42,
+    "data": {
+        "default_payload": None,
+    }
+}
+
 DEVICE_EXAMPLE_IOS = {
     "app_id": "com.example.gcm.ios",
     "pushkey": "spqr",
@@ -118,6 +128,22 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": []})
         self.assertEqual(gcm.num_requests, 1)
 
+    def test_misformed_default_payload_rejected(self):
+        """
+        Tests that a non-dict default_payload is rejected.
+        """
+        gcm = self.get_test_pushkin("com.example.gcm")
+        gcm.preload_with_response(
+            200, {"results": [{"message_id": "msg42", "registration_id": "badpayload"}]}
+        )
+
+        resp = self._request(
+            self._make_dummy_notification([DEVICE_EXAMPLE_WITH_BAD_DEFAULT_PAYLOAD])
+        )
+
+        self.assertEqual(resp, {"rejected": ['badpayload']})
+        self.assertEqual(gcm.num_requests, 1)
+
     def test_rejected(self):
         """
         Tests the rejected case: a pushkey rejected to GCM leads to Sygnal
@@ -132,6 +158,7 @@ class GcmTestCase(testutils.TestCase):
 
         self.assertEqual(resp, {"rejected": ["spqr"]})
         self.assertEqual(gcm.num_requests, 1)
+
 
     def test_batching(self):
         """
