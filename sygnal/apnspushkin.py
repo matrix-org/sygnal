@@ -283,6 +283,13 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         with self.sygnal.tracer.start_span(
             "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
+            # Before we build the payload, check that the default_payload is not misconfigured
+            # and reject the pushkey if it is
+            if device.data:
+                default_payload = device.data.get("default_payload", {})
+                if not isinstance(default_payload, dict):
+                    log.error("Default_payload is misconfigured, this value must be a dict.")
+                    return [device.pushkey]
 
             if n.event_id and not n.type:
                 payload: Optional[Dict[str, Any]] = self._get_payload_event_id_only(
@@ -351,9 +358,8 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         payload = {}
 
         if device.data:
-            default_payload = device.data.get("default_payload")
-            if isinstance(default_payload, dict):
-                payload.update(default_payload)
+            default_payload = device.data.get("default_payload", {})
+            payload.update(default_payload)
 
         if n.room_id:
             payload["room_id"] = n.room_id

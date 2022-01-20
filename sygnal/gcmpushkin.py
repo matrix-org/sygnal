@@ -18,7 +18,7 @@ import json
 import logging
 import time
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple, Optional
 
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
@@ -347,15 +347,21 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         with self.sygnal.tracer.start_span(
             "gcm_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
+            # TODO: Implement collapse_key to queue only one message per room.
+            failed: List[str] = []
+
             data = GcmPushkin._build_data(n, device)
+
+            # Reject pushkey if default_payload is misconfigured
+            if not data:
+                log.error("Default_payload was misconfigured, this value must be a dict.")
+                failed.append(device.pushkey)
+
             headers = {
                 "User-Agent": ["sygnal"],
                 "Content-Type": ["application/json"],
                 "Authorization": ["key=%s" % (self.api_key,)],
             }
-
-            # TODO: Implement collapse_key to queue only one message per room.
-            failed: List[str] = []
 
             body = self.base_request_body.copy()
             body["data"] = data
@@ -409,7 +415,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             return failed
 
     @staticmethod
-    def _build_data(n: Notification, device: Device) -> Dict[str, Any]:
+    def _build_data(n: Notification, device: Device) -> Optional[Dict[str, Any]]:
         """
         Build the payload data to be sent.
         Args:
@@ -418,14 +424,16 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             will be sent.
 
         Returns:
-            JSON-compatible dict
+            JSON-compatible dict or None if the default_payload is misconfigured
         """
         data = {}
 
         if device.data:
-            default_payload = device.data.get("default_payload")
+            default_payload = device.data.get("default_payload", {})
             if isinstance(default_payload, dict):
                 data.update(default_payload)
+            else:
+                return None
 
         for attr in [
             "event_id",
