@@ -18,7 +18,7 @@ import json
 import logging
 import time
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple, Optional
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
