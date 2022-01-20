@@ -41,7 +41,7 @@ DEVICE_EXAMPLE_WITH_BAD_DEFAULT_PAYLOAD = {
     "pushkey_ts": 42,
     "data": {
         "default_payload": None,
-    }
+    },
 }
 
 DEVICE_EXAMPLE_IOS = {
@@ -141,7 +141,7 @@ class GcmTestCase(testutils.TestCase):
             self._make_dummy_notification([DEVICE_EXAMPLE_WITH_BAD_DEFAULT_PAYLOAD])
         )
 
-        self.assertEqual(resp, {"rejected": ['badpayload']})
+        self.assertEqual(resp, {"rejected": ["badpayload"]})
         self.assertEqual(gcm.num_requests, 1)
 
     def test_rejected(self):
@@ -158,7 +158,6 @@ class GcmTestCase(testutils.TestCase):
 
         self.assertEqual(resp, {"rejected": ["spqr"]})
         self.assertEqual(gcm.num_requests, 1)
-
 
     def test_batching(self):
         """

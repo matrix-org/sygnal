@@ -44,9 +44,7 @@ DEVICE_EXAMPLE_WITH_BAD_DEFAULT_PAYLOAD = {
     "app_id": "com.example.apns",
     "pushkey": "badpayload",
     "pushkey_ts": 42,
-    "data": {
-        "default_payload": None
-    },
+    "data": {"default_payload": None},
 }
 
 
@@ -274,13 +272,14 @@ class ApnsTestCase(testutils.TestCase):
         self.assertEqual({"rejected": []}, resp)
 
     def test_misconfigured_payload_is_rejected(self):
-        """Test that a misconfigured default_payload causes the pushkey to be rejected"""
+        """Test that a misconfigured default_payload causes the pushkey to be rejected
+        """
 
         resp = self._request(
             self._make_dummy_notification([DEVICE_EXAMPLE_WITH_BAD_DEFAULT_PAYLOAD])
         )
 
-        self.assertEqual({"rejected":["badpayload"]}, resp)
+        self.assertEqual({"rejected": ["badpayload"]}, resp)
 
     def test_rejection(self):
         """

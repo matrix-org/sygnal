@@ -354,7 +354,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
             # Reject pushkey if default_payload is misconfigured
             if not data:
-                log.error("Default_payload was misconfigured, this value must be a dict.")
+                log.error(
+                    "Default_payload was misconfigured, this value must be a dict."
+                )
                 failed.append(device.pushkey)
 
             headers = {
