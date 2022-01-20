@@ -272,8 +272,7 @@ class ApnsTestCase(testutils.TestCase):
         self.assertEqual({"rejected": []}, resp)
 
     def test_misconfigured_payload_is_rejected(self):
-        """Test that a misconfigured default_payload causes the pushkey to be rejected
-        """
+        """Test that a misconfigured default_payload causes the pushkey to be rejected"""
 
         resp = self._request(
             self._make_dummy_notification([DEVICE_EXAMPLE_WITH_BAD_DEFAULT_PAYLOAD])
