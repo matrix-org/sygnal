@@ -289,7 +289,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 default_payload = device.data.get("default_payload", {})
                 if not isinstance(default_payload, dict):
                     log.error(
-                        "Default_payload is malformed, this value must be a dict."
+                        "default_payload is malformed, this value must be a dict."
                     )
                     return [device.pushkey]
 
