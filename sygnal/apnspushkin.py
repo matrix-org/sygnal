@@ -294,9 +294,12 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                     return [device.pushkey]
 
             if n.event_id and not n.type:
-                payload: Optional[Dict[str, Any]] = self._get_payload_event_id_only(
-                    n, device
-                )
+                if device.data is None:
+                    payload: Optional[Dict[str, Any]] = self._get_payload_event_id_only(
+                        n, {}
+                    )
+                else:
+                    payload = self._get_payload_event_id_only(n, default_payload)
             else:
                 payload = self._get_payload_full(n, device, log)
 
@@ -345,7 +348,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             raise NotificationDispatchException("Retried too many times.")
 
     def _get_payload_event_id_only(
-        self, n: Notification, device: Device
+        self, n: Notification, default_payload: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Constructs a payload for a notification where we know only the event ID.
@@ -359,9 +362,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         """
         payload = {}
 
-        if device.data:
-            default_payload = device.data.get("default_payload", {})
-            payload.update(default_payload)
+        payload.update(default_payload)
 
         if n.room_id:
             payload["room_id"] = n.room_id
