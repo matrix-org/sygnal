@@ -283,10 +283,22 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         with self.sygnal.tracer.start_span(
             "apns_dispatch", tags=span_tags, child_of=context.opentracing_span
         ) as span_parent:
+            # Before we build the payload, check that the default_payload is not
+            # malformed and reject the pushkey if it is
+
+            default_payload = {}
+
+            if device.data:
+                default_payload = device.data.get("default_payload", {})
+                if not isinstance(default_payload, dict):
+                    log.error(
+                        "default_payload is malformed, this value must be a dict."
+                    )
+                    return [device.pushkey]
 
             if n.event_id and not n.type:
                 payload: Optional[Dict[str, Any]] = self._get_payload_event_id_only(
-                    n, device
+                    n, default_payload
                 )
             else:
                 payload = self._get_payload_full(n, device, log)
@@ -336,7 +348,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             raise NotificationDispatchException("Retried too many times.")
 
     def _get_payload_event_id_only(
-        self, n: Notification, device: Device
+        self, n: Notification, default_payload: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Constructs a payload for a notification where we know only the event ID.
@@ -350,8 +362,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         """
         payload = {}
 
-        if device.data:
-            payload.update(device.data.get("default_payload", {}))
+        payload.update(default_payload)
 
         if n.room_id:
             payload["room_id"] = n.room_id
