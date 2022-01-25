@@ -285,6 +285,9 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         ) as span_parent:
             # Before we build the payload, check that the default_payload is not
             # malformed and reject the pushkey if it is
+
+            default_payload = {}
+
             if device.data:
                 default_payload = device.data.get("default_payload", {})
                 if not isinstance(default_payload, dict):
@@ -294,12 +297,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                     return [device.pushkey]
 
             if n.event_id and not n.type:
-                if device.data is None:
-                    payload: Optional[Dict[str, Any]] = self._get_payload_event_id_only(
-                        n, {}
-                    )
-                else:
-                    payload = self._get_payload_event_id_only(n, default_payload)
+                payload = self._get_payload_event_id_only(n, default_payload)
             else:
                 payload = self._get_payload_full(n, device, log)
 
