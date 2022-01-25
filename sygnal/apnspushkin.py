@@ -297,7 +297,9 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                     return [device.pushkey]
 
             if n.event_id and not n.type:
-                payload = self._get_payload_event_id_only(n, default_payload)
+                payload: Optional[Dict[str, Any]] = self._get_payload_event_id_only(
+                    n, default_payload
+                )
             else:
                 payload = self._get_payload_full(n, device, log)
 
