@@ -22,7 +22,7 @@ from typing import Sequence
 from setuptools import find_packages, setup
 
 INSTALL_REQUIRES = [
-    "aioapns>=1.10",
+    "aioapns>=1.10,<2.1",
     "attrs>=19.2.0",
     "cryptography>=2.6.1",
     "idna>=2.8",
