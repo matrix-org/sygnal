@@ -35,7 +35,7 @@ pusher (see
 
 See the sample configuration for examples.
 
-You can find a docker image for sygnal [here](https://hub.docker.com/r/matrixdotorg/sygnal).
+You can find a docker image for sygnal [on DockerHub](https://hub.docker.com/r/matrixdotorg/sygnal).
 
 
 App Types
