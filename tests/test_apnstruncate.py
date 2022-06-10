@@ -139,7 +139,7 @@ class TruncateTestCase(unittest.TestCase):
             I have no great desire to manually parse UTF-8 to work around this since
             it works fine on Linux.
         """
-        if len(u"\U0001F430") != 1:
+        if len("\U0001F430") != 1:
             msg = (
                 "Unicode support is broken in your Python binary. "
                 + "Truncating messages with multibyte unicode characters will fail."
@@ -152,7 +152,7 @@ class TruncateTestCase(unittest.TestCase):
         multibyte character.
         """
         overhead = len(json_encode(payload_for_aps({"alert": ""})))
-        txt = u"\U0001F430" + simplestring(30)
+        txt = "\U0001F430" + simplestring(30)
         aps = {"alert": txt}
         # NB. The number of characters of the string we get is dependent
         # on the json encoding used.
