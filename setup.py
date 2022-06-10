@@ -44,7 +44,7 @@ INSTALL_REQUIRES = [
 
 EXTRAS_REQUIRE = {
     "dev": [
-        "black==21.6b0",
+        "black==22.3.0",
         "coverage~=5.5",
         "flake8==3.9.0",
         "isort~=5.0",
