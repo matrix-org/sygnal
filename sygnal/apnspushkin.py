@@ -73,6 +73,9 @@ CERTIFICATE_EXPIRATION_GAUGE = Gauge(
     labelnames=["pushkin"],
 )
 
+class ApnsPushTypeHeader:
+  def __init__(self, value):
+    self.value = value
 
 class ApnsPushkin(ConcurrencyLimitedPushkin):
     """
@@ -225,11 +228,18 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
 
         device_token = base64.b64decode(device.pushkey).hex()
 
+        apns_push_type = None
+        if device.data:
+            apns_push_type_value = device.data.get("apns_push_type", None)
+            if apns_push_type_value is not None:
+                apns_push_type = ApnsPushTypeHeader(apns_push_type_value)
+
         request = NotificationRequest(
             device_token=device_token,
             message=shaved_payload,
             priority=prio,
             notification_id=notif_id,
+            push_type=apns_push_type
         )
 
         try:
