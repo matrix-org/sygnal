@@ -1,1 +1,1 @@
-Add support for setting the 'apns-push-type' header via device data. This is needed if notifications are to be silenced client side.
+Add support for 'push_type' option in app config. This is needed if notifications are to be silenced client side.
