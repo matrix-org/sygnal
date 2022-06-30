@@ -73,10 +73,12 @@ CERTIFICATE_EXPIRATION_GAUGE = Gauge(
     labelnames=["pushkin"],
 )
 
+
 class ApnsPushTypeHeader:
     def __init__(self, value):
         self.value = value
 
+   
 class ApnsPushkin(ConcurrencyLimitedPushkin):
     """
     Relays notifications to the Apple Push Notification Service.
