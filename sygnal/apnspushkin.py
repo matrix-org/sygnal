@@ -74,8 +74,8 @@ CERTIFICATE_EXPIRATION_GAUGE = Gauge(
 )
 
 class ApnsPushTypeHeader:
-  def __init__(self, value):
-    self.value = value
+    def __init__(self, value):
+        self.value = value
 
 class ApnsPushkin(ConcurrencyLimitedPushkin):
     """
@@ -112,6 +112,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         "key_id",
         "keyfile",
         "topic",
+        "push_type",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
@@ -191,6 +192,12 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 loop=loop,
             )
 
+        push_type = self.get_config("push_type", str)
+        if not push_type:
+            self.push_type = None
+        else:
+            self.push_type = ApnsPushTypeHeader(push_type)
+
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
 
@@ -228,18 +235,12 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
 
         device_token = base64.b64decode(device.pushkey).hex()
 
-        apns_push_type = None
-        if device.data:
-            apns_push_type_value = device.data.get("apns_push_type", None)
-            if apns_push_type_value is not None:
-                apns_push_type = ApnsPushTypeHeader(apns_push_type_value)
-
         request = NotificationRequest(
             device_token=device_token,
             message=shaved_payload,
             priority=prio,
             notification_id=notif_id,
-            push_type=apns_push_type
+            push_type=self.push_type
         )
 
         try:
