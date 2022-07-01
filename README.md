@@ -73,7 +73,7 @@ For either type, it can accept:
   APNS environment is used.
   Valid values are 'production' or 'sandbox'. If not provided, 'production' is used.
 - the `push_type` parameter which determines what value for the `apns-push-type` header is sent to
-  APNS. If not provided, the header is not sent.
+  APNs. If not provided, the header is not sent.
 
 ### gcm
 
