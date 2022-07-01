@@ -1,1 +1,1 @@
-Add support for 'push_type' option in app config. This is needed if notifications are to be silenced client side.
+Add a new `push_type` configuration option for APNs apps, to control the value of the `apns-push-type` header when sending requests.
