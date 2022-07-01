@@ -1,0 +1,1 @@
+Add a new `push_type` configuration option for APNs apps, to control the value of the `apns-push-type` header when sending requests.

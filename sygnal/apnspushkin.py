@@ -25,7 +25,7 @@ from uuid import uuid4
 
 import aioapns
 from aioapns import APNs, NotificationRequest
-from aioapns.common import NotificationResult
+from aioapns.common import NotificationResult, PushType
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509 import load_pem_x509_certificate
 from opentracing import Span, logs, tags
@@ -109,7 +109,17 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         "key_id",
         "keyfile",
         "topic",
+        "push_type",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
+
+    APNS_PUSH_TYPES = {
+        "alert": PushType.ALERT,
+        "background": PushType.BACKGROUND,
+        "voip": PushType.VOIP,
+        "complication": PushType.COMPLICATION,
+        "fileprovider": PushType.FILEPROVIDER,
+        "mdm": PushType.MDM,
+    }
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
         super().__init__(name, sygnal, config)
@@ -188,6 +198,15 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 loop=loop,
             )
 
+        push_type = self.get_config("push_type", str)
+        if not push_type:
+            self.push_type = None
+        else:
+            if push_type not in self.APNS_PUSH_TYPES.keys():
+                raise PushkinSetupException(f"Invalid value for push_type: {push_type}")
+
+            self.push_type = self.APNS_PUSH_TYPES[push_type]
+
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
 
@@ -230,6 +249,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             message=shaved_payload,
             priority=prio,
             notification_id=notif_id,
+            push_type=self.push_type,
         )
 
         try:

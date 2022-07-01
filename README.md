@@ -72,7 +72,8 @@ For either type, it can accept:
 - the `platform` parameter which determines whether the production or sandbox
   APNS environment is used.
   Valid values are 'production' or 'sandbox'. If not provided, 'production' is used.
-
+- the `push_type` parameter which determines what value for the `apns-push-type` header is sent to
+  APNs. If not provided, the header is not sent.
 
 ### gcm
 
