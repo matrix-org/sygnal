@@ -1,3 +1,33 @@
+Sygnal 0.12.0 (2022-07-04)
+==========================
+
+Features
+--------
+
+- Add a new `push_type` configuration option for APNs apps, to control the value of the `apns-push-type` header when sending requests. ([\#309](https://github.com/matrix-org/sygnal/issues/309))
+
+
+Bugfixes
+--------
+
+- Fix a bug introduced in Sygnal 0.7.0 where a malformed `default_payload` could cause an internal server error. ([\#292](https://github.com/matrix-org/sygnal/issues/292))
+
+
+Improved Documentation
+----------------------
+
+- Document the use of an iOS Notification Service Extension and the Push Gateway API as a workaround to trigger VoIP notifications on iOS. ([\#285](https://github.com/matrix-org/sygnal/issues/285))
+- Add a link to the docker image in the README. ([\#297](https://github.com/matrix-org/sygnal/issues/297))
+
+
+Internal Changes
+----------------
+
+- Avoid a breaking change in aioapns 2.1 by requiring an earlier version of that package. ([\#294](https://github.com/matrix-org/sygnal/issues/294))
+- Fix test failures by using the latest versions of TLS in the TLS proxy tests. ([\#306](https://github.com/matrix-org/sygnal/issues/306))
+- Update the `black` code formatter to 22.3.0. ([\#307](https://github.com/matrix-org/sygnal/issues/307))
+
+
 Sygnal 0.11.0 (2021-12-15)
 ==========================
 

@@ -1,1 +1,0 @@
-Fix a bug introduced in Sygnal 0.7.0 where a malformed `default_payload` could cause an internal server error.
