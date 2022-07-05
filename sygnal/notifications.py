@@ -98,6 +98,7 @@ class Notification:
         self.user_is_target: Optional[bool] = notif.get("user_is_target")
         self.type: Optional[str] = notif.get("type")
         self.sender: Optional[str] = notif.get("sender")
+        self.ttl: Optional[int] = notif.get("ttl")
 
         if "devices" not in notif or not isinstance(notif["devices"], list):
             raise InvalidNotificationException("Expected list in 'devices' key")

@@ -366,6 +366,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             body["data"] = data
             body["priority"] = "normal" if n.prio == "low" else "high"
 
+            if n.ttl is not None:
+                body["time_to_live"] = n.ttl
+
             for retry_number in range(0, MAX_TRIES):
                 if len(pushkeys) == 1:
                     body["to"] = pushkeys[0]
