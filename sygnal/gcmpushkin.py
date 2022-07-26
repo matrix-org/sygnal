@@ -354,7 +354,14 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
             # Reject pushkey if default_payload is misconfigured
             if data is None:
+                logger.warning(
+                    "Rejecting pushkey due to misconfigured default_payload, please ensure that "
+                    "default_payload is a dict."
+                )
                 failed.append(device.pushkey)
+                pushkeys.remove(device.pushkey)
+                if len(pushkeys) == 0:
+                    return failed
 
             headers = {
                 "User-Agent": ["sygnal"],
@@ -389,7 +396,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     if len(pushkeys) == 0:
                         break
                 except TemporaryNotificationDispatchException as exc:
-                    retry_delay = RETRY_DELAY_BASE * (2**retry_number)
+                    retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
                     if exc.custom_retry_delay is not None:
                         retry_delay = exc.custom_retry_delay
 
@@ -432,7 +439,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             if isinstance(default_payload, dict):
                 data.update(default_payload)
             else:
-                logger.error(
+                logger.warning(
                     "default_payload was misconfigured, this value must be a dict."
                 )
                 return None
