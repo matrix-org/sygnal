@@ -312,8 +312,8 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 default_payload = device.data.get("default_payload", {})
                 if not isinstance(default_payload, dict):
                     logger.warning(
-                        "Rejecting pushkey due to misconfigured default_payload, please ensure that "
-                        "default_payload is a dict."
+                        "Rejecting pushkey due to misconfigured default_payload, "
+                        "please ensure that default_payload is a dict."
                     )
                     return [device.pushkey]
 
