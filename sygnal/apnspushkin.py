@@ -311,8 +311,9 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             if device.data:
                 default_payload = device.data.get("default_payload", {})
                 if not isinstance(default_payload, dict):
-                    log.error(
-                        "default_payload is malformed, this value must be a dict."
+                    logger.warning(
+                        "Rejecting pushkey due to misconfigured default_payload, please ensure that "
+                        "default_payload is a dict."
                     )
                     return [device.pushkey]
 
@@ -347,7 +348,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                             log, span, device, shaved_payload, prio
                         )
                 except TemporaryNotificationDispatchException as exc:
-                    retry_delay = self.RETRY_DELAY_BASE * (2**retry_number)
+                    retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
                     if exc.custom_retry_delay is not None:
                         retry_delay = exc.custom_retry_delay
 
