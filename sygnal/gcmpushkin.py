@@ -396,7 +396,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     if len(pushkeys) == 0:
                         break
                 except TemporaryNotificationDispatchException as exc:
-                    retry_delay = RETRY_DELAY_BASE * (2 ** retry_number)
+                    retry_delay = RETRY_DELAY_BASE * (2**retry_number)
                     if exc.custom_retry_delay is not None:
                         retry_delay = exc.custom_retry_delay
 

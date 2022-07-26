@@ -348,7 +348,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                             log, span, device, shaved_payload, prio
                         )
                 except TemporaryNotificationDispatchException as exc:
-                    retry_delay = self.RETRY_DELAY_BASE * (2 ** retry_number)
+                    retry_delay = self.RETRY_DELAY_BASE * (2**retry_number)
                     if exc.custom_retry_delay is not None:
                         retry_delay = exc.custom_retry_delay
 
