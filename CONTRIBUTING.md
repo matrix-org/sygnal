@@ -65,7 +65,7 @@ changes into our repo.
 
 Some other points to follow:
 
- * Please base your changes on the `master` branch.
+ * Please base your changes on the `main` branch.
 
  * Please follow the [code style requirements](#code-style).
 
