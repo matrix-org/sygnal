@@ -352,16 +352,13 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
             data = GcmPushkin._build_data(n, device)
 
-            # Reject pushkey if default_payload is misconfigured
+            # Reject pushkey(s) if default_payload is misconfigured
             if data is None:
-                logger.warning(
-                    "Rejecting pushkey due to misconfigured default_payload, "
+                log.warning(
+                    "Rejecting pushkey(s) due to misconfigured default_payload, "
                     "please ensure that default_payload is a dict."
                 )
-                failed.append(device.pushkey)
-                pushkeys.remove(device.pushkey)
-                if len(pushkeys) == 0:
-                    return failed
+                return pushkeys
 
             headers = {
                 "User-Agent": ["sygnal"],
