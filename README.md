@@ -3,11 +3,11 @@ Introduction
 
 Sygnal is a reference Push Gateway for [Matrix](https://matrix.org/).
 
-See <https://matrix.org/docs/spec/client_server/r0.5.0#id134> for a high
+See https://spec.matrix.org/latest/push-gateway-api/#overview for a high
 level overview of how notifications work in Matrix.
 
-<https://matrix.org/docs/spec/push_gateway/r0.1.0> describes the
-protocol that Matrix Home Servers use to send notifications to Push
+The [Matrix Specification](https://spec.matrix.org/latest/push-gateway-api/)
+describes the protocol that Matrix Home Servers use to send notifications to Push
 Gateways such as Sygnal.
 
 
@@ -31,7 +31,7 @@ are to be handled. Each app should be given its own subsection, with the
 key of that subsection being the app's `app_id`. Keys in this section
 take the form of the `app_id`, as specified when setting up a Matrix
 pusher (see
-<https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-pushers-set>).
+https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3pushersset).
 
 See the sample configuration for examples.
 
@@ -103,9 +103,9 @@ If you wish, you can instead configure a HTTP CONNECT proxy in
 Pusher `data` configuration
 ===========================
 
-The following parameters can be specified in the [data]{.title-ref}
+The following parameters can be specified in the `data`
 dictionary which is given when configuring the pusher via
-[POST /_matrix/client/r0/pushers/set](https://matrix.org/docs/spec/client_server/latest#post-matrix-client-r0-pushers-set):
+[POST /_matrix/client/v3/pushers/set](https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3pushersset):
 
 - `default_payload`: a dictionary which defines the basic payload to
   be sent to the notification service. Sygnal will merge information
