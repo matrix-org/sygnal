@@ -142,7 +142,7 @@ class GcmTestCase(testutils.TestCase):
         )
 
         self.assertEqual(resp, {"rejected": ["badpayload"]})
-        self.assertEqual(gcm.num_requests, 1)
+        self.assertEqual(gcm.num_requests, 0)
 
     def test_rejected(self):
         """
