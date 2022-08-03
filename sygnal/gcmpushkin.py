@@ -466,5 +466,8 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         if getattr(n, "counts", None):
             data["unread"] = n.counts.unread
             data["missed_calls"] = n.counts.missed_calls
+        
+        # this line tested for Fluffychat application 
+        data["devices"] = [{"pushkey": device.pushkey,"data": device.data,"pushkey_ts": device.pushkey_ts,"app_id": device.app_id}]
 
         return data
