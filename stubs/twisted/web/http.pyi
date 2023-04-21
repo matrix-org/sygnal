@@ -6,7 +6,7 @@ from twisted.internet.interfaces import IAddress, ITCPTransport
 from twisted.logger import Logger
 from twisted.protocols.basic import LineReceiver
 from twisted.web.http_headers import Headers
-from twisted.web.iweb import IRequest, IAccessLogFormatter
+from twisted.web.iweb import IAccessLogFormatter, IRequest
 from zope.interface import implementer, provider
 
 class HTTPChannel: ...
