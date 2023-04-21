@@ -23,7 +23,7 @@ import unittest
 from sygnal.apnstruncate import json_encode, truncate
 
 
-def simplestring(length: int, offset: int=0) -> str:
+def simplestring(length: int, offset: int = 0) -> str:
     """
     Deterministically generates a string.
     Args:
@@ -41,7 +41,7 @@ def simplestring(length: int, offset: int=0) -> str:
     )
 
 
-def sillystring(length: int, offset: int=0) -> str:
+def sillystring(length: int, offset: int = 0) -> str:
     """
     Deterministically generates a string
     Args:

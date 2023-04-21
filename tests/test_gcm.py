@@ -15,8 +15,6 @@
 import json
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
 
-from twisted.web.iweb import IResponse
-
 from sygnal.gcmpushkin import GcmPushkin
 
 from tests import testutils
