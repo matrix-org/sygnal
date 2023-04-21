@@ -8,8 +8,8 @@ jobs:
   check-code-style:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.7"
       - run: python -m pip install tox
@@ -18,8 +18,8 @@ jobs:
   check-types-mypy:
     runs-on: ubuntu-latest
     steps: 
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.7"
       - run: python -m pip install tox  
@@ -30,24 +30,27 @@ jobs:
     needs: [check-code-style, check-types-mypy]
     runs-on: ubuntu-latest
     steps: 
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.7"
       - run: python -m pip install -e .
-      - run: trial tests
+      - run: python -m twisted.trial tests
 
   run-unit-tests-olddeps:
     name: Unit tests (old dependencies)
     needs: [ check-code-style, check-types-mypy ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.7"
-      - name: Install old dependencies
-        run: pip install -r <(./scripts-dev/old_deps.py)
+      - name: Patch pyproject.toml to require oldest dependencies
+        run: |
+          # Ugly. Could use something like https://pyproject-parser.readthedocs.io/en/latest/cli.html#info in the future.
+          sed --in-place=.bak -e 's/>=/==/g' pyproject.toml
+          diff pyproject.toml.bak pyproject.toml || true # diff returns 1 if there is a change
       - name: Install Sygnal
         run: python -m pip install -e .
-      - run: trial tests
+      - run: python -m twisted.trial tests

@@ -33,10 +33,10 @@ jobs:
 
       # we explicitly check out the repository (and use `context: .` in buildx)
       # because we need to preserve the git metadata so that setuptools_scm
-      # (as part of Sygnal's setup.py) can deduce the package version.
+      # (part of build system config in pyproject.toml) can deduce the package version.
       # See: https://github.com/marketplace/actions/build-and-push-docker-images#path-context
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build all platforms
         uses: docker/build-push-action@v2

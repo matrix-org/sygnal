@@ -13,15 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import Any, Dict, List
 
-from sygnal.notifications import ConcurrencyLimitedPushkin, Device, Notification
+from sygnal.notifications import (
+    ConcurrencyLimitedPushkin,
+    Device,
+    Notification,
+    NotificationContext,
+)
 from sygnal.utils import twisted_sleep
 
 from tests.testutils import TestCase
-
-if TYPE_CHECKING:
-    from sygnal.notifications import NotificationContext
 
 DEVICE_GCM1_EXAMPLE = {
     "app_id": "com.example.gcm",
@@ -41,7 +43,7 @@ DEVICE_APNS_EXAMPLE = {
 
 
 class SlowConcurrencyLimitedDummyPushkin(ConcurrencyLimitedPushkin):
-    async def dispatch_notification(
+    async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: "NotificationContext"
     ) -> List[str]:
         """

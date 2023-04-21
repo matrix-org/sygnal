@@ -3,7 +3,8 @@
 # Runs linting scripts over the local Sygnal checkout
 # isort - sorts import statements
 # black - opinionated code formatter
-# flake8 - lints and finds mistakes
+# ruff - lints and finds mistakes
+# mypy - type checker
 
 set -e
 
@@ -84,8 +85,7 @@ else
     files=(
       "sygnal"
       "tests"
-      "scripts-dev"
-      "setup.py"
+      "stubs"
     )
   fi
 fi
@@ -98,5 +98,5 @@ set -x
 
 isort "${files[@]}"
 python3 -m black "${files[@]}"
-flake8 "${files[@]}"
+ruff --quiet --fix "${files[@]}"
 mypy "${files[@]}"
