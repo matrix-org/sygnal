@@ -80,9 +80,9 @@ class ProxyAgent(_AgentBase):
             parsed_url = decompose_http_proxy_url(proxy_url_str)
             self._proxy_auth = parsed_url.credentials
 
-            self.proxy_endpoint = HostnameEndpoint(
+            self.proxy_endpoint: Optional[HostnameEndpoint] = HostnameEndpoint(
                 reactor, parsed_url.hostname, parsed_url.port, **self._endpoint_kwargs
-            )  # type: Optional[HostnameEndpoint]
+            )
         else:
             self.proxy_endpoint = None
 
@@ -124,11 +124,12 @@ class ProxyAgent(_AgentBase):
         pool_key: tuple = (parsed_uri.scheme, parsed_uri.host, parsed_uri.port)
         request_path = parsed_uri.originForm
 
+        endpoint: IStreamClientEndpoint
         if parsed_uri.scheme == b"http" and self.proxy_endpoint:
             # Cache *all* connections under the same key, since we are only
             # connecting to a single destination, the proxy:
             pool_key = ("http-proxy", self.proxy_endpoint)
-            endpoint = self.proxy_endpoint  # type: IStreamClientEndpoint
+            endpoint = self.proxy_endpoint
             request_path = uri
         elif parsed_uri.scheme == b"https" and self.proxy_endpoint:
             endpoint = HTTPConnectProxyEndpoint(

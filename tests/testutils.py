@@ -337,6 +337,6 @@ class FakeChannel:
         """pretend that a request has arrived, and process it"""
 
         # this is normally done by HTTPChannel, in its various lineReceived etc methods
-        req = self.site.requestFactory(self)  # type: Request
+        req: Request = self.site.requestFactory(self)
         req.content = content
         req.requestReceived(method, request_path, b"1.1")
