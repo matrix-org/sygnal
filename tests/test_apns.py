@@ -56,7 +56,7 @@ DEVICE_EXAMPLE_FOR_PUSH_TYPE_PUSHKIN = {
 
 
 class ApnsTestCase(testutils.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.apns_mock_class = patch("sygnal.apnspushkin.APNs").start()
         self.apns_mock = MagicMock()
         self.apns_mock_class.return_value = self.apns_mock
@@ -82,7 +82,7 @@ class ApnsTestCase(testutils.TestCase):
         assert isinstance(test_pushkin, ApnsPushkin)
         return test_pushkin
 
-    def config_setup(self, config):
+    def config_setup(self, config) -> None:
         super().config_setup(config)
         config["apps"][PUSHKIN_ID] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_WITH_PUSH_TYPE] = {
@@ -91,7 +91,7 @@ class ApnsTestCase(testutils.TestCase):
             "push_type": "alert",
         }
 
-    def test_payload_truncation(self):
+    def test_payload_truncation(self) -> None:
         """
         Tests that APNS message bodies will be truncated to fit the limits of
         APNS.
@@ -114,7 +114,7 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertLessEqual(len(apnstruncate.json_encode(payload)), 240)
 
-    def test_payload_truncation_test_validity(self):
+    def test_payload_truncation_test_validity(self) -> None:
         """
         This tests that L{test_payload_truncation_success} is a valid test
         by showing that not limiting the truncation size would result in a
@@ -138,7 +138,7 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertGreater(len(apnstruncate.json_encode(payload)), 200)
 
-    def test_expected(self):
+    def test_expected(self) -> None:
         """
         Tests the expected case: a good response from APNS means we pass on
         a good response to the homeserver.
@@ -177,7 +177,7 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertEqual({"rejected": []}, resp)
 
-    def test_expected_event_id_only_with_default_payload(self):
+    def test_expected_event_id_only_with_default_payload(self) -> None:
         """
         Tests the expected fallback case: a good response from APNS means we pass on
         a good response to the homeserver.
@@ -214,7 +214,7 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertEqual({"rejected": []}, resp)
 
-    def test_expected_badge_only_with_default_payload(self):
+    def test_expected_badge_only_with_default_payload(self) -> None:
         """
         Tests the expected fallback case: a good response from APNS means we pass on
         a good response to the homeserver.
@@ -243,7 +243,7 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertEqual({"rejected": []}, resp)
 
-    def test_expected_full_with_default_payload(self):
+    def test_expected_full_with_default_payload(self) -> None:
         """
         Tests the expected fallback case: a good response from APNS means we pass on
         a good response to the homeserver.
@@ -285,7 +285,7 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertEqual({"rejected": []}, resp)
 
-    def test_misconfigured_payload_is_rejected(self):
+    def test_misconfigured_payload_is_rejected(self) -> None:
         """Test that a malformed default_payload causes pushkey to be rejected"""
 
         resp = self._request(
@@ -294,7 +294,7 @@ class ApnsTestCase(testutils.TestCase):
 
         self.assertEqual({"rejected": ["badpayload"]}, resp)
 
-    def test_rejection(self):
+    def test_rejection(self) -> None:
         """
         Tests the rejection case: a rejection response from APNS leads to us
         passing on a rejection to the homeserver.
@@ -312,7 +312,7 @@ class ApnsTestCase(testutils.TestCase):
         self.assertEqual(1, method.call_count)
         self.assertEqual({"rejected": ["spqr"]}, resp)
 
-    def test_no_retry_on_4xx(self):
+    def test_no_retry_on_4xx(self) -> None:
         """
         Test that we don't retry when we get a 4xx error but do not mark as
         rejected.
@@ -330,7 +330,7 @@ class ApnsTestCase(testutils.TestCase):
         self.assertEqual(1, method.call_count)
         self.assertEqual(502, resp)
 
-    def test_retry_on_5xx(self):
+    def test_retry_on_5xx(self) -> None:
         """
         Test that we DO retry when we get a 5xx error and do not mark as
         rejected.
@@ -348,7 +348,7 @@ class ApnsTestCase(testutils.TestCase):
         self.assertGreater(method.call_count, 1)
         self.assertEqual(502, resp)
 
-    def test_expected_with_push_type(self):
+    def test_expected_with_push_type(self) -> None:
         """
         Tests the expected case: a good response from APNS means we pass on
         a good response to the homeserver.
