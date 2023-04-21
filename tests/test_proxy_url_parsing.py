@@ -18,7 +18,7 @@ from sygnal.helper.proxy import HttpProxyUrl, decompose_http_proxy_url
 
 
 class ProxyUrlTestCase(unittest.TestCase):
-    def test_decompose_http_proxy_url(self):
+    def test_decompose_http_proxy_url(self) -> None:
         parts = decompose_http_proxy_url("http://example.org")
         self.assertEqual(parts, HttpProxyUrl("example.org", 80, None))
 
@@ -35,7 +35,7 @@ class ProxyUrlTestCase(unittest.TestCase):
             parts, HttpProxyUrl("example.org", 8080, ("bob", "secretsquirrel"))
         )
 
-    def test_decompose_username_only(self):
+    def test_decompose_username_only(self) -> None:
         """
         We do not support usernames without passwords for now — this tests the
         current behaviour, though (it ignores the username).
@@ -44,7 +44,7 @@ class ProxyUrlTestCase(unittest.TestCase):
         parts = decompose_http_proxy_url("http://bob@example.org:8080")
         self.assertEqual(parts, HttpProxyUrl("example.org", 8080, None))
 
-    def test_decompose_http_proxy_url_failure(self):
+    def test_decompose_http_proxy_url_failure(self) -> None:
         # test that non-HTTP schemes raise an exception
         self.assertRaises(
             RuntimeError, lambda: decompose_http_proxy_url("ftp://example.org")

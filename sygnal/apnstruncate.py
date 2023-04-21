@@ -28,7 +28,7 @@ Choppable = Union[
 ]
 
 
-def json_encode(payload) -> bytes:
+def json_encode(payload: Dict[str, Any]) -> bytes:
     return json.dumps(payload, ensure_ascii=False).encode()
 
 
@@ -115,7 +115,7 @@ def _choppables_for_aps(aps: Dict[str, Any]) -> List[Choppable]:
 def _choppable_get(
     aps: Dict[str, Any],
     choppable: Choppable,
-):
+) -> str:
     if choppable[0] == "alert":
         return aps["alert"]
     elif choppable[0] == "alert.body":

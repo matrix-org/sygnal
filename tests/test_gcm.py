@@ -13,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
 
 from sygnal.gcmpushkin import GcmPushkin
 
 from tests import testutils
 from tests.testutils import DummyResponse
+
+if TYPE_CHECKING:
+    from sygnal.sygnal import Sygnal
 
 DEVICE_EXAMPLE = {"app_id": "com.example.gcm", "pushkey": "spqr", "pushkey_ts": 42}
 DEVICE_EXAMPLE2 = {"app_id": "com.example.gcm", "pushkey": "spqr2", "pushkey_ts": 42}
@@ -57,22 +61,26 @@ class TestGcmPushkin(GcmPushkin):
     can be preloaded with virtual requests.
     """
 
-    def __init__(self, name, sygnal, config):
+    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         super().__init__(name, sygnal, config)
-        self.preloaded_response = None
-        self.preloaded_response_payload = None
-        self.last_request_body = None
-        self.last_request_headers = None
+        self.preloaded_response = DummyResponse(0)
+        self.preloaded_response_payload: Dict[str, Any] = {}
+        self.last_request_body: Dict[str, Any] = {}
+        self.last_request_headers: Dict[AnyStr, List[AnyStr]] = {}  # type: ignore[valid-type]
         self.num_requests = 0
 
-    def preload_with_response(self, code, response_payload):
+    def preload_with_response(
+        self, code: int, response_payload: Dict[str, Any]
+    ) -> None:
         """
         Preloads a fake GCM response.
         """
         self.preloaded_response = DummyResponse(code)
         self.preloaded_response_payload = response_payload
 
-    async def _perform_http_request(self, body, headers):
+    async def _perform_http_request(  # type: ignore[override]
+        self, body: Dict[str, Any], headers: Dict[AnyStr, List[AnyStr]]
+    ) -> Tuple[DummyResponse, str]:
         self.last_request_body = body
         self.last_request_headers = headers
         self.num_requests += 1
@@ -80,7 +88,7 @@ class TestGcmPushkin(GcmPushkin):
 
 
 class GcmTestCase(testutils.TestCase):
-    def config_setup(self, config):
+    def config_setup(self, config: Dict[str, Any]) -> None:
         config["apps"]["com.example.gcm"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
             "api_key": "kii",
@@ -96,7 +104,7 @@ class GcmTestCase(testutils.TestCase):
         assert isinstance(pushkin, TestGcmPushkin)
         return pushkin
 
-    def test_expected(self):
+    def test_expected(self) -> None:
         """
         Tests the expected case: a good response from GCM leads to a good
         response from Sygnal.
@@ -111,7 +119,7 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": []})
         self.assertEqual(gcm.num_requests, 1)
 
-    def test_expected_with_default_payload(self):
+    def test_expected_with_default_payload(self) -> None:
         """
         Tests the expected case: a good response from GCM leads to a good
         response from Sygnal.
@@ -128,7 +136,7 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": []})
         self.assertEqual(gcm.num_requests, 1)
 
-    def test_misformed_default_payload_rejected(self):
+    def test_misformed_default_payload_rejected(self) -> None:
         """
         Tests that a non-dict default_payload is rejected.
         """
@@ -144,7 +152,7 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": ["badpayload"]})
         self.assertEqual(gcm.num_requests, 0)
 
-    def test_rejected(self):
+    def test_rejected(self) -> None:
         """
         Tests the rejected case: a pushkey rejected to GCM leads to Sygnal
         informing the homeserver of the rejection.
@@ -159,7 +167,7 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": ["spqr"]})
         self.assertEqual(gcm.num_requests, 1)
 
-    def test_batching(self):
+    def test_batching(self) -> None:
         """
         Tests that multiple GCM devices have their notification delivered to GCM
         together, instead of being delivered separately.
@@ -184,7 +192,7 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
         self.assertEqual(gcm.num_requests, 1)
 
-    def test_batching_individual_failure(self):
+    def test_batching_individual_failure(self) -> None:
         """
         Tests that multiple GCM devices have their notification delivered to GCM
         together, instead of being delivered separately,
@@ -211,7 +219,7 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
         self.assertEqual(gcm.num_requests, 1)
 
-    def test_fcm_options(self):
+    def test_fcm_options(self) -> None:
         """
         Tests that the config option `fcm_options` allows setting a base layer
         of options to pass to FCM, for example ones that would be needed for iOS.

@@ -19,11 +19,12 @@
 
 import string
 import unittest
+from typing import Any, Dict
 
 from sygnal.apnstruncate import json_encode, truncate
 
 
-def simplestring(length, offset=0):
+def simplestring(length: int, offset: int = 0) -> str:
     """
     Deterministically generates a string.
     Args:
@@ -41,7 +42,7 @@ def simplestring(length, offset=0):
     )
 
 
-def sillystring(length, offset=0):
+def sillystring(length: int, offset: int = 0) -> str:
     """
     Deterministically generates a string
     Args:
@@ -55,7 +56,7 @@ def sillystring(length, offset=0):
     return "".join([chars[(i + offset) % len(chars)] for i in range(length)])
 
 
-def payload_for_aps(aps):
+def payload_for_aps(aps: Dict[str, Any]) -> Dict[str, Any]:
     """
     Returns the APNS payload for an 'aps' dictionary.
     """
@@ -63,7 +64,7 @@ def payload_for_aps(aps):
 
 
 class TruncateTestCase(unittest.TestCase):
-    def test_dont_truncate(self):
+    def test_dont_truncate(self) -> None:
         """
         Tests that truncation is not performed if unnecessary.
         """
@@ -72,7 +73,7 @@ class TruncateTestCase(unittest.TestCase):
         aps = {"alert": txt}
         self.assertEqual(txt, truncate(payload_for_aps(aps), 256)["aps"]["alert"])
 
-    def test_truncate_alert(self):
+    def test_truncate_alert(self) -> None:
         """
         Tests that the 'alert' string field will be truncated when needed.
         """
@@ -83,7 +84,7 @@ class TruncateTestCase(unittest.TestCase):
             txt[:5], truncate(payload_for_aps(aps), overhead + 5)["aps"]["alert"]
         )
 
-    def test_truncate_alert_body(self):
+    def test_truncate_alert_body(self) -> None:
         """
         Tests that the 'alert' 'body' field will be truncated when needed.
         """
@@ -95,7 +96,7 @@ class TruncateTestCase(unittest.TestCase):
             truncate(payload_for_aps(aps), overhead + 5)["aps"]["alert"]["body"],
         )
 
-    def test_truncate_loc_arg(self):
+    def test_truncate_loc_arg(self) -> None:
         """
         Tests that the 'alert' 'loc-args' field will be truncated when needed.
         (Tests with one loc arg)
@@ -108,7 +109,7 @@ class TruncateTestCase(unittest.TestCase):
             truncate(payload_for_aps(aps), overhead + 5)["aps"]["alert"]["loc-args"][0],
         )
 
-    def test_truncate_loc_args(self):
+    def test_truncate_loc_args(self) -> None:
         """
         Tests that the 'alert' 'loc-args' field will be truncated when needed.
         (Tests with two loc args)
@@ -130,7 +131,7 @@ class TruncateTestCase(unittest.TestCase):
             ],
         )
 
-    def test_python_unicode_support(self):
+    def test_python_unicode_support(self) -> None:
         """
         Tests Python's unicode support :-
             a one character unicode string should have a length of one, even if it's one
@@ -146,7 +147,7 @@ class TruncateTestCase(unittest.TestCase):
             )
             self.fail(msg)
 
-    def test_truncate_string_with_multibyte(self):
+    def test_truncate_string_with_multibyte(self) -> None:
         """
         Tests that truncation works as expected on strings containing one
         multibyte character.
@@ -160,7 +161,7 @@ class TruncateTestCase(unittest.TestCase):
             txt[:17], truncate(payload_for_aps(aps), overhead + 20)["aps"]["alert"]
         )
 
-    def test_truncate_multibyte(self):
+    def test_truncate_multibyte(self) -> None:
         """
         Tests that truncation works as expected on strings containing only
         multibyte characters.
