@@ -376,7 +376,13 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 else:
                     body["registration_ids"] = pushkeys
 
-                log.info("Sending (attempt %i) => %r room:%s, event:%s", retry_number, pushkeys, n.room_id, n.event_id)
+                log.info(
+                    "Sending (attempt %i) => %r room:%s, event:%s",
+                    retry_number,
+                    pushkeys,
+                    n.room_id,
+                    n.event_id,
+                )
 
                 try:
                     span_tags = {"retry_num": retry_number}

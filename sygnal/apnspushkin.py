@@ -246,7 +246,6 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         )
 
         try:
-
             with ACTIVE_REQUESTS_GAUGE.track_inprogress():
                 with SEND_TIME_HISTOGRAM.time():
                     response = await self._send_notification(request)
