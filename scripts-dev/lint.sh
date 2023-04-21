@@ -4,6 +4,7 @@
 # isort - sorts import statements
 # black - opinionated code formatter
 # flake8 - lints and finds mistakes
+# mypy - type checker
 
 set -e
 
@@ -84,8 +85,6 @@ else
     files=(
       "sygnal"
       "tests"
-      "scripts-dev"
-      "setup.py"
     )
   fi
 fi

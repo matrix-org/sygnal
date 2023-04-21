@@ -46,8 +46,11 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.7"
-      - name: Install old dependencies
-        run: pip install -r <(./scripts-dev/old_deps.py)
+      - name: Patch pyproject.toml to require oldest dependencies
+        run: |
+          # Ugly. Could use something like https://pyproject-parser.readthedocs.io/en/latest/cli.html#info in the future.
+          sed --in-place=.bak -e 's/>=/==/g' pyproject.toml
+          diff pyproject.toml.bak pyproject.toml || true # diff returns 1 if there is a change
       - name: Install Sygnal
         run: python -m pip install -e .
       - run: trial tests

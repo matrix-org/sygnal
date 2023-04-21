@@ -33,3 +33,67 @@
         directory = "misc"
         name = "Internal Changes"
         showcontent = true
+
+[build-system]
+build-backend = "setuptools.build_meta"
+# Setuptools 64 adds support for PEP 660, which makes `pip install -e .` work.
+requires = ["setuptools>=64", "setuptools_scm[toml]>=6.2"]
+
+[tool.setuptools_scm]
+# Note: including this section without any keys still has meaning, see
+# https://github.com/pypa/setuptools_scm/blob/51b3566170be25582b5c3216a54b024caf3d431f/README.rst?plain=1#L63-L71
+
+[tool.setuptools.packages.find]
+exclude = ["tests", "tests.*"]
+
+[project]
+name = "matrix-sygnal"
+dynamic = ["version"]
+description = "Reference Push Gateway for Matrix Notifications"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = "~=3.7"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Matrix.org Team and contributors", email = "packages@matrix.org"}
+]
+dependencies = [
+    "aioapns>=1.10,<2.1",
+    "attrs>=19.2.0",
+    "cryptography>=2.6.1",
+    "idna>=2.8",
+    'importlib_metadata;python_version<"3.8"',
+    "jaeger-client>=4.0.0",
+    "matrix-common==1.0.0",
+    "opentracing>=2.2.0",
+    "prometheus_client>=0.7.0,<0.8",
+    "py-vapid>=1.7.0",
+    "pyOpenSSL>=17.5.0",
+    "pywebpush>=1.13.0",
+    "pyyaml>=5.1.1",
+    "sentry-sdk>=0.10.2",
+    "service_identity>=18.1.0",
+    "Twisted>=19.7",
+    'typing-extensions>=3.7.4;python_version<"3.8"',
+    "zope.interface>=4.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black==22.3.0",
+    "coverage~=5.5",
+    "flake8==3.9.0",
+    "isort~=5.0",
+    "mypy==0.812",
+    "mypy-zope==0.3.0",
+    "towncrier",
+    "tox",
+    "types-opentracing>=2.4.2",
+    "typing-extensions>=3.7.4",
+]
+
+
+[project.urls]
+homepage = "https://github.com/matrix-org/sygnal"
+documentation = "https://github.com/matrix-org/sygnal/tree/main/docs"
+repository = "https://github.com/matrix-org/sygnal.git"
+changelog = "https://github.com/matrix-org/sygnal/blob/main/CHANGELOG.md"
