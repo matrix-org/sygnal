@@ -19,6 +19,7 @@
 
 import string
 import unittest
+from typing import Any, Dict
 
 from sygnal.apnstruncate import json_encode, truncate
 
@@ -55,7 +56,7 @@ def sillystring(length: int, offset: int = 0) -> str:
     return "".join([chars[(i + offset) % len(chars)] for i in range(length)])
 
 
-def payload_for_aps(aps):
+def payload_for_aps(aps: Dict[str, Any]) -> Dict[str, Any]:
     """
     Returns the APNS payload for an 'aps' dictionary.
     """

@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 from aioapns.common import NotificationResult, PushType
@@ -82,7 +83,7 @@ class ApnsTestCase(testutils.TestCase):
         assert isinstance(test_pushkin, ApnsPushkin)
         return test_pushkin
 
-    def config_setup(self, config) -> None:
+    def config_setup(self, config: Dict[str, Any]) -> None:
         super().config_setup(config)
         config["apps"][PUSHKIN_ID] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_WITH_PUSH_TYPE] = {
