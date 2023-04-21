@@ -228,18 +228,11 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         device: Device,
         shaved_payload: Dict[str, Any],
         prio: int,
+        notif_id: str,
     ) -> List[str]:
         """
         Actually attempts to dispatch the notification once.
         """
-
-        # this is no good: APNs expects ID to be in their format
-        # so we can't just derive a
-        # notif_id = context.request_id + f"-{n.devices.index(device)}"
-
-        notif_id = str(uuid4())
-
-        log.info(f"Sending as APNs-ID {notif_id}")
         span.set_tag("apns_id", notif_id)
 
         device_token = base64.b64decode(device.pushkey).hex()
@@ -344,8 +337,24 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                         "apns_dispatch_try", tags=span_tags, child_of=span_parent
                     ) as span:
                         assert shaved_payload is not None
+
+                        # this is no good: APNs expects ID to be in their format
+                        # so we can't just derive a
+                        # notif_id = context.request_id + f"-{n.devices.index(device)}"
+                        notif_id = str(uuid4())
+                        # XXX: shouldn't we use the same notif_id for each retry?
+
+                        log.info(
+                            "Sending (attempt %i) => %s APNs-ID:%s room:%s, event:%s",
+                            retry_number,
+                            notif_id,
+                            device.pushkey,
+                            n.room_id,
+                            n.event_id,
+                        )
+
                         return await self._dispatch_request(
-                            log, span, device, shaved_payload, prio
+                            log, span, device, shaved_payload, prio, notif_id
                         )
                 except TemporaryNotificationDispatchException as exc:
                     retry_delay = self.RETRY_DELAY_BASE * (2**retry_number)
