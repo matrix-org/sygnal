@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: "3.7"
       - run: python -m pip install -e .
-      - run: trial tests
+      - run: python -m twisted.trial tests
 
   run-unit-tests-olddeps:
     name: Unit tests (old dependencies)
@@ -53,4 +53,4 @@ jobs:
           diff pyproject.toml.bak pyproject.toml || true # diff returns 1 if there is a change
       - name: Install Sygnal
         run: python -m pip install -e .
-      - run: trial tests
+      - run: python -m twisted.trial tests
