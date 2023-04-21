@@ -46,7 +46,7 @@ jobs:
       # (part of build system config in pyproject.toml) can deduce the package version.
       # See: https://github.com/marketplace/actions/build-and-push-docker-images#path-context
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build and push all platforms
         uses: docker/build-push-action@v2
