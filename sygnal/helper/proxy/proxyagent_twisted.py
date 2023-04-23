@@ -18,15 +18,21 @@
 
 import logging
 import re
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from twisted.internet import defer
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
-from twisted.internet.interfaces import IStreamClientEndpoint
+from twisted.internet.interfaces import IReactorCore, IStreamClientEndpoint
 from twisted.python.failure import Failure
-from twisted.web.client import URI, BrowserLikePolicyForHTTPS, _AgentBase
+from twisted.web.client import (
+    URI,
+    BrowserLikePolicyForHTTPS,
+    HTTPConnectionPool,
+    _AgentBase,
+)
 from twisted.web.error import SchemeNotSupported
-from twisted.web.iweb import IAgent
+from twisted.web.http_headers import Headers
+from twisted.web.iweb import IAgent, IBodyProducer, IPolicyForHTTPS, IResponse
 from zope.interface import implementer
 
 from sygnal.helper.proxy import decompose_http_proxy_url
@@ -61,16 +67,16 @@ class ProxyAgent(_AgentBase):
 
     def __init__(
         self,
-        reactor,
-        contextFactory=BrowserLikePolicyForHTTPS(),
-        connectTimeout=None,
-        bindAddress=None,
-        pool=None,
+        reactor: IReactorCore,
+        contextFactory: IPolicyForHTTPS = BrowserLikePolicyForHTTPS(),
+        connectTimeout: Optional[float] = None,
+        bindAddress: Optional[bytes] = None,
+        pool: Optional[HTTPConnectionPool] = None,
         proxy_url_str: Optional[str] = None,
     ):
         _AgentBase.__init__(self, reactor, pool)
 
-        self._endpoint_kwargs = {}
+        self._endpoint_kwargs: Dict[str, Any] = {}
         if connectTimeout is not None:
             self._endpoint_kwargs["timeout"] = connectTimeout
         if bindAddress is not None:
@@ -89,7 +95,13 @@ class ProxyAgent(_AgentBase):
         self._policy_for_https = contextFactory
         self._reactor = reactor
 
-    def request(self, method, uri, headers=None, bodyProducer=None):
+    def request(
+        self,
+        method: bytes,
+        uri: bytes,
+        headers: Optional[Headers] = None,
+        bodyProducer: Optional[IBodyProducer] = None,
+    ) -> "defer.Deferred[IResponse]":
         """
         Issue a request to the server indicated by the given uri.
 

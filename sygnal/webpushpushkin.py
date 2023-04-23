@@ -25,6 +25,7 @@ from matrix_common.regex import glob_to_regex
 from prometheus_client import Gauge, Histogram
 from py_vapid import Vapid, VapidException
 from pywebpush import CaseInsensitiveDict, webpush
+from twisted.internet import defer
 from twisted.internet.defer import DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
@@ -401,7 +402,7 @@ class HttpDelayedRequest:
 
     def execute(
         self, http_agent: ProxyAgent, low_priority: bool, topic: bytes
-    ) -> IResponse:
+    ) -> "defer.Deferred[IResponse]":
         body_producer = FileBodyProducer(BytesIO(self.data))
         # Convert the headers to the camelcase version.
         headers = {

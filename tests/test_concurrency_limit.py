@@ -44,7 +44,7 @@ DEVICE_APNS_EXAMPLE = {
 
 class SlowConcurrencyLimitedDummyPushkin(ConcurrencyLimitedPushkin):
     async def _dispatch_notification_unlimited(
-        self, n: Notification, device: Device, context: "NotificationContext"
+        self, n: Notification, device: Device, context: NotificationContext
     ) -> List[str]:
         """
         We will deliver the notification to the mighty nobody

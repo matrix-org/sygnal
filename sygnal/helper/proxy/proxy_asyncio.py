@@ -20,7 +20,7 @@ from asyncio.protocols import Protocol
 from asyncio.transports import Transport
 from base64 import urlsafe_b64encode
 from ssl import Purpose, SSLContext, create_default_context
-from typing import Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union
 
 import attr
 
@@ -296,7 +296,7 @@ class ProxyingEventLoopWrapper:
         host: str,
         port: int,
         ssl: Union[bool, SSLContext] = False,
-    ):
+    ) -> Tuple[BaseTransport, Protocol]:
         proxy_url_parts = decompose_http_proxy_url(self.proxy_url_str)
 
         sslcontext: Optional[SSLContext]
@@ -309,7 +309,7 @@ class ProxyingEventLoopWrapper:
         else:
             sslcontext = None
 
-        def make_protocol():
+        def make_protocol() -> HttpConnectProtocol:
             proxy_setup_protocol = HttpConnectProtocol(
                 (host, port),
                 proxy_url_parts.credentials,
@@ -339,7 +339,7 @@ class ProxyingEventLoopWrapper:
 
         return transport, user_protocol
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         """
         We use this to delegate other method calls to the real EventLoop.
         """
@@ -356,27 +356,27 @@ class _BufferedWrapperProtocol(Protocol):
     _connected: bool = False
     _buffer: bytearray = attr.Factory(bytearray)
 
-    def connection_made(self, transport: BaseTransport):
+    def connection_made(self, transport: BaseTransport) -> None:
         self._connected = True
         self._protocol.connection_made(transport)
         if self._buffer:
             self._protocol.data_received(self._buffer)
             self._buffer = bytearray()
 
-    def connection_lost(self, exc: Optional[Exception]):
+    def connection_lost(self, exc: Optional[Exception]) -> None:
         self._protocol.connection_lost(exc)
 
-    def pause_writing(self):
+    def pause_writing(self) -> None:
         self._protocol.pause_writing()
 
-    def resume_writing(self):
+    def resume_writing(self) -> None:
         self._protocol.resume_writing()
 
-    def data_received(self, data: bytes):
+    def data_received(self, data: bytes) -> None:
         if self._connected:
             self._protocol.data_received(data)
         else:
             self._buffer.extend(data)
 
-    def eof_received(self):
+    def eof_received(self) -> Optional[bool]:
         return self._protocol.eof_received()
