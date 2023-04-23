@@ -243,7 +243,7 @@ class HTTPConnectSetupClient(http.HTTPClient):
     def handleStatus(self, version: bytes, status: bytes, message: bytes) -> None:
         logger.debug("Got Status: %s %s %s", status, message, version)
         if status != b"200":
-            raise ProxyConnectError("Unexpected status on CONNECT: %s" % status)
+            raise ProxyConnectError(f"Unexpected status on CONNECT: {status!s}")
 
     def handleEndHeaders(self) -> None:
         logger.debug("End Headers")
