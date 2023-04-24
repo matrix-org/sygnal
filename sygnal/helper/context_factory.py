@@ -19,6 +19,7 @@
 
 import logging
 
+import idna
 from OpenSSL import SSL
 from service_identity import VerificationError
 from service_identity.pyopenssl import verify_hostname, verify_ip_address
@@ -132,11 +133,17 @@ class ConnectionVerifier:
     def __init__(self, hostname: bytes):
         _decoded = hostname.decode("ascii")
         if isIPAddress(_decoded) or isIPv6Address(_decoded):
+            self._hostnameBytes = hostname
             self._is_ip_address = True
         else:
+            # twisted's ClientTLSOptions falls back to the stdlib impl here if
+            # idna is not installed, but points out that lacks support for
+            # IDNA2008 (http://bugs.python.org/issue17305).
+            #
+            # We can rely on having idna.
+            self._hostnameBytes = idna.encode(hostname)
             self._is_ip_address = False
 
-        self._hostnameBytes = hostname
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
 
     def verify_context_info_cb(
