@@ -26,6 +26,7 @@ from service_identity.pyopenssl import verify_hostname, verify_ip_address
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.internet.ssl import CertificateOptions, TLSVersion, platformTrust
+from twisted.protocols.tls import TLSMemoryBIOProtocol
 from twisted.python.failure import Failure
 from twisted.web.iweb import IPolicyForHTTPS
 from zope.interface import implementer
@@ -43,7 +44,7 @@ class ClientTLSOptionsFactory:
     constructs an SSLClientConnectionCreator factory accordingly.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Use CA root certs provided by OpenSSL
         trust_root = platformTrust()
 
@@ -61,13 +62,13 @@ class ClientTLSOptionsFactory:
         self._verify_ssl_context = self._verify_ssl.getContext()
         self._verify_ssl_context.set_info_callback(self._context_info_cb)
 
-    def get_options(self, host):
+    def get_options(self, host: bytes) -> IOpenSSLClientConnectionCreator:
         ssl_context = self._verify_ssl_context
 
         return SSLClientConnectionCreator(host, ssl_context)
 
     @staticmethod
-    def _context_info_cb(ssl_connection, where, ret):
+    def _context_info_cb(ssl_connection: SSL.Connection, where: int, ret: int) -> None:
         """The 'information callback' for our openssl context object."""
         # we assume that the app_data on the connection object has been set to
         # a TLSMemoryBIOProtocol object. (This is done by SSLClientConnectionCreator)
@@ -83,7 +84,9 @@ class ClientTLSOptionsFactory:
             f = Failure()
             tls_protocol.failVerification(f)
 
-    def creatorForNetloc(self, hostname, port):
+    def creatorForNetloc(
+        self, hostname: bytes, port: int
+    ) -> IOpenSSLClientConnectionCreator:
         """Implements the IPolicyForHTTPS interace so that this can be passed
         directly to agents.
         """
@@ -97,11 +100,13 @@ class SSLClientConnectionCreator:
     Replaces twisted.internet.ssl.ClientTLSOptions
     """
 
-    def __init__(self, hostname, ctx):
+    def __init__(self, hostname: bytes, ctx: SSL.Context):
         self._ctx = ctx
         self._verifier = ConnectionVerifier(hostname)
 
-    def clientConnectionForTLS(self, tls_protocol):
+    def clientConnectionForTLS(
+        self, tls_protocol: TLSMemoryBIOProtocol
+    ) -> SSL.Connection:
         context = self._ctx
         connection = SSL.Connection(context, None)
 
@@ -125,9 +130,10 @@ class ConnectionVerifier:
 
     # This code is based on twisted.internet.ssl.ClientTLSOptions.
 
-    def __init__(self, hostname):
-        if isIPAddress(hostname) or isIPv6Address(hostname):
-            self._hostnameBytes = hostname.encode("ascii")
+    def __init__(self, hostname: bytes):
+        _decoded = hostname.decode("ascii")
+        if isIPAddress(_decoded) or isIPv6Address(_decoded):
+            self._hostnameBytes = hostname
             self._is_ip_address = True
         else:
             # twisted's ClientTLSOptions falls back to the stdlib impl here if
@@ -140,7 +146,9 @@ class ConnectionVerifier:
 
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
 
-    def verify_context_info_cb(self, ssl_connection, where):
+    def verify_context_info_cb(
+        self, ssl_connection: SSL.Connection, where: int
+    ) -> None:
         if where & SSL.SSL_CB_HANDSHAKE_START and not self._is_ip_address:
             ssl_connection.set_tlsext_host_name(self._hostnameBytes)
 

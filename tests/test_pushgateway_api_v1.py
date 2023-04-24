@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Dict, List
+
 from twisted.internet.address import IPv6Address
 from twisted.internet.testing import StringTransport
 
@@ -20,7 +21,7 @@ from sygnal.exceptions import (
     NotificationDispatchException,
     TemporaryNotificationDispatchException,
 )
-from sygnal.notifications import Pushkin
+from sygnal.notifications import Device, Notification, NotificationContext, Pushkin
 
 from tests import testutils
 
@@ -60,7 +61,9 @@ class TestPushkin(Pushkin):
     A synthetic Pushkin with simple rules.
     """
 
-    async def dispatch_notification(self, n, device, context):
+    async def dispatch_notification(
+        self, n: Notification, device: Device, context: NotificationContext
+    ) -> List[str]:
         if device.pushkey == "raise_exception":
             raise Exception("Bad things have occurred!")
         elif device.pushkey == "remote_error":
@@ -75,7 +78,7 @@ class TestPushkin(Pushkin):
 
 
 class PushGatewayApiV1TestCase(testutils.TestCase):
-    def config_setup(self, config):
+    def config_setup(self, config: Dict[str, Any]) -> None:
         """
         Set up a TestPushkin for the test.
         """
@@ -84,7 +87,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             "type": "tests.test_pushgateway_api_v1.TestPushkin"
         }
 
-    def test_good_requests_give_200(self):
+    def test_good_requests_give_200(self) -> None:
         """
         Test that good requests give a 200 response code.
         """
@@ -98,7 +101,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             )
         )
 
-    def test_accepted_devices_are_not_rejected(self):
+    def test_accepted_devices_are_not_rejected(self) -> None:
         """
         Test that devices which are accepted by the Pushkin
         do not lead to a rejection being returned to the homeserver.
@@ -108,7 +111,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             {"rejected": []},
         )
 
-    def test_rejected_devices_are_rejected(self):
+    def test_rejected_devices_are_rejected(self) -> None:
         """
         Test that devices which are rejected by the Pushkin
         DO lead to a rejection being returned to the homeserver.
@@ -118,7 +121,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             {"rejected": [DEVICE_REJECTED["pushkey"]]},
         )
 
-    def test_only_rejected_devices_are_rejected(self):
+    def test_only_rejected_devices_are_rejected(self) -> None:
         """
         Test that devices which are rejected by the Pushkin
         are the only ones to have a rejection returned to the homeserver,
@@ -131,13 +134,13 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             {"rejected": [DEVICE_REJECTED["pushkey"]]},
         )
 
-    def test_bad_requests_give_400(self):
+    def test_bad_requests_give_400(self) -> None:
         """
         Test that bad requests lead to a 400 Bad Request response.
         """
         self.assertEqual(self._request({}), 400)
 
-    def test_exceptions_give_500(self):
+    def test_exceptions_give_500(self) -> None:
         """
         Test that internal exceptions/errors lead to a 500 Internal Server Error
         response.
@@ -162,7 +165,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             500,
         )
 
-    def test_remote_errors_give_502(self):
+    def test_remote_errors_give_502(self) -> None:
         """
         Test that errors caused by remote services such as GCM or APNS
         lead to a 502 Bad Gateway response.
@@ -187,7 +190,7 @@ class PushGatewayApiV1TestCase(testutils.TestCase):
             502,
         )
 
-    def test_overlong_requests_are_rejected(self):
+    def test_overlong_requests_are_rejected(self) -> None:
         # as a control case, first send a regular request.
 
         # connect the site to a fake transport.

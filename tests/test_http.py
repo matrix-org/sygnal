@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2019 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 from aioapns.common import NotificationResult
@@ -49,7 +49,7 @@ DEVICE_EXAMPLE_AMBIGIOUS = {
 
 
 class HttpTestCase(testutils.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.apns_mock_class = patch("sygnal.apnspushkin.APNs").start()
         self.apns_mock = MagicMock()
         self.apns_mock_class.return_value = self.apns_mock
@@ -69,13 +69,13 @@ class HttpTestCase(testutils.TestCase):
             # see https://github.com/python/mypy/issues/2427
             value._send_notification = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
 
-    def config_setup(self, config):
+    def config_setup(self, config: Dict[str, Any]) -> None:
         super().config_setup(config)
         config["apps"][PUSHKIN_ID_1] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_2] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
         config["apps"][PUSHKIN_ID_3] = {"type": "apns", "certfile": TEST_CERTFILE_PATH}
 
-    def test_with_specific_appid(self):
+    def test_with_specific_appid(self) -> None:
         """
         Tests the expected case: A specific app id must be processed.
         """
@@ -94,7 +94,7 @@ class HttpTestCase(testutils.TestCase):
 
         self.assertEqual({"rejected": []}, resp)
 
-    def test_with_matching_appid(self):
+    def test_with_matching_appid(self) -> None:
         """
         Tests the matching case: A matching app id (only one time) must be processed.
         """
@@ -113,7 +113,7 @@ class HttpTestCase(testutils.TestCase):
 
         self.assertEqual({"rejected": []}, resp)
 
-    def test_with_ambigious_appid(self):
+    def test_with_ambigious_appid(self) -> None:
         """
         Tests the rejection case: An ambigious app id should be rejected without
         processing.

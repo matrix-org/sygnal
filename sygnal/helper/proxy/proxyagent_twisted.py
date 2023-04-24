@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2019-2020 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,15 +17,21 @@
 
 import logging
 import re
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from twisted.internet import defer
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
-from twisted.internet.interfaces import IStreamClientEndpoint
+from twisted.internet.interfaces import IReactorCore, IStreamClientEndpoint
 from twisted.python.failure import Failure
-from twisted.web.client import URI, BrowserLikePolicyForHTTPS, _AgentBase
+from twisted.web.client import (
+    URI,
+    BrowserLikePolicyForHTTPS,
+    HTTPConnectionPool,
+    _AgentBase,
+)
 from twisted.web.error import SchemeNotSupported
-from twisted.web.iweb import IAgent
+from twisted.web.http_headers import Headers
+from twisted.web.iweb import IAgent, IBodyProducer, IPolicyForHTTPS, IResponse
 from zope.interface import implementer
 
 from sygnal.helper.proxy import decompose_http_proxy_url
@@ -42,35 +47,34 @@ class ProxyAgent(_AgentBase):
     """An Agent implementation which will use an HTTP proxy if one was requested
 
     Args:
-        reactor: twisted reactor to place outgoing
-            connections.
+        reactor: twisted reactor to place outgoing connections.
 
-        contextFactory (IPolicyForHTTPS): A factory for TLS contexts, to control the
+        contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.  The default is to use a
             `BrowserLikePolicyForHTTPS`, so unless you have special
             requirements you can leave this as-is.
 
-        connectTimeout (float): The amount of time that this Agent will wait
+        connectTimeout: The amount of time that this Agent will wait
             for the peer to accept a connection.
 
-        bindAddress (bytes): The local address for client sockets to bind to.
+        bindAddress: The local address for client sockets to bind to.
 
-        pool (HTTPConnectionPool|None): connection pool to be used. If None, a
+        pool: connection pool to be used. If None, a
             non-persistent pool instance will be created.
     """
 
     def __init__(
         self,
-        reactor,
-        contextFactory=BrowserLikePolicyForHTTPS(),
-        connectTimeout=None,
-        bindAddress=None,
-        pool=None,
+        reactor: IReactorCore,
+        contextFactory: IPolicyForHTTPS = BrowserLikePolicyForHTTPS(),
+        connectTimeout: Optional[float] = None,
+        bindAddress: Optional[bytes] = None,
+        pool: Optional[HTTPConnectionPool] = None,
         proxy_url_str: Optional[str] = None,
     ):
         _AgentBase.__init__(self, reactor, pool)
 
-        self._endpoint_kwargs = {}
+        self._endpoint_kwargs: Dict[str, Any] = {}
         if connectTimeout is not None:
             self._endpoint_kwargs["timeout"] = connectTimeout
         if bindAddress is not None:
@@ -89,7 +93,13 @@ class ProxyAgent(_AgentBase):
         self._policy_for_https = contextFactory
         self._reactor = reactor
 
-    def request(self, method, uri, headers=None, bodyProducer=None):
+    def request(
+        self,
+        method: bytes,
+        uri: bytes,
+        headers: Optional[Headers] = None,
+        bodyProducer: Optional[IBodyProducer] = None,
+    ) -> "defer.Deferred[IResponse]":
         """
         Issue a request to the server indicated by the given uri.
 
@@ -101,20 +111,20 @@ class ProxyAgent(_AgentBase):
         See also: twisted.web.iweb.IAgent.request
 
         Args:
-            method (bytes): The request method to use, such as `GET`, `POST`, etc
+            method: The request method to use, such as `GET`, `POST`, etc
 
-            uri (bytes): The location of the resource to request.
+            uri: The location of the resource to request.
 
-            headers (Headers|None): Extra headers to send with the request
+            headers: Extra headers to send with the request
 
-            bodyProducer (IBodyProducer|None): An object which can generate bytes to
+            bodyProducer: An object which can generate bytes to
                 make up the body of this request (for example, the properly encoded
                 contents of a file for a file upload). Or, None if the request is to
                 have no body.
 
         Returns:
-            Deferred[IResponse]: completes when the header of the response has
-                 been received (regardless of the response status code).
+            completes when the header of the response has been received
+                (regardless of the response status code).
         """
         uri = uri.strip()
         if not _VALID_URI.match(uri):
