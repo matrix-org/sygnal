@@ -18,7 +18,7 @@
 
 import logging
 from base64 import urlsafe_b64encode
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 from twisted.internet import defer, protocol
 from twisted.internet.base import ReactorBase
@@ -194,7 +194,7 @@ class HTTPConnectProtocol(protocol.Protocol):
         if not self.connected_deferred.called:
             self.connected_deferred.errback(reason)
 
-    def proxyConnected(self, _: Union[None, "defer.Deferred[None]"]) -> None:
+    def proxyConnected(self, _: Optional["defer.Deferred[None]"]) -> None:
         self.wrapped_protocol.makeConnection(self.transport)
 
         self.connected_deferred.callback(self.wrapped_protocol)
