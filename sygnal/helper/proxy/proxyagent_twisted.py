@@ -113,7 +113,7 @@ class ProxyAgent(_AgentBase):
         Args:
             method: The request method to use, such as `GET`, `POST`, etc
 
-            urip: The location of the resource to request.
+            uri: The location of the resource to request.
 
             headers: Extra headers to send with the request
 
