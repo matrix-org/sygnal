@@ -53,11 +53,10 @@ class HTTPConnectProxyEndpoint:
 
     Args:
         reactor: the Twisted reactor to use for the connection
-        proxy_endpoint (IStreamClientEndpoint): the endpoint to use to connect to the
-            proxy
-        host (bytes): hostname that we want to CONNECT to
-        port (int): port that we want to connect to
-        proxy_auth (tuple): None or tuple of (username, pasword) for HTTP basic proxy
+        proxy_endpoint: the endpoint to use to connect to the proxy
+        host: hostname that we want to CONNECT to
+        port: port that we want to connect to
+        proxy_auth: None or tuple of (username, pasword) for HTTP basic proxy
             authentication
     """
 
@@ -218,9 +217,9 @@ class HTTPConnectSetupClient(http.HTTPClient):
     """HTTPClient protocol to send a CONNECT message for proxies and read the response.
 
     Args:
-        host (bytes): The hostname to send in the CONNECT message
-        port (int): The port to send in the CONNECT message
-        proxy_auth (tuple): None or tuple of (username, pasword) for HTTP basic proxy
+        host: The hostname to send in the CONNECT message
+        port: The port to send in the CONNECT message
+        proxy_auth: None or tuple of (username, pasword) for HTTP basic proxy
             authentication
     """
 

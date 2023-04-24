@@ -48,20 +48,19 @@ class ProxyAgent(_AgentBase):
     """An Agent implementation which will use an HTTP proxy if one was requested
 
     Args:
-        reactor: twisted reactor to place outgoing
-            connections.
+        reactor: twisted reactor to place outgoing connections.
 
-        contextFactory (IPolicyForHTTPS): A factory for TLS contexts, to control the
+        contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.  The default is to use a
             `BrowserLikePolicyForHTTPS`, so unless you have special
             requirements you can leave this as-is.
 
-        connectTimeout (float): The amount of time that this Agent will wait
+        connectTimeout: The amount of time that this Agent will wait
             for the peer to accept a connection.
 
-        bindAddress (bytes): The local address for client sockets to bind to.
+        bindAddress: The local address for client sockets to bind to.
 
-        pool (HTTPConnectionPool|None): connection pool to be used. If None, a
+        pool: connection pool to be used. If None, a
             non-persistent pool instance will be created.
     """
 
@@ -113,20 +112,20 @@ class ProxyAgent(_AgentBase):
         See also: twisted.web.iweb.IAgent.request
 
         Args:
-            method (bytes): The request method to use, such as `GET`, `POST`, etc
+            method: The request method to use, such as `GET`, `POST`, etc
 
-            uri (bytes): The location of the resource to request.
+            urip: The location of the resource to request.
 
-            headers (Headers|None): Extra headers to send with the request
+            headers: Extra headers to send with the request
 
-            bodyProducer (IBodyProducer|None): An object which can generate bytes to
+            bodyProducer: An object which can generate bytes to
                 make up the body of this request (for example, the properly encoded
                 contents of a file for a file upload). Or, None if the request is to
                 have no body.
 
         Returns:
-            Deferred[IResponse]: completes when the header of the response has
-                 been received (regardless of the response status code).
+            completes when the header of the response has been received
+                (regardless of the response status code).
         """
         uri = uri.strip()
         if not _VALID_URI.match(uri):
