@@ -14,17 +14,6 @@
 # limitations under the License.
 
 try:
-    from importlib.metadata import (  # type: ignore[attr-defined]
-        PackageNotFoundError,
-        version,
-    )
-except ImportError:
-    from importlib_metadata import (  # type: ignore[misc,no-redef]
-        PackageNotFoundError,
-        version,
-    )
-
-try:
     __version__ = version(__name__)
 except PackageNotFoundError:
     # package is not installed

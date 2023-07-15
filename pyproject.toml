@@ -68,7 +68,7 @@ name = "matrix-sygnal"
 dynamic = ["version"]
 description = "Reference Push Gateway for Matrix Notifications"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = "~=3.7"
+requires-python = "~=3.8"
 license = {file = "LICENSE"}
 authors = [
     {name = "Matrix.org Team and contributors", email = "packages@matrix.org"}
@@ -78,7 +78,6 @@ dependencies = [
     "attrs>=19.2.0",
     "cryptography>=2.6.1",
     "idna>=2.8",
-    'importlib_metadata;python_version<"3.8"',
     "jaeger-client>=4.0.0",
     "matrix-common==1.0.0",
     "opentracing>=2.2.0",
@@ -90,7 +89,6 @@ dependencies = [
     "sentry-sdk>=0.10.2",
     "service_identity>=18.1.0",
     "Twisted>=19.7",
-    'typing-extensions>=3.7.4;python_version<"3.8"',
     "zope.interface>=4.6.0",
 ]
 
