@@ -89,7 +89,7 @@ dependencies = [
     "sentry-sdk>=0.10.2",
     "service_identity>=18.1.0",
     "Twisted>=19.7",
-    "zope.interface>=4.6.0",
+    "zope.interface>=5.0.0",
 ]
 
 [project.optional-dependencies]
