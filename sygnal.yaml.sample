@@ -8,7 +8,7 @@
 #
 log:
   # Specify a Python logging 'dictConfig', as described at:
-  #   https://docs.python.org/3.7/library/logging.config.html#logging.config.dictConfig
+  #   https://docs.python.org/3/library/logging.config.html#logging.config.dictConfig
   #
   setup:
     version: 1
@@ -189,7 +189,7 @@ apps:
   #  #inflight_request_limit: 512
   #
   #  # Specifies whether to use the production or sandbox APNs server. Note that
-  #  # sandbox tokens should only be used with the sandbox server and vice versa. 
+  #  # sandbox tokens should only be used with the sandbox server and vice versa.
   #  #
   #  # Valid options are:
   #  #   * production

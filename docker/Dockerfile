@@ -9,7 +9,7 @@
 ###
 ### Stage 0: builder
 ###
-FROM python:3.7-slim as builder
+FROM python:3.10-slim as builder
 
 # Install git; Sygnal uses it to obtain the package version from the state of the
 # git repository.
@@ -25,7 +25,7 @@ RUN pip install --prefix="/install" --no-warn-script-location /sygnal
 ### Stage 1: runtime
 ###
 
-FROM python:3.7-slim
+FROM python:3.10-slim
 COPY --from=builder /install /usr/local
 
 EXPOSE 5000/tcp

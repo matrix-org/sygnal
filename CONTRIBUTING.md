@@ -6,7 +6,7 @@ this case, the [Apache Software License v2](LICENSE).
 
 ### Create a virtualenv
 
-To contribute to Sygnal, ensure you have Python 3.7 or newer and then run:
+To contribute to Sygnal, ensure you have Python 3.8 or newer and then run:
 
 ```bash
 python3 -m venv venv
@@ -17,8 +17,8 @@ This creates an isolated virtual Python environment ("virtualenv") just for
 use with Sygnal, then installs Sygnal along with its dependencies, and lastly
 installs a handful of useful tools
 
-If you get `ConnectTimeoutError`, this is caused by slow internet whereby 
-`pip` has a default time out of _15 sec_. You can specify a larger timeout 
+If you get `ConnectTimeoutError`, this is caused by slow internet whereby
+`pip` has a default time out of _15 sec_. You can specify a larger timeout
 by passing `--timeout 120` to the `pip install` command above.
 
 Finally, activate the virtualenv by running:
@@ -90,7 +90,7 @@ Many of the conventions are enforced by scripts which are run as part of the
 [continuous integration system](#continuous-integration-and-testing).
 
 To help check and fix adherence to the code style, you can run `tox`
-locally. You'll need Python 3.7 or later, and a virtual environment configured and
+locally. You'll need Python 3.8 or later, and a virtual environment configured and
 active:
 
 ```bash
@@ -251,7 +251,7 @@ and update your branch.
 After installing tox with `pip install tox`, you can use the following to run
 unit tests and lints in a local development environment:
 
-- `tox -e py37` to run unit tests on Python 3.7.
+- `tox -e py38` to run unit tests on Python 3.8.
 - `tox -e check_codestyle` to check code style and formatting.
 - `tox -e check_types` to check types with MyPy.
 - `tox` **to do all of the above.**

@@ -133,7 +133,7 @@ With custom configuration file name:
 SYGNAL_CONF=/path/to/custom_sygnal.conf python -m sygnal.sygnal
 ```
 
-Python 3.7 or higher is required.
+Python 3.8 or higher is required.
 
 
 Log Rotation
