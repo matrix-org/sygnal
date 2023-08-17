@@ -111,3 +111,6 @@ homepage = "https://github.com/matrix-org/sygnal"
 documentation = "https://github.com/matrix-org/sygnal/tree/main/docs"
 repository = "https://github.com/matrix-org/sygnal.git"
 changelog = "https://github.com/matrix-org/sygnal/blob/main/CHANGELOG.md"
+
+[project.scripts]
+sygnal = "sygnal.sygnal:main"

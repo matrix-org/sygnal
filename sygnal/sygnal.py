@@ -337,7 +337,7 @@ def merge_left_with_defaults(
     return result
 
 
-if __name__ == "__main__":
+def main():
     # TODO we don't want to have to install the reactor, when we can get away with
     #   it
     asyncioreactor.install()
@@ -356,3 +356,7 @@ if __name__ == "__main__":
     custom_reactor = cast(SygnalReactor, asyncioreactor.AsyncioSelectorReactor())
     sygnal = Sygnal(config, custom_reactor)
     sygnal.run()
+
+
+if __name__ == "__main__":
+    main()
