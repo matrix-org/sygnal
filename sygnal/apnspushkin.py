@@ -242,7 +242,10 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         log.info(f"Sending as APNs-ID {notif_id}")
         span.set_tag("apns_id", notif_id)
 
-        device_token = base64.b64decode(device.pushkey).hex()
+        if self.get_config("apns_device_token_use_hex", bool, True):
+            device_token = base64.b64decode(device.pushkey).hex()
+        else:
+            device_token = device.pushkey
 
         request = NotificationRequest(
             device_token=device_token,

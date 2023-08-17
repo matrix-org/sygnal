@@ -197,6 +197,11 @@ apps:
   #  #
   #  # The default is 'production'. Uncomment to use the sandbox instance.
   #  #platform: sandbox
+  #  #
+  #  # Specifies whether to use a hexadecimally encoded push token. If True
+  #  # (default) the pushkey received is trancoded from base64 to hex. If False
+  #  # the pushkey received is passed to APNs as is.
+  #  #apns_device_token_use_hex: false
 
   # This is an example GCM/FCM push configuration.
   #
