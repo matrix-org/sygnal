@@ -74,7 +74,7 @@ authors = [
     {name = "Matrix.org Team and contributors", email = "packages@matrix.org"}
 ]
 dependencies = [
-    "aioapns>=1.10,<2.1",
+    "aioapns>=3.0",
     "attrs>=19.2.0",
     "cryptography>=2.6.1",
     "idna>=2.8",
