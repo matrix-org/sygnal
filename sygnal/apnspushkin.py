@@ -265,7 +265,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             return []
         else:
             # .description corresponds to the 'reason' response field
-            span.set_tag("apns_reason", response.description)
+            span.set_tag("apns_reason", response.description or "None")
             if (code, response.description) in self.TOKEN_ERRORS:
                 log.info(
                     "APNs token %s for pushkin %s was rejected: %d %s",
