@@ -1,0 +1,1 @@
+Bump aioapns dependency to 3.0 in order to support Python 3.10+.
