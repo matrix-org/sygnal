@@ -103,6 +103,7 @@ dev = [
     "towncrier",
     "tox",
     "types-opentracing>=2.4.2",
+    "types-pyOpenSSL",
     "types-PyYAML",
     "typing-extensions>=3.7.4",
 ]
