@@ -97,7 +97,7 @@ dev = [
     "black>=22.7.0",
     "coverage~=5.5",
     "ruff==0.0.262",
-    "isort~=5.0",
+    "isort>=5.10.1",
     "mypy",
     "mypy-zope",
     "towncrier",
