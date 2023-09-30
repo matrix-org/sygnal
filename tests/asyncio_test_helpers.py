@@ -141,7 +141,9 @@ class MockTransport(Transport):
     def resume_reading(self) -> None:
         pass  # NOP
 
-    def set_write_buffer_limits(self, high: int = None, low: int = None) -> None:
+    def set_write_buffer_limits(
+        self, high: Optional[int] = None, low: Optional[int] = None
+    ) -> None:
         pass  # NOP
 
     def get_write_buffer_size(self) -> int:

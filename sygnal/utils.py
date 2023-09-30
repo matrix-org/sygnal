@@ -43,6 +43,7 @@ class NotificationLoggerAdapter(LoggerAdapter):
     def process(
         self, msg: str, kwargs: MutableMapping[str, Any]
     ) -> Tuple[str, MutableMapping[str, Any]]:
+        assert self.extra
         return f"[{self.extra['request_id']}] {msg}", kwargs
 
 
