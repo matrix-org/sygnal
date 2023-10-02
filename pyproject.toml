@@ -96,7 +96,7 @@ dependencies = [
 dev = [
     "black==23.9.1",
     "coverage~=5.5",
-    "ruff==0.0.262",
+    "ruff==0.0.291",
     "isort~=5.10",
     "mypy==1.5.1",
     "mypy-zope==1.0.1",
