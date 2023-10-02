@@ -94,12 +94,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "black>=22.7.0",
+    "black==22.7.0",
     "coverage~=5.5",
     "ruff==0.0.262",
-    "isort>=5.10.1",
-    "mypy",
-    "mypy-zope",
+    "isort~=5.10",
+    "mypy==1.5.1",
+    "mypy-zope==1.0.1",
     "towncrier",
     "tox",
     "types-opentracing>=2.4.2",
