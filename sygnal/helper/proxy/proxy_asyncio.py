@@ -166,6 +166,7 @@ class HttpConnectProtocol(asyncio.Protocol):
 
             # start_tls does NOT call connection_made on new_protocol, so we
             # must do it ourselves
+            assert transport
             buffered_protocol.connection_made(transport)
         else:
             # no wrapping required for non-TLS
@@ -326,7 +327,7 @@ class ProxyingEventLoopWrapper:
         # (N.B. if we want to ever use TLS to the proxy [e.g. to protect the proxy
         # credentials], we can ask this to give us a TLS connection).
 
-        transport, connect_protocol = await self._wrapped_loop.create_connection(
+        _, connect_protocol = await self._wrapped_loop.create_connection(
             make_protocol, proxy_url_parts.hostname, proxy_url_parts.port
         )
 
