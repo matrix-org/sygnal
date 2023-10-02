@@ -94,7 +94,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "black==22.7.0",
+    "black==23.9.1",
     "coverage~=5.5",
     "ruff==0.0.262",
     "isort~=5.10",
