@@ -352,9 +352,18 @@ class SygnalLoggedSite(server.Site):
         """Log this request. Called by request.finish."""
         # this also works around a bug in twisted.web.http.HTTPFactory which uses a
         # monotonic time as an epoch time.
+
+        def _should_log_request() -> bool:
+            """Whether we should log at INFO that we processed the request."""
+            if request.path == b"/health":
+                return False
+
+            return True
+
+        log_level = logging.INFO if _should_log_request() else logging.DEBUG
         log_date_time = datetimeToLogString()
         line = self.log_formatter(log_date_time, request)
-        self.logger.info("Handled request: %s", line)
+        self.logger.log(log_level, "Handled request: %s", line)
 
 
 class PushGatewayApiServer(object):
