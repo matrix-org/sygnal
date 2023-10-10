@@ -1,0 +1,1 @@
+Set log level for `/health` endpoint to `DEBUG`.
