@@ -1,3 +1,44 @@
+# Sygnal 0.13.0 (2023-11-21)
+
+Sygnal will soon be forked by Element under an AGPLv3.0 licence (with CLA, for
+proprietary dual licensing). You can read more about this here:
+
+- https://matrix.org/blog/2023/11/06/future-of-synapse-dendrite/
+- https://element.io/blog/element-to-adopt-agplv3/
+
+The Matrix.org Foundation copy of the project will be archived. Any changes needed
+by server administrators will be communicated via our usual announcements channels,
+but we are striving to make this as seamless as possible.
+
+### Features
+
+- Set log level for `/health` endpoint to `DEBUG`. ([\#352](https://github.com/matrix-org/sygnal/issues/352))
+
+### Bugfixes
+
+- Fix a bug introduced in Sygnal 0.5.0 where `sygnal.__version__` would not be correctly populated. ([\#355](https://github.com/matrix-org/sygnal/issues/355))
+
+### Improved Documentation
+
+- Update outdated links in `README.md`. ([\#316](https://github.com/matrix-org/sygnal/issues/316))
+- Change `master` to `main` branch in `CONTRIBUTING.md`. ([\#317](https://github.com/matrix-org/sygnal/issues/317))
+
+### Deprecations and Removals
+
+- Remove support for Python 3.7. ([\#343](https://github.com/matrix-org/sygnal/issues/343))
+
+### Internal Changes
+
+- Don't attempt delivery of notification if we have rejected pushkey. ([\#315](https://github.com/matrix-org/sygnal/issues/315))
+- Improve static type checking. ([\#333](https://github.com/matrix-org/sygnal/issues/333), [\#336](https://github.com/matrix-org/sygnal/issues/336))
+- Extend logging for outgoing pushes. ([\#334](https://github.com/matrix-org/sygnal/issues/334))
+- Move from setup.py to pyproject.toml. ([\#335](https://github.com/matrix-org/sygnal/issues/335))
+- Add entrypoint to allow running Sygnal by running the `sygnal` script. ([\#341](https://github.com/matrix-org/sygnal/issues/341))
+- Bump aioapns dependency to 3.0 in order to support Python 3.10+. ([\#347](https://github.com/matrix-org/sygnal/issues/347))
+- Bump `matrix-common` dependency to `1.3.0`. ([\#348](https://github.com/matrix-org/sygnal/issues/348))
+- Bump development dependencies. ([\#349](https://github.com/matrix-org/sygnal/issues/349))
+
+
 Sygnal 0.12.0 (2022-07-04)
 ==========================
 
