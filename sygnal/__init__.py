@@ -16,7 +16,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version(__name__)
+    __version__ = version("matrix-sygnal")
 except PackageNotFoundError:
     # package is not installed
     pass

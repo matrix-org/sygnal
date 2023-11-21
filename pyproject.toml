@@ -88,7 +88,8 @@ dependencies = [
     "pyyaml>=5.1.1",
     "sentry-sdk>=0.10.2",
     "service_identity>=18.1.0",
-    "Twisted>=19.7",
+    # Upper bound: tests fail on latest Twisted, see https://github.com/matrix-org/sygnal/issues/356
+    "Twisted>=19.7,<23.10",
     "zope.interface>=5.0.0",
 ]
 
