@@ -242,6 +242,8 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         log.info(f"Sending as APNs-ID {notif_id}")
         span.set_tag("apns_id", notif_id)
 
+        # Some client libraries will provide the push token in hex format already. Avoid
+        # attempting to convert from base 64 to hex.
         if self.get_config("apns_device_token_use_hex", bool, True):
             device_token = base64.b64decode(device.pushkey).hex()
         else:
