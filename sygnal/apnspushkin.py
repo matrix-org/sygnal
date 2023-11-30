@@ -244,7 +244,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
 
         # Some client libraries will provide the push token in hex format already. Avoid
         # attempting to convert from base 64 to hex.
-        if self.get_config("apns_device_token_use_hex", bool, True):
+        if self.get_config("convert_device_token_to_hex", bool, True):
             device_token = base64.b64decode(device.pushkey).hex()
         else:
             device_token = device.pushkey
