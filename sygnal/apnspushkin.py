@@ -238,7 +238,12 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         """
         span.set_tag("apns_id", notif_id)
 
-        device_token = base64.b64decode(device.pushkey).hex()
+        # Some client libraries will provide the push token in hex format already. Avoid
+        # attempting to convert from base 64 to hex.
+        if self.get_config("convert_device_token_to_hex", bool, True):
+            device_token = base64.b64decode(device.pushkey).hex()
+        else:
+            device_token = device.pushkey
 
         request = NotificationRequest(
             device_token=device_token,

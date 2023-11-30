@@ -1,0 +1,1 @@
+Add a new `convert_device_token_to_hex` configuration option for APNs apps, to allow disabling the conversion of device tokens from base64 to hex.

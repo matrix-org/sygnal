@@ -197,6 +197,11 @@ apps:
   #  #
   #  # The default is 'production'. Uncomment to use the sandbox instance.
   #  #platform: sandbox
+  #  #
+  #  # Specifies whether to convert the device push token from base 64 to hex.
+  #  # Defaults to True, set this to False if your client library provides a
+  #  # push token in hex format.
+  #  #convert_device_token_to_hex: false
 
   # This is an example GCM/FCM push configuration.
   #
