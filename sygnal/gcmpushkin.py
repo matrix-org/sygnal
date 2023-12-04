@@ -371,10 +371,13 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             body["priority"] = "normal" if n.prio == "low" else "high"
 
             for retry_number in range(0, MAX_TRIES):
+                # Should only ever be one of `to` or `registration_ids` fields
                 if len(pushkeys) == 1:
                     body["to"] = pushkeys[0]
+                    body.pop("registration_ids", None)
                 else:
                     body["registration_ids"] = pushkeys
+                    body.pop("to", None)
 
                 log.info(
                     "Sending (attempt %i) => %r room:%s, event:%s",
