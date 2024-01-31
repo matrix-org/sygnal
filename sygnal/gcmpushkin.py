@@ -17,9 +17,11 @@
 import json
 import logging
 import time
+from enum import Enum
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 
+import google.auth
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import DeferredSemaphore
@@ -70,9 +72,12 @@ RESPONSE_STATUS_CODES_COUNTER = Counter(
 logger = logging.getLogger(__name__)
 
 GCM_URL = b"https://fcm.googleapis.com/fcm/send"
+GCM_URL_V1 = "https://fcm.googleapis.com/v1/projects/{ProjectID}/messages:send"
 MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
 MAX_BYTES_PER_FIELD = 1024
+
+AUTH_SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
 
 # The error codes that mean a registration ID will never
 # succeed and we should reject it upstream.
@@ -95,6 +100,11 @@ BAD_MESSAGE_FAILURE_CODES = ["MessageTooBig", "InvalidDataKey", "InvalidTtl"]
 DEFAULT_MAX_CONNECTIONS = 20
 
 
+class APIVersion(Enum):
+    Legacy = "legacy"
+    V1 = "v1"
+
+
 class GcmPushkin(ConcurrencyLimitedPushkin):
     """
     Pushkin that relays notifications to Google/Firebase Cloud Messaging.
@@ -103,8 +113,10 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     UNDERSTOOD_CONFIG_FIELDS = {
         "type",
         "api_key",
+        "api_version",
         "fcm_options",
         "max_connections",
+        "project_id",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
@@ -140,6 +152,24 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         self.api_key = self.get_config("api_key", str)
         if not self.api_key:
             raise PushkinSetupException("No API key set in config")
+
+        self.api_version = APIVersion.Legacy
+        version_str = self.get_config("api_version", str)
+        if not version_str:
+            logger.warning(
+                "API version not set in config, defaulting to %s",
+                self.api_version.value,
+            )
+        else:
+            try:
+                self.api_version = APIVersion(version_str)
+            except ValueError:
+                raise PushkinSetupException(
+                    "Invalid API version set in config",
+                    version_str,
+                )
+
+        self.project_id = self.get_config("project_id", str)
 
         # Use the fcm_options config dictionary as a foundation for the body;
         # this lets the Sygnal admin choose custom FCM options
@@ -186,12 +216,16 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             with PENDING_REQUESTS_GAUGE.track_inprogress():
                 await self.connection_semaphore.acquire()
 
+        url = GCM_URL
+        if self.api_version is APIVersion.V1:
+            url = str.encode(GCM_URL_V1.format(ProjectID=self.project_id))
+
         try:
             with SEND_TIME_HISTOGRAM.time():
                 with ACTIVE_REQUESTS_GAUGE.track_inprogress():
                     response = await self.http_agent.request(
                         b"POST",
-                        GCM_URL,
+                        url,
                         headers=Headers(headers),
                         bodyProducer=body_producer,
                     )
@@ -319,6 +353,18 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 f"Unknown GCM response code {response.code}"
             )
 
+    def _get_access_token(self) -> str:
+        """Retrieve a valid access token that can be used to authorize requests.
+
+        :return: Access token.
+        """
+        # TODO: export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
+
+        credentials, project = google.auth.default(scopes=AUTH_SCOPES)
+        request = google.auth.transport.requests.Request()
+        credentials.refresh(request)
+        return credentials.token
+
     async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: NotificationContext
     ) -> List[str]:
@@ -363,14 +409,21 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             headers = {
                 "User-Agent": ["sygnal"],
                 "Content-Type": ["application/json"],
-                "Authorization": ["key=%s" % (self.api_key,)],
             }
+
+            if self.api_version is APIVersion.V1:
+                headers["Authorization"] = ["Bearer %s" % (self._get_access_token(),)]
+            elif self.api_version == APIVersion.Legacy:
+                headers["Authorization"] = ["key=%s" % (self.api_key,)]
 
             body = self.base_request_body.copy()
             body["data"] = data
             body["priority"] = "normal" if n.prio == "low" else "high"
 
             for retry_number in range(0, MAX_TRIES):
+                # TODO: change body for v1 (move entire body inside of "message" key)
+                # TODO: batch send individual messages for each token for v1
+                # https://firebase.google.com/docs/cloud-messaging/send-message#send-messages-to-multiple-devices
                 if len(pushkeys) == 1:
                     body["to"] = pushkeys[0]
                 else:
