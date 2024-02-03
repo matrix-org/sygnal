@@ -86,12 +86,16 @@ class TestGcmPushkin(GcmPushkin):
         self.num_requests += 1
         return self.preloaded_response, json.dumps(self.preloaded_response_payload)
 
+    def _get_access_token(self) -> str:
+        return "token"
+
 
 class GcmTestCase(testutils.TestCase):
     def config_setup(self, config: Dict[str, Any]) -> None:
         config["apps"]["com.example.gcm"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
             "api_key": "kii",
+            "api_version": "legacy",
         }
         config["apps"]["com.example.gcm.ios"] = {
             "type": "tests.test_gcm.TestGcmPushkin",

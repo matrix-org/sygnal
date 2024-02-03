@@ -205,9 +205,12 @@ apps:
 
   # This is an example GCM/FCM push configuration.
   #
-  #com.example.myapp.android:
+  #im.vector.app:
   #  type: gcm
-  #  api_key: your_api_key_for_gcm
+  #  #api_key: 
+  #  api_version: v1
+  #  project_id: project-id
+  #  service_account_file: /path/to/service_account.json
   #
   #  # This is the maximum number of connections to GCM servers at any one time
   #  # the default is 20.

@@ -21,7 +21,8 @@ from enum import Enum
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 
-import google.auth
+import google.auth.transport.requests
+from google.oauth2 import service_account
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import DeferredSemaphore
@@ -117,6 +118,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "fcm_options",
         "max_connections",
         "project_id",
+        "service_account_file",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
@@ -170,6 +172,16 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 )
 
         self.project_id = self.get_config("project_id", str)
+        if self.api_version is APIVersion.V1 and not self.project_id:
+            raise PushkinSetupException(
+                "Must configure `project_id` when using FCM api v1",
+            )
+
+        self.service_account_file = self.get_config("service_account_file", str)
+        if self.api_version is APIVersion.V1 and not self.service_account_file:
+            raise PushkinSetupException(
+                "Must configure `service_account_file` when using FCM api v1",
+            )
 
         # Use the fcm_options config dictionary as a foundation for the body;
         # this lets the Sygnal admin choose custom FCM options
@@ -249,8 +261,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     ) -> Tuple[List[str], List[str]]:
         poke_start_time = time.time()
 
-        failed = []
-
         response, response_text = await self._perform_http_request(body, headers)
 
         RESPONSE_STATUS_CODES_COUNTER.labels(
@@ -261,6 +271,39 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
         span.set_tag(tags.HTTP_STATUS_CODE, response.code)
 
+        if self.api_version is APIVersion.Legacy:
+            return self._handle_legacy_response(
+                n,
+                log,
+                response,
+                response_text,
+                pushkeys,
+                span,
+            )
+        elif self.api_version is APIVersion.V1:
+            return self._handle_v1_response(
+                log,
+                response,
+                response_text,
+                pushkeys,
+                span,
+            )
+        else:
+            log.warn(
+                "Processing response for unknown API version: %s", self.api_version
+            )
+            return [], []
+
+    def _handle_legacy_response(
+        self,
+        n: Notification,
+        log: NotificationLoggerAdapter,
+        response: IResponse,
+        response_text: str,
+        pushkeys: List[str],
+        span: Span,
+    ) -> Tuple[List[str], List[str]]:
+        failed = []
         if 500 <= response.code < 600:
             log.debug("%d from server, waiting to try again", response.code)
 
@@ -353,14 +396,86 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 f"Unknown GCM response code {response.code}"
             )
 
+    def _handle_v1_response(
+        self,
+        log: NotificationLoggerAdapter,
+        response: IResponse,
+        response_text: str,
+        pushkeys: List[str],
+        span: Span,
+    ) -> Tuple[List[str], List[str]]:
+        if 500 <= response.code < 600:
+            log.debug("%d from server, waiting to try again", response.code)
+
+            retry_after = None
+
+            for header_value in response.headers.getRawHeaders(
+                b"retry-after", default=[]
+            ):
+                retry_after = int(header_value)
+                span.log_kv({"event": "gcm_retry_after", "retry_after": retry_after})
+
+            raise TemporaryNotificationDispatchException(
+                "GCM server error, hopefully temporary.", custom_retry_delay=retry_after
+            )
+        elif response.code == 400:
+            log.error(
+                "%d from server, we have sent something invalid! Error: %r",
+                response.code,
+                response_text,
+            )
+            # permanent failure: give up
+            raise NotificationDispatchException("Invalid request")
+        elif response.code == 401:
+            log.error(
+                "401 from server! Our API key is invalid? Error: %r", response_text
+            )
+            # permanent failure: give up
+            raise NotificationDispatchException("Not authorised to push")
+        elif response.code == 403:
+            log.error("403 from server! Sender ID mismatch! Error: %r", response_text)
+            # permanent failure: give up
+            raise NotificationDispatchException("Sender ID mismatch")
+        elif response.code == 429:
+            log.debug("%d from server, waiting to try again", response.code)
+
+            # Minimum 1 minute delay required
+            retry_after = 60
+            # TODO: Exponentially back this off
+
+            for header_value in response.headers.getRawHeaders(
+                b"retry-after", default=[]
+            ):
+                header_retry = int(header_value)
+                if header_retry > retry_after:
+                    retry_after = header_retry
+
+            span.log_kv({"event": "gcm_retry_after", "retry_after": retry_after})
+            raise TemporaryNotificationDispatchException(
+                "Message rate quota exceeded.", custom_retry_delay=retry_after
+            )
+        elif response.code == 404:
+            log.info("Reg IDs %r get 404 response; assuming unregistered", pushkeys)
+            return pushkeys, []
+        elif 200 <= response.code < 300:
+            return [], []
+        else:
+            raise NotificationDispatchException(
+                f"Unknown GCM response code {response.code}"
+            )
+
     def _get_access_token(self) -> str:
         """Retrieve a valid access token that can be used to authorize requests.
 
         :return: Access token.
         """
-        # TODO: export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
-
-        credentials, project = google.auth.default(scopes=AUTH_SCOPES)
+        # TODO: Should we use the environment variable approach instead?
+        # export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
+        # credentials, project = google.auth.default(scopes=AUTH_SCOPES)
+        credentials = service_account.Credentials.from_service_account_file(
+            str(self.service_account_file),
+            scopes=AUTH_SCOPES,
+        )
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
         return credentials.token
@@ -370,20 +485,26 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     ) -> List[str]:
         log = NotificationLoggerAdapter(logger, {"request_id": context.request_id})
 
-        # `_dispatch_notification_unlimited` gets called once for each device in the
-        # `Notification` with a matching app ID. We do something a little dirty and
-        # perform all of our dispatches the first time we get called for a
-        # `Notification` and do nothing for the rest of the times we get called.
-        pushkeys = [
-            device.pushkey for device in n.devices if self.handles_appid(device.app_id)
-        ]
-        # `pushkeys` ought to never be empty here. At the very least it should contain
-        # `device`'s pushkey.
+        pushkeys: list[str] = []
+        if self.api_version is APIVersion.Legacy:
+            # `_dispatch_notification_unlimited` gets called once for each device in the
+            # `Notification` with a matching app ID. We do something a little dirty and
+            # perform all of our dispatches the first time we get called for a
+            # `Notification` and do nothing for the rest of the times we get called.
+            pushkeys = [
+                device.pushkey
+                for device in n.devices
+                if self.handles_appid(device.app_id)
+            ]
+            # `pushkeys` ought to never be empty here. At the very least it should contain
+            # `device`'s pushkey.
 
-        if pushkeys[0] != device.pushkey:
-            # We've already been asked to dispatch for this `Notification` and have
-            # previously sent out the notification to all devices.
-            return []
+            if pushkeys[0] != device.pushkey:
+                # We've already been asked to dispatch for this `Notification` and have
+                # previously sent out the notification to all devices.
+                return []
+        elif self.api_version is APIVersion.V1:
+            pushkeys = [device.pushkey]
 
         # The pushkey is kind of secret because you can use it to send push
         # to someone.
@@ -411,23 +532,30 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 "Content-Type": ["application/json"],
             }
 
-            if self.api_version is APIVersion.V1:
-                headers["Authorization"] = ["Bearer %s" % (self._get_access_token(),)]
-            elif self.api_version == APIVersion.Legacy:
+            if self.api_version == APIVersion.Legacy:
                 headers["Authorization"] = ["key=%s" % (self.api_key,)]
+            elif self.api_version is APIVersion.V1:
+                headers["Authorization"] = ["Bearer %s" % (self._get_access_token(),)]
 
             body = self.base_request_body.copy()
             body["data"] = data
-            body["priority"] = "normal" if n.prio == "low" else "high"
+            if self.api_version is APIVersion.Legacy:
+                body["priority"] = "normal" if n.prio == "low" else "high"
+            elif self.api_version is APIVersion.V1:
+                priority = {"priority": "normal" if n.prio == "low" else "high"}
+                body["android"] = priority
 
             for retry_number in range(0, MAX_TRIES):
-                # TODO: change body for v1 (move entire body inside of "message" key)
-                # TODO: batch send individual messages for each token for v1
-                # https://firebase.google.com/docs/cloud-messaging/send-message#send-messages-to-multiple-devices
-                if len(pushkeys) == 1:
-                    body["to"] = pushkeys[0]
-                else:
-                    body["registration_ids"] = pushkeys
+                if self.api_version is APIVersion.Legacy:
+                    if len(pushkeys) == 1:
+                        body["to"] = pushkeys[0]
+                    else:
+                        body["registration_ids"] = pushkeys
+                elif self.api_version is APIVersion.V1:
+                    body["token"] = device.pushkey
+                    new_body = body
+                    body = {}
+                    body["message"] = new_body
 
                 log.info(
                     "Sending (attempt %i) => %r room:%s, event:%s",
