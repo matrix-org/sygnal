@@ -39,6 +39,18 @@ class TemporaryNotificationDispatchException(Exception):
         self.custom_retry_delay = custom_retry_delay
 
 
+class NotificationQuotaDispatchException(Exception):
+    """
+    To be used by pushkins for errors that are do to exceeding the quota
+    limits and are hopefully temporary, so the request should possibly be
+    retried soon.
+    """
+
+    def __init__(self, *args: object, custom_retry_delay: Optional[int] = None) -> None:
+        super().__init__(*args)
+        self.custom_retry_delay = custom_retry_delay
+
+
 class ProxyConnectError(ConnectError):
     """
     Exception raised when we are unable to start a connection using a HTTP proxy

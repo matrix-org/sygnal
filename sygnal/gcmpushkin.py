@@ -32,6 +32,7 @@ from twisted.web.iweb import IResponse
 
 from sygnal.exceptions import (
     NotificationDispatchException,
+    NotificationQuotaDispatchException,
     PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
@@ -76,6 +77,7 @@ GCM_URL = b"https://fcm.googleapis.com/fcm/send"
 GCM_URL_V1 = "https://fcm.googleapis.com/v1/projects/{ProjectID}/messages:send"
 MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
+RETRY_DELAY_BASE_QUOTA_EXCEEDED = 60
 MAX_BYTES_PER_FIELD = 1024
 
 AUTH_SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
@@ -441,18 +443,15 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             log.debug("%d from server, waiting to try again", response.code)
 
             # Minimum 1 minute delay required
-            retry_after = 60
-            # TODO: Exponentially back this off
+            retry_after = None
 
             for header_value in response.headers.getRawHeaders(
                 b"retry-after", default=[]
             ):
-                header_retry = int(header_value)
-                if header_retry > retry_after:
-                    retry_after = header_retry
+                retry_after = int(header_value)
 
             span.log_kv({"event": "gcm_retry_after", "retry_after": retry_after})
-            raise TemporaryNotificationDispatchException(
+            raise NotificationQuotaDispatchException(
                 "Message rate quota exceeded.", custom_retry_delay=retry_after
             )
         elif response.code == 404:
@@ -598,6 +597,24 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     await twisted_sleep(
                         retry_delay, twisted_reactor=self.sygnal.reactor
                     )
+                except NotificationQuotaDispatchException as exc:
+                    retry_delay = RETRY_DELAY_BASE_QUOTA_EXCEEDED * (2**retry_number)
+                    if exc.custom_retry_delay is not None:
+                        retry_delay = exc.custom_retry_delay
+
+                    log.warning(
+                        "Quota exceeded, will retry in %d seconds",
+                        retry_delay,
+                        exc_info=True,
+                    )
+
+                    span_parent.log_kv(
+                        {"event": "temporary_fail", "retrying_in": retry_delay}
+                    )
+
+                    await twisted_sleep(
+                        retry_delay, twisted_reactor=self.sygnal.reactor
+                    )
 
             if len(pushkeys) > 0:
                 log.info("Gave up retrying reg IDs: %r", pushkeys)
@@ -652,7 +669,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             data["prio"] = "normal"
 
         if getattr(n, "counts", None):
-            data["unread"] = n.counts.unread
-            data["missed_calls"] = n.counts.missed_calls
+            data["unread"] = str(n.counts.unread)
+            data["missed_calls"] = str(n.counts.missed_calls)
 
         return data
