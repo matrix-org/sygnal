@@ -30,6 +30,11 @@ DEVICE_EXAMPLE_APIV1 = {
     "pushkey": "spqr",
     "pushkey_ts": 42,
 }
+DEVICE_EXAMPLE2_APIV1 = {
+    "app_id": "com.example.gcm.apiv1",
+    "pushkey": "spqr2",
+    "pushkey_ts": 42,
+}
 DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD = {
     "app_id": "com.example.gcm",
     "pushkey": "spqr",
@@ -251,6 +256,31 @@ class GcmTestCase(testutils.TestCase):
         assert gcm.last_request_body is not None
         self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
         self.assertEqual(gcm.num_requests, 1)
+
+    def test_batching_api_v1(self) -> None:
+        """
+        Tests that multiple GCM devices have their notification delivered to GCM
+        separately, instead of being delivered together.
+        """
+        gcm = self.get_test_pushkin("com.example.gcm.apiv1")
+        gcm.preload_with_response(
+            200,
+            {
+                "results": [
+                    {"registration_id": "spqr", "message_id": "msg42"},
+                    {"registration_id": "spqr2", "message_id": "msg42"},
+                ]
+            },
+        )
+
+        resp = self._request(
+            self._make_dummy_notification([DEVICE_EXAMPLE_APIV1, DEVICE_EXAMPLE2_APIV1])
+        )
+
+        self.assertEqual(resp, {"rejected": []})
+        assert gcm.last_request_body is not None
+        self.assertEqual(gcm.last_request_body["message"]["token"], "spqr2")
+        self.assertEqual(gcm.num_requests, 2)
 
     def test_batching_individual_failure(self) -> None:
         """
