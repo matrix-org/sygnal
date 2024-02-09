@@ -106,6 +106,7 @@ class TestCase(unittest.TestCase):
                 "content": {
                     "msgtype": "m.text",
                     "body": "I'm floating in a most peculiar way.",
+                    "other": 1,
                 },
                 "counts": {"unread": 2, "missed_calls": 1},
                 "devices": devices,

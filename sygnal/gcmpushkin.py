@@ -517,7 +517,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # TODO: Implement collapse_key to queue only one message per room.
             failed: List[str] = []
 
-            data = GcmPushkin._build_data(n, device)
+            data = GcmPushkin._build_data(n, device, self.api_version)
 
             # Reject pushkey(s) if default_payload is misconfigured
             if data is None:
@@ -623,7 +623,11 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             return failed
 
     @staticmethod
-    def _build_data(n: Notification, device: Device) -> Optional[Dict[str, Any]]:
+    def _build_data(
+        n: Notification,
+        device: Device,
+        api_version: APIVersion,
+    ) -> Optional[Dict[str, Any]]:
         """
         Build the payload data to be sent.
         Args:
@@ -664,12 +668,24 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 if data[attr] is not None and len(data[attr]) > MAX_BYTES_PER_FIELD:
                     data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
 
+        if api_version is APIVersion.V1:
+            if "content" in data:
+                for attr, value in data["content"].items():
+                    if not isinstance(value, str):
+                        continue
+                    data["content_" + attr] = value
+                del data["content"]
+
         data["prio"] = "high"
         if n.prio == "low":
             data["prio"] = "normal"
 
         if getattr(n, "counts", None):
-            data["unread"] = str(n.counts.unread)
-            data["missed_calls"] = str(n.counts.missed_calls)
+            if api_version is APIVersion.Legacy:
+                data["unread"] = n.counts.unread
+                data["missed_calls"] = n.counts.missed_calls
+            elif api_version is APIVersion.V1:
+                data["unread"] = str(n.counts.unread)
+                data["missed_calls"] = str(n.counts.missed_calls)
 
         return data

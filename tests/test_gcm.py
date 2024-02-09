@@ -14,6 +14,7 @@
 # limitations under the License.
 import json
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
+from unittest.mock import MagicMock
 
 from sygnal.gcmpushkin import GcmPushkin
 
@@ -142,30 +143,101 @@ class GcmTestCase(testutils.TestCase):
         Tests the expected case: a good response from GCM leads to a good
         response from Sygnal.
         """
+        self.apns_pushkin_snotif = MagicMock()
         gcm = self.get_test_pushkin("com.example.gcm")
         gcm.preload_with_response(
             200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
         )
 
+        # type safety: using ignore here due to mypy not handling monkeypatching,
+        # see https://github.com/python/mypy/issues/2427
+        gcm._request_dispatch = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
+
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(([], []))
+
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE]))
 
+        self.assertEqual(1, method.call_count)
+        notification_req = method.call_args.args
+
+        self.assertEqual(
+            {
+                "data": {
+                    "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
+                    "type": "m.room.message",
+                    "sender": "@exampleuser:matrix.org",
+                    "room_name": "Mission Control",
+                    "room_alias": "#exampleroom:matrix.org",
+                    "membership": None,
+                    "sender_display_name": "Major Tom",
+                    "content": {
+                        "msgtype": "m.text",
+                        "body": "I'm floating in a most peculiar way.",
+                        "other": 1,
+                    },
+                    "room_id": "!slw48wfj34rtnrf:example.com",
+                    "prio": "high",
+                    "unread": 2,
+                    "missed_calls": 1,
+                },
+                "priority": "high",
+                "to": "spqr",
+            },
+            notification_req[2],
+        )
+
         self.assertEqual(resp, {"rejected": []})
-        self.assertEqual(gcm.num_requests, 1)
 
     def test_expected_api_v1(self) -> None:
         """
         Tests the expected case: a good response from GCM leads to a good
         response from Sygnal.
         """
+        self.apns_pushkin_snotif = MagicMock()
         gcm = self.get_test_pushkin("com.example.gcm.apiv1")
         gcm.preload_with_response(
             200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
         )
 
+        # type safety: using ignore here due to mypy not handling monkeypatching,
+        # see https://github.com/python/mypy/issues/2427
+        gcm._request_dispatch = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
+
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(([], []))
+
         resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE_APIV1]))
 
+        self.assertEqual(1, method.call_count)
+        notification_req = method.call_args.args
+
+        self.assertEqual(
+            {
+                "message": {
+                    "data": {
+                        "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
+                        "type": "m.room.message",
+                        "sender": "@exampleuser:matrix.org",
+                        "room_name": "Mission Control",
+                        "room_alias": "#exampleroom:matrix.org",
+                        "membership": None,
+                        "sender_display_name": "Major Tom",
+                        "content_msgtype": "m.text",
+                        "content_body": "I'm floating in a most peculiar way.",
+                        "room_id": "!slw48wfj34rtnrf:example.com",
+                        "prio": "high",
+                        "unread": "2",
+                        "missed_calls": "1",
+                    },
+                    "android": {"priority": "high"},
+                    "token": "spqr",
+                }
+            },
+            notification_req[2],
+        )
+
         self.assertEqual(resp, {"rejected": []})
-        self.assertEqual(gcm.num_requests, 1)
 
     def test_expected_with_default_payload(self) -> None:
         """
