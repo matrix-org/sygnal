@@ -25,8 +25,26 @@ if TYPE_CHECKING:
 
 DEVICE_EXAMPLE = {"app_id": "com.example.gcm", "pushkey": "spqr", "pushkey_ts": 42}
 DEVICE_EXAMPLE2 = {"app_id": "com.example.gcm", "pushkey": "spqr2", "pushkey_ts": 42}
+DEVICE_EXAMPLE_APIV1 = {
+    "app_id": "com.example.gcm.apiv1",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+}
 DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD = {
     "app_id": "com.example.gcm",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+    "data": {
+        "default_payload": {
+            "aps": {
+                "mutable-content": 1,
+                "alert": {"loc-key": "SINGLE_UNREAD", "loc-args": []},
+            }
+        }
+    },
+}
+DEVICE_EXAMPLE_APIV1_WITH_DEFAULT_PAYLOAD = {
+    "app_id": "com.example.gcm.apiv1",
     "pushkey": "spqr",
     "pushkey_ts": 42,
     "data": {
@@ -102,6 +120,12 @@ class GcmTestCase(testutils.TestCase):
             "api_key": "kii",
             "fcm_options": {"content_available": True, "mutable_content": True},
         }
+        config["apps"]["com.example.gcm.apiv1"] = {
+            "type": "tests.test_gcm.TestGcmPushkin",
+            "api_version": "v1",
+            "project_id": "example_project",
+            "service_account_file": "/path/to/file.json",
+        }
 
     def get_test_pushkin(self, name: str) -> TestGcmPushkin:
         pushkin = self.sygnal.pushkins[name]
@@ -123,6 +147,21 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(resp, {"rejected": []})
         self.assertEqual(gcm.num_requests, 1)
 
+    def test_expected_api_v1(self) -> None:
+        """
+        Tests the expected case: a good response from GCM leads to a good
+        response from Sygnal.
+        """
+        gcm = self.get_test_pushkin("com.example.gcm.apiv1")
+        gcm.preload_with_response(
+            200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
+        )
+
+        resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE_APIV1]))
+
+        self.assertEqual(resp, {"rejected": []})
+        self.assertEqual(gcm.num_requests, 1)
+
     def test_expected_with_default_payload(self) -> None:
         """
         Tests the expected case: a good response from GCM leads to a good
@@ -135,6 +174,23 @@ class GcmTestCase(testutils.TestCase):
 
         resp = self._request(
             self._make_dummy_notification([DEVICE_EXAMPLE_WITH_DEFAULT_PAYLOAD])
+        )
+
+        self.assertEqual(resp, {"rejected": []})
+        self.assertEqual(gcm.num_requests, 1)
+
+    def test_expected_api_v1_with_default_payload(self) -> None:
+        """
+        Tests the expected case: a good response from GCM leads to a good
+        response from Sygnal.
+        """
+        gcm = self.get_test_pushkin("com.example.gcm.apiv1")
+        gcm.preload_with_response(
+            200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
+        )
+
+        resp = self._request(
+            self._make_dummy_notification([DEVICE_EXAMPLE_APIV1_WITH_DEFAULT_PAYLOAD])
         )
 
         self.assertEqual(resp, {"rejected": []})
