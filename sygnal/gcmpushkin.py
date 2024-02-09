@@ -151,10 +151,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             proxy_url_str=proxy_url,
         )
 
-        self.api_key = self.get_config("api_key", str)
-        if not self.api_key:
-            raise PushkinSetupException("No API key set in config")
-
         self.api_version = APIVersion.Legacy
         version_str = self.get_config("api_version", str)
         if not version_str:
@@ -170,6 +166,11 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     "Invalid API version set in config",
                     version_str,
                 )
+
+        if self.api_version is APIVersion.Legacy:
+            self.api_key = self.get_config("api_key", str)
+            if not self.api_key:
+                raise PushkinSetupException("No API key set in config")
 
         self.project_id = self.get_config("project_id", str)
         if self.api_version is APIVersion.V1 and not self.project_id:
