@@ -207,7 +207,7 @@ EOF
 ```
 
 
-## Example of an FCM request
+## Example of an FCM request (Legacy API)
 
 HTTP data sent to `https://fcm.googleapis.com/fcm/send`:
 

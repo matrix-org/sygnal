@@ -78,11 +78,26 @@ For either type, it can accept:
 ### gcm
 
 This sends messages via Google/Firebase Cloud Messaging (GCM/FCM)
-and hence can be used to deliver notifications to Android apps. It
-expects the 'api_key' parameter to contain the 'Server key',
-which can be acquired from Firebase Console at:
-`https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/`
+and hence can be used to deliver notifications to Android apps.
 
+The expected configuration depends on which version of the firebase api you
+wish to use.
+
+For legacy API, it expects:
+
+- the `api_key` parameter to contain the `Server key`,
+  which can be acquired from Firebase Console at:
+  `https://console.firebase.google.com/project/<PROJECT NAME>/settings/cloudmessaging/`
+    
+For API v1, it expects:
+
+- the `api_version` parameter to contain `v1`
+- the `project_id` parameter to contain the `Project ID`,
+  which can be acquired from Firebase Console at:
+  `https://console.cloud.google.com/project/<PROJECT NAME>/settings/general/`
+- the `service_account_file` parameter to contain the path to the service account file,
+  which can be acquired from Firebase Console at:
+  `https://console.firebase.google.com/project/<PROJECT NAME>/settings/serviceaccounts/adminsdk`
 
 Using an HTTP Proxy for outbound traffic
 ----------------------------------------

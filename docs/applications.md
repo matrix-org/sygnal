@@ -211,7 +211,14 @@ may be useful for reference.
 
 ### Firebase Cloud Messaging
 
-The client will receive a message with an FCM `data` payload with this structure:
+The client will receive a message with an FCM `data` payload with a structure depending on the api version used:
+
+Please note that fields may be truncated if they are large, so that they fit
+within FCM's limit.
+Please also note that some fields will be unavailable if you registered a pusher
+with `event_id_only` format.
+
+#### Legacy API
 
 ```json
 {
@@ -232,10 +239,24 @@ The client will receive a message with an FCM `data` payload with this structure
 }
 ```
 
-Please note that fields may be truncated if they are large, so that they fit
-within FCM's limit.
-Please also note that some fields will be unavailable if you registered a pusher
-with `event_id_only` format.
+#### API v1
+
+```json
+{
+  "event_id": "$3957tyerfgewrf384",
+  "type": "m.room.message",
+  "sender": "@exampleuser:example.org",
+  "room_name": "Mission Control",
+  "room_alias": "#exampleroom:example.org",
+  "sender_display_name": "Major Tom",
+  "content_msgtype": "m.text",
+  "content_body": "I'm floating in a most peculiar way."
+  "room_id": "!slw48wfj34rtnrf:example.org",
+  "prio": "high",
+  "unread": "2",
+  "missed_calls": "1"
+}
+```
 
 ### WebPush
 
