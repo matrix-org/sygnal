@@ -110,6 +110,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         "keyfile",
         "topic",
         "push_type",
+        "push_with_badge",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     APNS_PUSH_TYPES = {
@@ -554,13 +555,19 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         if loc_args:
             payload["aps"].setdefault("alert", {})["loc-args"] = loc_args
 
-        if badge is not None:
+        if self.get_config("push_with_badge", bool, True) and badge is not None:
             payload["aps"]["badge"] = badge
 
         if loc_key and n.room_id:
             payload["room_id"] = n.room_id
         if loc_key and n.event_id:
             payload["event_id"] = n.event_id
+
+        if not self.get_config("push_with_badge", bool, True):
+            if n.counts.unread is not None:
+                payload["unread_count"] = n.counts.unread
+            if n.counts.missed_calls is not None:
+                payload["missed_calls"] = n.counts.missed_calls
 
         return payload
 
