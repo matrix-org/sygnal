@@ -669,7 +669,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
 
         if api_version is APIVersion.V1:
-            if "content" in data:
+            if isinstance(data.get("content"), dict):
                 for attr, value in data["content"].items():
                     if not isinstance(value, str):
                         continue
