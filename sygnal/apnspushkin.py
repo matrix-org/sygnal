@@ -110,6 +110,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         "keyfile",
         "topic",
         "push_type",
+        "convert_device_token_to_hex",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     APNS_PUSH_TYPES = {

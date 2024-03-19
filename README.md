@@ -74,6 +74,10 @@ For either type, it can accept:
   Valid values are 'production' or 'sandbox'. If not provided, 'production' is used.
 - the `push_type` parameter which determines what value for the `apns-push-type` header is sent to
   APNs. If not provided, the header is not sent.
+- the `convert_device_token_to_hex` parameter which determines if the
+  token provided from the client is b64 decoded and converted to
+  hex. Some client libraries already provide the token in hex, and
+  this should be set to `False` if so.
 
 ### gcm
 
