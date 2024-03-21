@@ -545,6 +545,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 priority = {"priority": "normal" if n.prio == "low" else "high"}
                 body["android"] = priority
 
+            if n.ttl is not None:
+                body["time_to_live"] = n.ttl
+
             for retry_number in range(0, MAX_TRIES):
                 if self.api_version is APIVersion.Legacy:
                     if len(pushkeys) == 1:
