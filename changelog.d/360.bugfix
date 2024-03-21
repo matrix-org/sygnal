@@ -1,1 +1,0 @@
-Fixed an issue which resulted in proxy configuration being ignored for APNs notifications.

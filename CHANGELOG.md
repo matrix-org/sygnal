@@ -1,3 +1,15 @@
+# Sygnal 0.14.0 (2024-03-21)
+
+### Features
+
+- Add a new `convert_device_token_to_hex` configuration option for APNs apps, to allow disabling the conversion of device tokens from base64 to hex. ([\#344](https://github.com/matrix-org/sygnal/issues/344))
+- Adds the ability to use the new FCM v1 API. ([\#361](https://github.com/matrix-org/sygnal/issues/361))
+
+### Bugfixes
+
+- Fixed an issue which resulted in proxy configuration being ignored for APNs notifications. ([\#360](https://github.com/matrix-org/sygnal/issues/360))
+
+
 # Sygnal 0.13.0 (2023-11-21)
 
 Sygnal will soon be forked by Element under an AGPLv3.0 licence (with CLA, for
