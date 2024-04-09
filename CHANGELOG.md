@@ -1,3 +1,10 @@
+# Sygnal 0.14.1 (2024-04-09)
+
+### Bugfixes
+
+- Fix a bug causing Sygnal to fail when processing notifications without a `content` dict, when those notifications were destined for GCM. Contributed by @c-cal. ([\#362](https://github.com/matrix-org/sygnal/issues/362))
+
+
 # Sygnal 0.14.0 (2024-03-21)
 
 ### Features

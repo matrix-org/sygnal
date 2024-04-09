@@ -1,1 +1,0 @@
-Fix a bug causing Sygnal to fail when processing notifications without a `content` dict, when those notifications were destined for GCM. Contributed by @c-cal.
