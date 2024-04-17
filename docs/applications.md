@@ -250,7 +250,7 @@ with `event_id_only` format.
   "room_alias": "#exampleroom:example.org",
   "sender_display_name": "Major Tom",
   "content_msgtype": "m.text",
-  "content_body": "I'm floating in a most peculiar way."
+  "content_body": "I'm floating in a most peculiar way.",
   "room_id": "!slw48wfj34rtnrf:example.org",
   "prio": "high",
   "unread": "2",
