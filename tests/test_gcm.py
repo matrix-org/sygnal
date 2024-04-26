@@ -116,6 +116,7 @@ class TestGcmPushkin(GcmPushkin):
 
 class GcmTestCase(testutils.TestCase):
     maxDiff = None
+
     def config_setup(self, config: Dict[str, Any]) -> None:
         config["apps"]["com.example.gcm"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
@@ -138,7 +139,7 @@ class GcmTestCase(testutils.TestCase):
                         "aps": {
                             "content-available": 1,
                             "mutable-content": 1,
-                            "alert": ""
+                            "alert": "",
                         },
                     },
                 },
@@ -248,7 +249,7 @@ class GcmTestCase(testutils.TestCase):
                             "aps": {
                                 "content-available": 1,
                                 "mutable-content": 1,
-                                "alert": ""
+                                "alert": "",
                             },
                         },
                     },
