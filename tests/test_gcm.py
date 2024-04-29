@@ -115,6 +115,8 @@ class TestGcmPushkin(GcmPushkin):
 
 
 class GcmTestCase(testutils.TestCase):
+    maxDiff = None
+
     def config_setup(self, config: Dict[str, Any]) -> None:
         config["apps"]["com.example.gcm"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
@@ -131,6 +133,17 @@ class GcmTestCase(testutils.TestCase):
             "api_version": "v1",
             "project_id": "example_project",
             "service_account_file": "/path/to/file.json",
+            "fcm_options": {
+                "apns": {
+                    "payload": {
+                        "aps": {
+                            "content-available": 1,
+                            "mutable-content": 1,
+                            "alert": "",
+                        },
+                    },
+                },
+            },
         }
 
     def get_test_pushkin(self, name: str) -> TestGcmPushkin:
@@ -231,6 +244,15 @@ class GcmTestCase(testutils.TestCase):
                         "missed_calls": "1",
                     },
                     "android": {"priority": "high"},
+                    "apns": {
+                        "payload": {
+                            "aps": {
+                                "content-available": 1,
+                                "mutable-content": 1,
+                                "alert": "",
+                            },
+                        },
+                    },
                     "token": "spqr",
                 }
             },

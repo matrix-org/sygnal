@@ -228,9 +228,9 @@ apps:
   #  # This allows you to specify additional options to send to Firebase.
   #  #
   #  # Of particular interest, admins who wish to support iOS apps using Firebase
-  #  # probably wish to set content_available, and may need to set mutable_content.
-  #  # (content_available allows your iOS app to be woken up by data messages,
-  #  # and mutable_content allows your notification to be modified by a
+  #  # probably wish to set content-available, and may need to set mutable-content.
+  #  # (content-available allows your iOS app to be woken up by data messages,
+  #  # and mutable-content allows your notification to be modified by a
   #  # Notification Service app extension).
   #  #
   #  # See https://firebase.google.com/docs/cloud-messaging/http-server-ref
@@ -240,5 +240,9 @@ apps:
   #  # be overwritten or lead to an invalid request.
   #  #
   #  #fcm_options:
-  #  #  content_available: true
-  #  #  mutable_content: true
+  #  #  apns:
+  #  #    payload:
+  #  #      aps:
+  #  #        content-available: 1
+  #  #        mutable-content: 1
+  #  #        alert: ""
