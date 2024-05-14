@@ -16,7 +16,7 @@ import json
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
 from unittest.mock import MagicMock
 
-from sygnal.gcmpushkin import GcmPushkin
+from sygnal.gcmpushkin import GcmPushkin, PushkinSetupException
 
 from tests import testutils
 from tests.testutils import DummyResponse
@@ -86,12 +86,18 @@ class TestGcmPushkin(GcmPushkin):
     """
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
-        super().__init__(name, sygnal, config)
         self.preloaded_response = DummyResponse(0)
         self.preloaded_response_payload: Dict[str, Any] = {}
         self.last_request_body: Dict[str, Any] = {}
         self.last_request_headers: Dict[AnyStr, List[AnyStr]] = {}  # type: ignore[valid-type]
         self.num_requests = 0
+        try:
+            super().__init__(name, sygnal, config)
+        except PushkinSetupException as e:
+            # for FCM v1 API we get an exception because the service account file
+            # does not exist, let's ignore it and move forward
+            if "service_account_file" not in str(e):
+                raise e
 
     def preload_with_response(
         self, code: int, response_payload: Dict[str, Any]
@@ -110,7 +116,7 @@ class TestGcmPushkin(GcmPushkin):
         self.num_requests += 1
         return self.preloaded_response, json.dumps(self.preloaded_response_payload)
 
-    def _get_access_token(self) -> str:
+    async def _get_access_token(self) -> str:
         return "token"
 
 

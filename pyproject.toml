@@ -104,6 +104,7 @@ dev = [
     "mypy-zope==1.0.1",
     "towncrier",
     "tox",
+    "google-auth-stubs==0.2.0",
     "types-opentracing>=2.4.2",
     "types-pyOpenSSL",
     "types-PyYAML",
