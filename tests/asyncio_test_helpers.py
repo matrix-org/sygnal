@@ -1,7 +1,7 @@
 import logging
 import types
 from asyncio import AbstractEventLoop, transports
-from asyncio.protocols import BaseProtocol, Protocol
+from asyncio.protocols import BaseProtocol, BufferedProtocol, Protocol
 from asyncio.transports import Transport
 from contextvars import Context
 from typing import Any, Callable, List, Optional, Tuple
@@ -164,8 +164,13 @@ class MockTransport(Transport):
 
     def pretend_to_receive(self, data: bytes) -> None:
         proto = self.get_protocol()
-        assert isinstance(proto, Protocol)
-        proto.data_received(data)
+        if isinstance(proto, Protocol):
+            proto.data_received(data)
+        elif isinstance(proto, BufferedProtocol):
+            data_len = len(data)
+            b = proto.get_buffer(data_len)
+            b[0:data_len] = data  # type: ignore[index]
+            proto.buffer_updated(data_len)
 
     def set_protocol(self, protocol: BaseProtocol) -> None:
         self.protocol = protocol
