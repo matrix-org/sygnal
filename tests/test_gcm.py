@@ -116,7 +116,7 @@ class TestGcmPushkin(GcmPushkin):
         self.num_requests += 1
         return self.preloaded_response, json.dumps(self.preloaded_response_payload)
 
-    async def _get_access_token(self) -> str:
+    async def _get_auth_header(self) -> str:
         return "token"
 
 
