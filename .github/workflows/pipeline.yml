@@ -36,15 +36,12 @@ jobs:
     needs: [check-code-style, check-types-mypy]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Poetry
-        uses: matrix-org/setup-python-poetry@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          install-project: "false"
           python-version: "3.11"
-
-      - run: poetry run trial tests
+      - run: python -m pip install -e .
+      - run: python -m twisted.trial tests
 
   run-unit-tests-olddeps:
     name: Unit tests (old dependencies)
