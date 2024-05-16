@@ -14,6 +14,7 @@ jobs:
         uses: matrix-org/setup-python-poetry@v1
         with:
           install-project: "false"
+          python-version: "3.11"
 
       - run: poetry run tox -e check_codestyle
 
@@ -26,6 +27,7 @@ jobs:
         uses: matrix-org/setup-python-poetry@v1
         with:
           install-project: "false"
+          python-version: "3.11"
 
       - run: poetry run tox -e check_types
 
@@ -34,27 +36,33 @@ jobs:
     needs: [check-code-style, check-types-mypy]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - name: Setup Poetry
+        uses: matrix-org/setup-python-poetry@v1
         with:
+          install-project: "false"
           python-version: "3.11"
-      - run: python -m pip install -e .
-      - run: python -m twisted.trial tests
+
+      - run: poetry run trial tests
 
   run-unit-tests-olddeps:
     name: Unit tests (old dependencies)
     needs: [ check-code-style, check-types-mypy ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - name: Setup Poetry
+        uses: matrix-org/setup-python-poetry@v1
         with:
+          install-project: "false"
           python-version: "3.8"
+
       - name: Patch pyproject.toml to require oldest dependencies
         run: |
           # Ugly. Could use something like https://pyproject-parser.readthedocs.io/en/latest/cli.html#info in the future.
           sed --in-place=.bak -e 's/>=/==/g' pyproject.toml
           diff pyproject.toml.bak pyproject.toml || true # diff returns 1 if there is a change
-      - name: Install Sygnal
-        run: python -m pip install -e .
-      - run: python -m twisted.trial tests
+
+      - run: poetry run trial tests
