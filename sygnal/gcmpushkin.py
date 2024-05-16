@@ -24,6 +24,9 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 
 import aiohttp
+
+# We are using an unstable API, but it's there since 3+ years
+# https://github.com/googleapis/google-auth-library-python/issues/613
 import google.auth.transport._aiohttp_requests
 from google.auth._default_async import load_credentials_from_file
 from google.oauth2._credentials_async import Credentials
@@ -193,30 +196,32 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 "Must configure `project_id` when using FCM api v1",
             )
 
-        self.credentials: Credentials = None  # type: ignore
+        self.credentials: Optional[Credentials] = None
 
         if self.api_version is APIVersion.V1:
             self.service_account_file = self.get_config("service_account_file", str)
-            if self.service_account_file:
-                try:
-                    self.credentials, _ = load_credentials_from_file(
-                        str(self.service_account_file),
-                        scopes=AUTH_SCOPES,
-                    )
-                except google.auth.exceptions.DefaultCredentialsError:
-                    pass
-
-            if not self.credentials:
+            if not self.service_account_file:
                 raise PushkinSetupException(
-                    "Must configure valid `service_account_file` when using FCM api v1",
+                    "Must configure `service_account_file` when using FCM api v1",
+                )
+            try:
+                self.credentials, _ = load_credentials_from_file(
+                    str(self.service_account_file),
+                    scopes=AUTH_SCOPES,
+                )
+            except google.auth.exceptions.DefaultCredentialsError as e:
+                raise PushkinSetupException(
+                    f"`service_account_file` must be valid: {str(e)}",
                 )
 
             session = None
             if proxy_url:
+                # `ClientSession` can't directly take the proxy URL, so we need to
+                # set the usual env var and use `trust_env=True`
                 os.environ["HTTPS_PROXY"] = proxy_url
                 session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
 
-            self.request = google.auth.transport._aiohttp_requests.Request(
+            self.google_auth_request = google.auth.transport._aiohttp_requests.Request(
                 session=session
             )
 
@@ -497,9 +502,12 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         if self.api_version is APIVersion.Legacy:
             return "key=%s" % (self.api_key,)
         else:
+            assert self.credentials is not None
             if not self.credentials.valid:
                 await Deferred.fromFuture(
-                    asyncio.ensure_future(self.credentials.refresh(self.request))
+                    asyncio.ensure_future(
+                        self.credentials.refresh(self.google_auth_request)
+                    )
                 )
             return "Bearer %s" % self.credentials.token
 
