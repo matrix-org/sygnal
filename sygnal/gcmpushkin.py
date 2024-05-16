@@ -23,10 +23,9 @@ from enum import Enum
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 
-import aiohttp
-
-# We are using an unstable API, but it's there since 3+ years
+# We are using an unstable async google-auth API, but it's there since 3+ years
 # https://github.com/googleapis/google-auth-library-python/issues/613
+import aiohttp
 import google.auth.transport._aiohttp_requests
 from google.auth._default_async import load_credentials_from_file
 from google.oauth2._credentials_async import Credentials
