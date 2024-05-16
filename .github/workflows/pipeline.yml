@@ -48,18 +48,15 @@ jobs:
     needs: [ check-code-style, check-types-mypy ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Poetry
-        uses: matrix-org/setup-python-poetry@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          install-project: "false"
           python-version: "3.8"
-
       - name: Patch pyproject.toml to require oldest dependencies
         run: |
           # Ugly. Could use something like https://pyproject-parser.readthedocs.io/en/latest/cli.html#info in the future.
           sed --in-place=.bak -e 's/>=/==/g' pyproject.toml
           diff pyproject.toml.bak pyproject.toml || true # diff returns 1 if there is a change
-
-      - run: poetry run trial tests
+      - name: Install Sygnal
+        run: python -m pip install -e .
+      - run: python -m twisted.trial tests
