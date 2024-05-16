@@ -44,7 +44,6 @@ multi_line_output = 3
 include_trailing_comma = true
 combine_as_imports = true
 
-
 [tool.ruff]
 line-length = 88
 ignore = [
@@ -52,69 +51,55 @@ ignore = [
 ]
 
 [build-system]
-build-backend = "setuptools.build_meta"
-# Setuptools 64 adds support for PEP 660, which makes `pip install -e .` work.
-requires = ["setuptools>=64", "setuptools_scm[toml]>=6.2"]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
-[tool.setuptools_scm]
-# Note: including this section without any keys still has meaning, see
-# https://github.com/pypa/setuptools_scm/blob/51b3566170be25582b5c3216a54b024caf3d431f/README.rst?plain=1#L63-L71
-
-[tool.setuptools.packages.find]
-exclude = ["tests", "tests.*"]
-
-[project]
-name = "matrix-sygnal"
-dynamic = ["version"]
+[tool.poetry]
+name = "sygnal"
+version = "0.14.1"
 description = "Reference Push Gateway for Matrix Notifications"
-readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = "~=3.8"
-license = {file = "LICENSE"}
-authors = [
-    {name = "Matrix.org Team and contributors", email = "packages@matrix.org"}
-]
-dependencies = [
-    "aioapns>=3.0",
-    "attrs>=19.2.0",
-    "cryptography>=2.6.1",
-    "idna>=2.8",
-    "google-auth>=2.27.0",
-    "jaeger-client>=4.0.0",
-    "matrix-common==1.3.0",
-    "opentracing>=2.2.0",
-    "prometheus_client>=0.7.0,<0.8",
-    "py-vapid>=1.7.0",
-    "pyOpenSSL>=17.5.0",
-    "pywebpush>=1.13.0",
-    "pyyaml>=5.1.1",
-    "sentry-sdk>=0.10.2",
-    "service_identity>=18.1.0",
-    # Upper bound: tests fail on latest Twisted, see https://github.com/matrix-org/sygnal/issues/356
-    "Twisted>=19.7,<23.10",
-    "zope.interface>=5.0.0",
-]
+authors = ["Matrix.org Team and Contributors <packages@matrix.org>"]
+readme = "README.md"
+license = "Apache-2.0"
 
-[project.optional-dependencies]
-dev = [
-    "black==23.9.1",
-    "coverage~=5.5",
-    "ruff==0.0.291",
-    "isort~=5.10",
-    "mypy==1.5.1",
-    "mypy-zope==1.0.1",
-    "towncrier",
-    "tox",
-    "types-opentracing>=2.4.2",
-    "types-pyOpenSSL",
-    "types-PyYAML",
-    "typing-extensions>=3.7.4",
-]
+[tool.poetry.dependencies]
+python = "^3.8.0"
+aioapns = ">=3.0"
+attrs = ">=19.2.0"
+cryptography = ">=2.6.1"
+idna = ">=2.8"
+google-auth = ">=2.27.0"
+jaeger-client = ">=4.0.0"
+matrix-common = "==1.3.0"
+opentracing = ">=2.2.0"
+prometheus_client = ">=0.7.0,<0.8"
+py-vapid = ">=1.7.0"
+pyOpenSSL = ">=17.5.0"
+pywebpush = ">=1.13.0"
+pyyaml = ">=5.1.1"
+sentry-sdk = ">=0.10.2"
+service_identity = ">=18.1.0"
+# Upper bound: tests fail on latest Twisted, see https://github.com/matrix-org/sygnal/issues/356
+Twisted = ">=19.7,<23.10"
+zope-interface = ">=5.0.0"
 
-[project.urls]
-homepage = "https://github.com/matrix-org/sygnal"
-documentation = "https://github.com/matrix-org/sygnal/tree/main/docs"
-repository = "https://github.com/matrix-org/sygnal.git"
-changelog = "https://github.com/matrix-org/sygnal/blob/main/CHANGELOG.md"
+[tool.poetry.group.dev.dependencies]
+black = "==23.9.1"
+coverage = "~=5.5"
+ruff = "==0.0.291"
+isort = "~=5.10"
+mypy = "==1.5.1"
+mypy-zope = "==1.0.1"
+towncrier = ">=18.6.0"
+types-opentracing = ">=2.4.2"
+types-pyOpenSSL = ">=24.0.0"
+typing-extensions = ">=3.7.4"
 
-[project.scripts]
+[tool.poetry.urls]
+"homepage" = "https://github.com/matrix-org/sygnal"
+"documentation" = "https://github.com/matrix-org/sygnal/tree/main/docs"
+"repository" = "https://github.com/matrix-org/sygnal.git"
+"changelog" = "https://github.com/matrix-org/sygnal/blob/main/CHANGELOG.md"
+
+[tool.poetry.scripts]
 sygnal = "sygnal.sygnal:main"
