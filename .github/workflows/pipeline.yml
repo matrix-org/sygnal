@@ -44,7 +44,7 @@ jobs:
           install-project: "false"
           python-version: "3.11"
 
-      - run: poetry run trial ./tests
+      - run: poetry run trial tests
 
   run-unit-tests-olddeps:
     name: Unit tests (old dependencies)
