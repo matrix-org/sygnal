@@ -265,6 +265,7 @@ For GCM Pushkin proxy testing follow these steps:
 - create a firebase project & service account
 - download the service account file from firebase & save to `./scripts-dev/proxy-test/service_account.json`
 - configure the PROJECT_ID in `./scripts-dev/proxy-test/sygnal.yaml`
+- build a docker image of sygnal named `sygnal`
 - cd to `./scripts-dev/proxy-test/`
 - run `docker compose up`
 - in another terminal, run `docker exec -it sygnal bash`
