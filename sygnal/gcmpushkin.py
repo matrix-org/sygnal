@@ -159,15 +159,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             proxy_url_str=proxy_url,
         )
 
-        # Use the fcm_options config dictionary as a foundation for the body;
-        # this lets the Sygnal admin choose custom FCM options
-        # (e.g. content_available).
-        self.base_request_body = self.get_config("fcm_options", dict, {})
-        if not isinstance(self.base_request_body, dict):
-            raise PushkinSetupException(
-                "Config field fcm_options, if set, must be a dictionary of options"
-            )
-
         self.api_version = APIVersion.Legacy
         version_str = self.get_config("api_version", str)
         if not version_str:
@@ -222,6 +213,15 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
             self.google_auth_request = google.auth.transport._aiohttp_requests.Request(
                 session=session
+            )
+
+        # Use the fcm_options config dictionary as a foundation for the body;
+        # this lets the Sygnal admin choose custom FCM options
+        # (e.g. content_available).
+        self.base_request_body = self.get_config("fcm_options", dict, {})
+        if not isinstance(self.base_request_body, dict):
+            raise PushkinSetupException(
+                "Config field fcm_options, if set, must be a dictionary of options"
             )
 
     @classmethod
@@ -498,6 +498,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
         :return: Needed content of the `Authorization` header
         """
+        print("_get_auth_header")
         if self.api_version is APIVersion.Legacy:
             return "key=%s" % (self.api_key,)
         else:
