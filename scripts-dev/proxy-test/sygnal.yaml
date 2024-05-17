@@ -1,0 +1,66 @@
+##
+# This is a configuration for Sygnal, the reference Push Gateway for Matrix
+##
+
+log:
+  setup:
+    version: 1
+    formatters:
+      normal:
+        format: "%(asctime)s [%(process)d] %(levelname)-5s %(name)s %(message)s"
+    handlers:
+      stderr:
+        class: "logging.StreamHandler"
+        formatter: "normal"
+        stream: "ext://sys.stderr"
+
+      stdout:
+        class: "logging.StreamHandler"
+        formatter: "normal"
+        stream: "ext://sys.stdout"
+
+      file:
+        class: "logging.handlers.WatchedFileHandler"
+        formatter: "normal"
+        filename: "./sygnal.log"
+    loggers:
+      sygnal.access:
+        propagate: false
+        handlers: ["stdout"]
+        level: "INFO"
+
+      sygnal:
+        propagate: false
+        handlers: ["stderr", "file"]
+
+    root:
+      handlers: ["stderr"]
+      level: "INFO"
+
+    disable_existing_loggers: false
+
+  access:
+    x_forwarded_for: false
+
+http:
+  bind_addresses: ['127.0.0.1']
+  port: 5000
+
+proxy: 'http://172.28.0.3:8080'
+
+metrics:
+  prometheus:
+    enabled: false
+
+  opentracing:
+    enabled: false
+
+  sentry:
+    enabled: false
+
+apps:
+  im.vector.app:
+    type: gcm
+    api_version: v1
+    project_id: <PROJECT_ID>
+    service_account_file: /service_account.json
