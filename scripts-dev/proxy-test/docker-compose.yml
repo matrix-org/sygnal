@@ -1,0 +1,29 @@
+services:
+  sygnal:
+    image: sygnal
+    networks:
+      - no-internet
+    container_name: sygnal
+    volumes:
+      - ./sygnal.yaml:/sygnal.yaml
+      - ./<SERVICE_ACCOUNT_FILE>.json:/service_account.json:ro
+    ports:
+      - 5000:5000
+
+  proxy:
+    image: dominikbechstein/nginx-forward-proxy
+    networks:
+      - no-internet
+      - internet
+    container_name: nginx-forward-proxy
+    volumes:
+      - ./nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+    ports:
+      - 8080:8080
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
