@@ -498,7 +498,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
         :return: Needed content of the `Authorization` header
         """
-        print("_get_auth_header")
         if self.api_version is APIVersion.Legacy:
             return "key=%s" % (self.api_key,)
         else:
