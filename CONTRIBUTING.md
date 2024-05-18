@@ -273,6 +273,27 @@ unit tests and lints in a local development environment:
 - `tox -e check_types` to check types with MyPy.
 - `tox` **to do all of the above.**
 
+### Testing proxy support
+
+To test whether proxy support is working or not, a docker compose file has been
+provided to make things easier.
+
+For GCM Pushkin proxy testing follow these steps:
+- create a firebase project & service account
+- download the service account file from firebase & save to `./scripts-dev/proxy-test/service_account.json`
+- configure the PROJECT_ID in `./scripts-dev/proxy-test/sygnal.yaml`
+- build a docker image of sygnal named `sygnal`
+- cd to `./scripts-dev/proxy-test/`
+- run `docker compose up`
+- in another terminal, run `docker exec -it sygnal bash`
+- run `apt update && apt install curl -y`
+- run `chmod +x curl.sh`
+- run `./curl.sh`
+- you can tell if the proxy is **NOT** working by inspecting the sygnal logs & seeing something along the lines of "Network is unreachable" or DNS resolution/proxy errors
+- you cal tell if the proxy is working by inspecting the sygnal logs & seeing the following error from firebase '"code": 400, "message": "The registration token is not a valid FCM registration token"'
+- this is due to the `pushkey` being set to PUSHKEY_HERE in `notification.json`
+- if you want to fully test an actual notification, you will have to update this value in `./scripts-dev/proxy-test/notification.json` before calling `docker compose up`
+
 ## Updating your pull request
 
 If you decide to make changes to your pull request - perhaps to address issues

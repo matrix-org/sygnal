@@ -1,0 +1,38 @@
+services:
+  sygnal:
+    image: sygnal
+    networks:
+      no-internet:
+        ipv4_address: 172.28.0.2
+    container_name: sygnal
+    volumes:
+      - ./sygnal.yaml:/sygnal.yaml
+      - ./service_account.json:/service_account.json:ro
+      - ./curl.sh:/curl.sh
+      - ./notification.json:/notification.json
+      - ./proxy.conf:/etc/apt/apt.conf.d/proxy.conf
+    ports:
+      - 5000:5000
+
+  proxy:
+    image: dominikbechstein/nginx-forward-proxy
+    networks:
+      no-internet:
+        ipv4_address: 172.28.0.3
+      internet:
+    container_name: nginx-forward-proxy
+    volumes:
+      - ./nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+    ports:
+      - 8080:8080
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+  internet:
+    driver: bridge
