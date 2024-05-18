@@ -502,13 +502,17 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             return "key=%s" % (self.api_key,)
         else:
             assert self.credentials is not None
-            if not self.credentials.valid:
-                await Deferred.fromFuture(
-                    asyncio.ensure_future(
-                        self.credentials.refresh(self.google_auth_request)
-                    )
-                )
+            await self._refresh_credentials()
             return "Bearer %s" % self.credentials.token
+
+    async def _refresh_credentials(self) -> None:
+        assert self.credentials is not None
+        if not self.credentials.valid:
+            await Deferred.fromFuture(
+                asyncio.ensure_future(
+                    self.credentials.refresh(self.google_auth_request)
+                )
+            )
 
     async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: NotificationContext

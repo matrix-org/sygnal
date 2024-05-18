@@ -128,6 +128,11 @@ class TestGcmPushkin(GcmPushkin):
         self.num_requests += 1
         return self.preloaded_response, json.dumps(self.preloaded_response_payload)
 
+    async def _refresh_credentials(self) -> None:
+        assert self.credentials is not None
+        if not self.credentials.valid:
+            await self.credentials.refresh(self.google_auth_request)
+
 
 FAKE_SERVICE_ACCOUNT_FILE = b"""
 {
@@ -140,7 +145,7 @@ FAKE_SERVICE_ACCOUNT_FILE = b"""
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
   "token_uri": "https://oauth2.googleapis.com/token",
   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-04u89%40tchap-beta.iam.gserviceaccount.com",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk%40project_id.iam.gserviceaccount.com",
   "universe_domain": "googleapis.com"
 }
 """
@@ -298,8 +303,9 @@ class GcmTestCase(testutils.TestCase):
         )
 
         self.assertEqual(resp, {"rejected": []})
+        assert notification_req[3] is not None
         self.assertEqual(
-            gcm.last_request_headers.get("Authorization"), ["Bearer myaccesstoken"]
+            notification_req[3].get("Authorization"), ["Bearer myaccesstoken"]
         )
 
     def test_expected_with_default_payload(self) -> None:
