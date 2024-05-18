@@ -14,18 +14,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 import json
 import logging
+import os
 import time
 from enum import Enum
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 
-import google.auth.transport.requests
-from google.oauth2 import service_account
+# We are using an unstable async google-auth API, but it's there since 3+ years
+# https://github.com/googleapis/google-auth-library-python/issues/613
+import aiohttp
+import google.auth.transport._aiohttp_requests
+from google.auth._default_async import load_credentials_from_file
+from google.oauth2._credentials_async import Credentials
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
-from twisted.internet.defer import DeferredSemaphore
+from twisted.internet.defer import Deferred, DeferredSemaphore
 from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IResponse
@@ -180,10 +186,33 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 "Must configure `project_id` when using FCM api v1",
             )
 
-        self.service_account_file = self.get_config("service_account_file", str)
-        if self.api_version is APIVersion.V1 and not self.service_account_file:
-            raise PushkinSetupException(
-                "Must configure `service_account_file` when using FCM api v1",
+        self.credentials: Optional[Credentials] = None
+
+        if self.api_version is APIVersion.V1:
+            self.service_account_file = self.get_config("service_account_file", str)
+            if not self.service_account_file:
+                raise PushkinSetupException(
+                    "Must configure `service_account_file` when using FCM api v1",
+                )
+            try:
+                self.credentials, _ = load_credentials_from_file(
+                    str(self.service_account_file),
+                    scopes=AUTH_SCOPES,
+                )
+            except google.auth.exceptions.DefaultCredentialsError as e:
+                raise PushkinSetupException(
+                    f"`service_account_file` must be valid: {str(e)}",
+                )
+
+            session = None
+            if proxy_url:
+                # `ClientSession` can't directly take the proxy URL, so we need to
+                # set the usual env var and use `trust_env=True`
+                os.environ["HTTPS_PROXY"] = proxy_url
+                session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
+
+            self.google_auth_request = google.auth.transport._aiohttp_requests.Request(
+                session=session
             )
 
         # Use the fcm_options config dictionary as a foundation for the body;
@@ -464,21 +493,26 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 f"Unknown GCM response code {response.code}"
             )
 
-    def _get_access_token(self) -> str:
-        """Retrieve a valid access token that can be used to authorize requests.
+    async def _get_auth_header(self) -> str:
+        """Retrieve the auth header that can be used to authorize requests.
 
-        :return: Access token.
+        :return: Needed content of the `Authorization` header
         """
-        # TODO: Should we use the environment variable approach instead?
-        # export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
-        # credentials, project = google.auth.default(scopes=AUTH_SCOPES)
-        credentials = service_account.Credentials.from_service_account_file(
-            str(self.service_account_file),
-            scopes=AUTH_SCOPES,
-        )
-        request = google.auth.transport.requests.Request()
-        credentials.refresh(request)
-        return credentials.token
+        if self.api_version is APIVersion.Legacy:
+            return "key=%s" % (self.api_key,)
+        else:
+            assert self.credentials is not None
+            await self._refresh_credentials()
+            return "Bearer %s" % self.credentials.token
+
+    async def _refresh_credentials(self) -> None:
+        assert self.credentials is not None
+        if not self.credentials.valid:
+            await Deferred.fromFuture(
+                asyncio.ensure_future(
+                    self.credentials.refresh(self.google_auth_request)
+                )
+            )
 
     async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: NotificationContext
@@ -532,10 +566,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 "Content-Type": ["application/json"],
             }
 
-            if self.api_version == APIVersion.Legacy:
-                headers["Authorization"] = ["key=%s" % (self.api_key,)]
-            elif self.api_version is APIVersion.V1:
-                headers["Authorization"] = ["Bearer %s" % (self._get_access_token(),)]
+            headers["Authorization"] = [await self._get_auth_header()]
 
             body = self.base_request_body.copy()
             body["data"] = data
