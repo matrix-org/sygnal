@@ -4,35 +4,33 @@ Everyone is welcome to contribute code to Sygnal, provided you are willing to
 license your contributions under the same license as the project itself. In
 this case, the [Apache Software License v2](LICENSE).
 
-### Create a virtualenv
+### Installing dependencies
 
 To contribute to Sygnal, ensure you have Python 3.8 or newer and then run:
 
-```bash
-python3 -m venv venv
-./venv/bin/pip install -e '.[dev]'
+Sygnal uses the [poetry](https://python-poetry.org/) project to manage its dependencies
+and development environment. Once you have installed Python 3 and added the
+source, you should install `poetry`.
+Of their installation methods, we recommend
+[installing `poetry` using `pipx`](https://python-poetry.org/docs/#installing-with-pipx),
+
+```shell
+pip install --user pipx
+pipx install poetry
 ```
 
-This creates an isolated virtual Python environment ("virtualenv") just for
-use with Sygnal, then installs Sygnal along with its dependencies, and lastly
-installs a handful of useful tools
+but see poetry's [installation instructions](https://python-poetry.org/docs/#installation)
+for other installation methods.
 
-If you get `ConnectTimeoutError`, this is caused by slow internet whereby
-`pip` has a default time out of _15 sec_. You can specify a larger timeout
-by passing `--timeout 120` to the `pip install` command above.
+Next, open a terminal and install dependencies as follows:
 
-Finally, activate the virtualenv by running:
-
-```bash
-source ./venv/bin/activate
+```sh
+cd path/where/you/have/cloned/the/repository
+poetry install
 ```
 
-Be sure to do this _every time_ you open a new terminal window for working on
-Sygnal. Activating the venv ensures that any Python commands you run (`pip`,
-`python`, etc.) use the versions inside your venv, and not your system Python.
-
-When you're done, you can close your terminal or run `deactivate` to disable
-the virtualenv.
+This will install the runtime and developer dependencies for the project.  Be sure to check
+that the `poetry install` step completed cleanly.
 
 ### Run the tests
 
@@ -55,6 +53,25 @@ ___________________________________ summary ___________________________________
 ```
 
 Then all is well and you're ready to work!
+
+You can also directly run the tests using poetry.
+
+```sh
+poetry run trial tests
+```
+
+You can run unit tests in parallel by specifying `-jX` argument to `trial` where `X` is the number of parallel runners you want. To use 4 cpu cores, you would run them like:
+
+```sh
+poetry run trial -j4 tests
+```
+
+If you wish to only run *some* unit tests, you may specify
+another module instead of `tests` - or a test class or a method:
+
+```sh
+poetry run trial tests.test_apns.ApnsTestCase.test_expected
+```
 
 ## How to contribute
 
@@ -90,13 +107,9 @@ Many of the conventions are enforced by scripts which are run as part of the
 [continuous integration system](#continuous-integration-and-testing).
 
 To help check and fix adherence to the code style, you can run `tox`
-locally. You'll need Python 3.8 or later, and a virtual environment configured and
-active:
+locally. You'll need Python 3.8 or later:
 
 ```bash
-# Activate the virtual environment
-source ./venv/bin/activate
-
 # Run the code style check
 tox -e check_codestyle
 
@@ -113,6 +126,10 @@ files that were corrected.
 Please ensure your changes match the cosmetic style of the existing project,
 and **never** mix cosmetic and functional changes in the same commit, as it
 makes it horribly hard to review otherwise.
+
+## Further information on poetry
+
+See the information provided in the [Synapse docs](https://github.com/element-hq/synapse/blob/master/docs/development/dependencies.md).
 
 ## Changelog
 
