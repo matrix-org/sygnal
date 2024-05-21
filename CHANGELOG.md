@@ -1,3 +1,22 @@
+# Sygnal 0.14.2 (2024-05-21)
+
+### Bugfixes
+
+- FCM v1: use async version of google-auth and add HTTP proxy support. ([\#372](https://github.com/matrix-org/sygnal/issues/372))
+
+### Improved Documentation
+
+- Update docs & tests to reflect APNs usage in FCM v1 API. ([\#370](https://github.com/matrix-org/sygnal/issues/370))
+
+### Internal Changes
+
+- Update docker build and CI workflows to Python 3.11. ([\#373](https://github.com/matrix-org/sygnal/issues/373))
+- Switch over to use poetry & add lock file to version control. ([\#374](https://github.com/matrix-org/sygnal/issues/374))
+- Add manual proxy testing scripts & docs. ([\#375](https://github.com/matrix-org/sygnal/issues/375))
+- Bump `black` from 23.9.1 to 24.3.0. ([\#376](https://github.com/matrix-org/sygnal/issues/376))
+- Bump `requests` from 2.31.0 to 2.32.2. ([\#377](https://github.com/matrix-org/sygnal/issues/377))
+
+
 # Sygnal 0.14.1 (2024-04-09)
 
 ### Bugfixes
