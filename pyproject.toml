@@ -88,7 +88,7 @@ Twisted = ">=19.7,<23.10"
 zope-interface = ">=5.0.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "==23.9.1"
+black = "==24.3.0"
 coverage = "~=5.5"
 ruff = "==0.0.291"
 isort = "~=5.10"
