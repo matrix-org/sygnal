@@ -34,15 +34,13 @@ T = TypeVar("T")
 
 
 @overload
-def get_key(raw: Dict[str, Any], key: str, type_: Type[T], default: T) -> T:
-    ...
+def get_key(raw: Dict[str, Any], key: str, type_: Type[T], default: T) -> T: ...
 
 
 @overload
 def get_key(
     raw: Dict[str, Any], key: str, type_: Type[T], default: None = None
-) -> Optional[T]:
-    ...
+) -> Optional[T]: ...
 
 
 def get_key(
@@ -118,12 +116,12 @@ class Pushkin(abc.ABC):
         self.sygnal = sygnal
 
     @overload
-    def get_config(self, key: str, type_: Type[T], default: T) -> T:
-        ...
+    def get_config(self, key: str, type_: Type[T], default: T) -> T: ...
 
     @overload
-    def get_config(self, key: str, type_: Type[T], default: None = None) -> Optional[T]:
-        ...
+    def get_config(
+        self, key: str, type_: Type[T], default: None = None
+    ) -> Optional[T]: ...
 
     def get_config(
         self, key: str, type_: Type[T], default: Optional[T] = None
