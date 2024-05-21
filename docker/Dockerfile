@@ -17,7 +17,7 @@ FROM docker.io/library/python:${PYTHON_VERSION}-slim-bookworm as requirements
 # We install poetry in its own build stage to avoid its dependencies conflicting with
 # sygnal's dependencies.
 RUN --mount=type=cache,target=/root/.cache/pip \
-  pip install --user "poetry==1.3.2"
+  pip install --user "poetry==1.8.3"
 
 WORKDIR /sygnal
 
