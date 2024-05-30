@@ -83,7 +83,7 @@ pywebpush = ">=1.13.0"
 pyyaml = ">=5.1.1"
 sentry-sdk = ">=0.10.2"
 service_identity = ">=18.1.0"
-Twisted = ">=23.10"
+Twisted = ">=19.7"
 zope-interface = ">=5.0.0"
 
 [tool.poetry.group.dev.dependencies]
