@@ -574,7 +574,10 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 body["priority"] = "normal" if n.prio == "low" else "high"
             elif self.api_version is APIVersion.V1:
                 priority = {"priority": "normal" if n.prio == "low" else "high"}
-                body["android"] = priority
+                if "android" in body:
+                    body["android"].update(priority)
+                else:
+                    body["android"] = priority
 
             for retry_number in range(0, MAX_TRIES):
                 if self.api_version is APIVersion.Legacy:
