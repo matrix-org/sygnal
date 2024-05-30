@@ -174,6 +174,13 @@ class GcmTestCase(testutils.TestCase):
             "project_id": "example_project",
             "service_account_file": self.service_account_file.name,
             "fcm_options": {
+                "android": {
+                    "notification": {
+                        "body": {
+                            "test body",
+                        },
+                    },
+                },
                 "apns": {
                     "payload": {
                         "aps": {
@@ -286,7 +293,14 @@ class GcmTestCase(testutils.TestCase):
                         "unread": "2",
                         "missed_calls": "1",
                     },
-                    "android": {"priority": "high"},
+                    "android": {
+                        "notification": {
+                            "body": {
+                                "test body",
+                            },
+                        },
+                        "priority": "high",
+                    },
                     "apns": {
                         "payload": {
                             "aps": {
