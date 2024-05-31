@@ -1,3 +1,14 @@
+# Sygnal 0.14.3 (2024-05-31)
+
+### Bugfixes
+
+- Don't delete android notification options specified in config when using Firebase v1 API. ([\#380](https://github.com/matrix-org/sygnal/issues/380))
+
+### Internal Changes
+
+- Fix tests to allow Twisted versions >=23.10. ([\#381](https://github.com/matrix-org/sygnal/issues/381))
+
+
 # Sygnal 0.14.2 (2024-05-21)
 
 ### Bugfixes
