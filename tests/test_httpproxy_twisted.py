@@ -14,6 +14,8 @@
 # limitations under the License.
 import logging
 
+import twisted
+from incremental import Version
 from twisted.internet import interfaces  # noqa: F401
 from twisted.internet.protocol import Factory
 from twisted.protocols.tls import TLSMemoryBIOFactory
@@ -64,7 +66,7 @@ class SygnalTwistedProxyTests(TestCase):
             IProtocol: the server Protocol returned by server_factory
         """
         if ssl:
-            server_factory = _wrap_server_factory_for_tls(server_factory)
+            server_factory = _wrap_server_factory_for_tls(server_factory, self.reactor)
 
         server_protocol = server_factory.buildProtocol(None)
 
@@ -149,7 +151,9 @@ class SygnalTwistedProxyTests(TestCase):
         request.finish()
 
         # now we can replace the proxy channel with a new, SSL-wrapped HTTP channel
-        ssl_factory = _wrap_server_factory_for_tls(_get_test_protocol_factory())
+        ssl_factory = _wrap_server_factory_for_tls(
+            _get_test_protocol_factory(), self.reactor
+        )
         ssl_protocol = ssl_factory.buildProtocol(None)
         http_server = ssl_protocol.wrappedProtocol
 
@@ -188,7 +192,7 @@ class SygnalTwistedProxyTests(TestCase):
         self.assertEqual(body, b"result")
 
 
-def _wrap_server_factory_for_tls(factory, sanlist=None):
+def _wrap_server_factory_for_tls(factory, clock, sanlist=None):
     """Wrap an existing Protocol Factory with a test TLSMemoryBIOFactory
 
     The resultant factory will create a TLS server which presents a certificate
@@ -205,9 +209,15 @@ def _wrap_server_factory_for_tls(factory, sanlist=None):
         sanlist = [b"DNS:test.com"]
 
     connection_creator = TestServerTLSConnectionFactory(sanlist=sanlist)
-    return TLSMemoryBIOFactory(
-        connection_creator, isClient=False, wrappedFactory=factory
-    )
+    # Twisted > 23.8.0 has a different API that accepts a clock.
+    if twisted.version <= Version("Twisted", 23, 8, 0):  # type: ignore[attr-defined]
+        return TLSMemoryBIOFactory(
+            connection_creator, isClient=False, wrappedFactory=factory
+        )
+    else:
+        return TLSMemoryBIOFactory(
+            connection_creator, isClient=False, wrappedFactory=factory, clock=clock
+        )
 
 
 def _get_test_protocol_factory():
