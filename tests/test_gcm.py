@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 from unittest.mock import MagicMock
 
 from sygnal.gcmpushkin import APIVersion, GcmPushkin
@@ -117,7 +117,7 @@ class TestGcmPushkin(GcmPushkin):
         self.preloaded_response = DummyResponse(code)
         self.preloaded_response_payload = response_payload
 
-    def _load_credentials(self, proxy_url: str | None) -> None:
+    def _load_credentials(self, proxy_url: Optional[str]) -> None:
         if self.api_version is APIVersion.V1:
             self.credentials = TestCredentials()  # type: ignore[assignment]
             self.google_auth_request = None  # type: ignore[assignment]

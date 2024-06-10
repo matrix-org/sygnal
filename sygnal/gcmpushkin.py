@@ -196,7 +196,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 "Config field fcm_options, if set, must be a dictionary of options"
             )
 
-    def _load_credentials(self, proxy_url: str | None) -> None:
+    def _load_credentials(self, proxy_url: Optional[str]) -> None:
         self.credentials: Optional[Credentials] = None
 
         if self.api_version is APIVersion.V1:
