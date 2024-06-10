@@ -108,8 +108,6 @@ class TestGcmPushkin(GcmPushkin):
         self.last_request_body: Dict[str, Any] = {}
         self.last_request_headers: Dict[AnyStr, List[AnyStr]] = {}  # type: ignore[valid-type]
         self.num_requests = 0
-        if self.api_version is APIVersion.V1:
-            self.credentials = TestCredentials()  # type: ignore[assignment]
 
     def preload_with_response(
         self, code: int, response_payload: Dict[str, Any]
@@ -119,6 +117,12 @@ class TestGcmPushkin(GcmPushkin):
         """
         self.preloaded_response = DummyResponse(code)
         self.preloaded_response_payload = response_payload
+
+    def _load_credentials(self, proxy_url: str | None) -> None:
+        if self.api_version is APIVersion.V1:
+            self.credentials = TestCredentials()  # type: ignore[assignment]
+            self.google_auth_request = None  # type: ignore[assignment]
+            pass
 
     async def _perform_http_request(  # type: ignore[override]
         self, body: Dict[str, Any], headers: Dict[AnyStr, List[AnyStr]]
@@ -132,23 +136,6 @@ class TestGcmPushkin(GcmPushkin):
         assert self.credentials is not None
         if not self.credentials.valid:
             await self.credentials.refresh(self.google_auth_request)
-
-
-FAKE_SERVICE_ACCOUNT_FILE = b"""
-{
-  "type": "service_account",
-  "project_id": "project_id",
-  "private_key_id": "private_key_id",
-  "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC0PwE6TeTHjD5R\\nY2nOw1rsTgQZ38LCR2CLtx36n+LUkgej/9b+fwC88oKIqJKjUwn43JEOhf4rbA/a\\nqo4jVoLgv754G5+7Glfarr3/rqg+AVT75x6J5DRvhIYpDXwMIUqLAAbfk3TTFNJn\\n2ctrkBF2ZP9p3mzZ3NRjU63Wbf3LBpRqs8jdFEQu8JAecG8VKV1mboJIXG3hwqFN\\nJmcpC/+sWaxB5iMgSqy0w/rGFs6ZbZF6D10XYvf40lEEk9jQIovT+QD4+6GTlroT\\nbOk8uIwxFQcwMFpXj4MktqVNSNyiuuttptIvBWcMWHlaabXrR89vqUFe1g1Jx4GL\\nCF89RrcLAgMBAAECggEAPUYZ3b8zId78JGDeTEq+8wwGeuFFbRQkrvpeN5/41Xib\\nHlZPuQ5lqtXqKBjeWKVXA4G/0icc45gFv7kxPrQfI9YrItuJLmrjKNU0g+HVEdcU\\nE9pa2Fd6t9peXUBXRixfEee9bm3LTiKK8IDqlTNRrGTjKxNQ/7MBhI6izv1vRH/x\\n8i0o1xxNdqstHZ9wBFKYO9w8UQjtfzckkBNDLkaJ/WN0BoRubmUiV1+KwAyyBr6O\\nRnnZ9Tvy8VraSNSdJhX36ai36y18/sT6PWOp99zHYuDyz89KIz1la/fT9eSoR0Jy\\nYePmTEi+9pWhvtpAkqJkRxe5IDz71JVsQ07KoVfzaQKBgQDzKKUd/0ujhv/B9MQf\\nHcwSeWu/XnQ4hlcwz8dTWQjBV8gv9l4yBj9Pra62rg/tQ7b5XKMt6lv/tWs1IpdA\\neMsySY4972VPrmggKXgCnyKckDUYydNtHAIj9buo6AV8rONaneYnGv5wpSsf3q2c\\nOZrkamRgbBkI+B2mZ2obH1oVlQKBgQC9w9HkrDMvZ5L/ilZmpsvoHNFlQwmDgNlN\\n0ej5QGID5rljRM3CcLNHdyQiKqvLA9MCpPEXb2vVJPdmquD12A7a9s0OwxB/dtOD\\nykofcTY0ZHEM1HEyYJGmdK4FvZuNU4o2/D268dePjtj1Xw3c5fs0bcDiGQMtjWlz\\n5hjBzMsyHwKBgGjrIsPcwlBfEcAo0u7yNnnKNnmuUcuJ+9kt7j3Cbwqty80WKvK+\\ny1agBIECfhDMZQkXtbk8JFIjf4y/zi+db1/VaTDEORy2jmtCOWw4KgEQIDj/7OBp\\nc2r8vupUovl2x+rzsrkw5pTIT+FCffqoyHLCjWkle2/pTzHb8Waekoo5AoGAbELk\\nYy5uwTO45Hr60fOEzzZpq/iz28dNshz4agL2KD2gNGcTcEO1tCbfgXKQsfDLmG2b\\ncgBKJ77AOl1wnDEYQIme8TYOGnojL8Pfx9Jh10AaUvR8Y/49+hYFFhdXQCiR6M69\\nNQM2NJuNYWdKVGUMjJu0+AjHDFzp9YonQ6Ffp4cCgYEAmVALALCjU9GjJymgJ0lx\\nD9LccVHMwf9NmR/sMg0XNePRbCEcMDHKdtVJ1zPGS5txuxY3sRb/tDpv7TfuitrU\\nAw0/2ooMzunaoF/HXo+C/+t+pfuqPqLK4sCCyezUlMfCcaPdwXN2FmbgsaFHfe7I\\n7sGEnS/d8wEgydMiptJEf9s=\\n-----END PRIVATE KEY-----\\n",
-  "client_email": "firebase-adminsdk@project_id.iam.gserviceaccount.com",
-  "client_id": "client_id",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk%40project_id.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
-"""
 
 
 class GcmTestCase(testutils.TestCase):
@@ -165,14 +152,10 @@ class GcmTestCase(testutils.TestCase):
             "api_key": "kii",
             "fcm_options": {"content_available": True, "mutable_content": True},
         }
-        self.service_account_file = tempfile.NamedTemporaryFile()
-        self.service_account_file.write(FAKE_SERVICE_ACCOUNT_FILE)
-        self.service_account_file.flush()
         config["apps"]["com.example.gcm.apiv1"] = {
             "type": "tests.test_gcm.TestGcmPushkin",
             "api_version": "v1",
             "project_id": "example_project",
-            "service_account_file": self.service_account_file.name,
             "fcm_options": {
                 "android": {
                     "notification": {
@@ -192,9 +175,6 @@ class GcmTestCase(testutils.TestCase):
                 },
             },
         }
-
-    def tearDown(self) -> None:
-        self.service_account_file.close()
 
     def get_test_pushkin(self, name: str) -> TestGcmPushkin:
         pushkin = self.sygnal.pushkins[name]

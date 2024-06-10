@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 # https://github.com/googleapis/google-auth-library-python/issues/613
 import aiohttp
 import google.auth.transport._aiohttp_requests
-from google.auth._default_async import load_credentials_from_file
+from google.auth._default_async import default_async
 from google.oauth2._credentials_async import Credentials
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
@@ -126,7 +126,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "fcm_options",
         "max_connections",
         "project_id",
-        "service_account_file",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
@@ -186,22 +185,26 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 "Must configure `project_id` when using FCM api v1",
             )
 
+        self._load_credentials(proxy_url)
+
+        # Use the fcm_options config dictionary as a foundation for the body;
+        # this lets the Sygnal admin choose custom FCM options
+        # (e.g. content_available).
+        self.base_request_body = self.get_config("fcm_options", dict, {})
+        if not isinstance(self.base_request_body, dict):
+            raise PushkinSetupException(
+                "Config field fcm_options, if set, must be a dictionary of options"
+            )
+
+    def _load_credentials(self, proxy_url: str | None) -> None:
         self.credentials: Optional[Credentials] = None
 
         if self.api_version is APIVersion.V1:
-            self.service_account_file = self.get_config("service_account_file", str)
-            if not self.service_account_file:
-                raise PushkinSetupException(
-                    "Must configure `service_account_file` when using FCM api v1",
-                )
             try:
-                self.credentials, _ = load_credentials_from_file(
-                    str(self.service_account_file),
-                    scopes=AUTH_SCOPES,
-                )
+                self.credentials, _ = default_async(scopes=AUTH_SCOPES)
             except google.auth.exceptions.DefaultCredentialsError as e:
                 raise PushkinSetupException(
-                    f"`service_account_file` must be valid: {str(e)}",
+                    f"Failed loading google credentials: {str(e)}",
                 )
 
             session = None
@@ -213,15 +216,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
             self.google_auth_request = google.auth.transport._aiohttp_requests.Request(
                 session=session
-            )
-
-        # Use the fcm_options config dictionary as a foundation for the body;
-        # this lets the Sygnal admin choose custom FCM options
-        # (e.g. content_available).
-        self.base_request_body = self.get_config("fcm_options", dict, {})
-        if not isinstance(self.base_request_body, dict):
-            raise PushkinSetupException(
-                "Config field fcm_options, if set, must be a dictionary of options"
             )
 
     @classmethod

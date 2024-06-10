@@ -210,7 +210,6 @@ apps:
   #  #api_key: 
   #  api_version: v1
   #  project_id: project-id
-  #  service_account_file: /path/to/service_account.json
   #
   #  # This is the maximum number of connections to GCM servers at any one time
   #  # the default is 20.
