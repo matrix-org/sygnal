@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple
 # https://github.com/googleapis/google-auth-library-python/issues/613
 import aiohttp
 import google.auth.transport._aiohttp_requests
-from google.auth._default_async import default_async
+from google.auth._default_async import default_async, load_credentials_from_file
 from google.oauth2._credentials_async import Credentials
 from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
@@ -126,6 +126,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "fcm_options",
         "max_connections",
         "project_id",
+        "service_account_file",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
     def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
@@ -200,12 +201,24 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         self.credentials: Optional[Credentials] = None
 
         if self.api_version is APIVersion.V1:
-            try:
-                self.credentials, _ = default_async(scopes=AUTH_SCOPES)
-            except google.auth.exceptions.DefaultCredentialsError as e:
-                raise PushkinSetupException(
-                    f"Failed loading google credentials: {str(e)}",
-                )
+            self.service_account_file = self.get_config("service_account_file", str)
+            if self.service_account_file:
+                try:
+                    self.credentials, _ = load_credentials_from_file(
+                        str(self.service_account_file),
+                        scopes=AUTH_SCOPES,
+                    )
+                except google.auth.exceptions.DefaultCredentialsError as e:
+                    raise PushkinSetupException(
+                        f"`service_account_file` must be valid: {str(e)}",
+                    )
+            else:
+                try:
+                    self.credentials, _ = default_async(scopes=AUTH_SCOPES)
+                except google.auth.exceptions.DefaultCredentialsError as e:
+                    raise PushkinSetupException(
+                        f"Failed loading google credentials: {str(e)}",
+                    )
 
             session = None
             if proxy_url:
