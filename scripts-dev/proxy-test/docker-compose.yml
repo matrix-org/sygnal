@@ -5,6 +5,8 @@ services:
       no-internet:
         ipv4_address: 172.28.0.2
     container_name: sygnal
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: "/service_account.json"
     volumes:
       - ./sygnal.yaml:/sygnal.yaml
       - ./service_account.json:/service_account.json:ro
