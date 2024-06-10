@@ -99,9 +99,17 @@ For API v1, it expects:
 - the `project_id` parameter to contain the `Project ID`,
   which can be acquired from Firebase Console at:
   `https://console.cloud.google.com/project/<PROJECT NAME>/settings/general/`
+
+API v1 also expects one of the following to be configured:
 - the [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials) configured on the local system.
   This can point to a service account file which can be acquired from Firebase Console at:
   `https://console.firebase.google.com/project/<PROJECT NAME>/settings/serviceaccounts/adminsdk`
+
+  **OR..**
+
+- the `service_account_file` config parameter to contain the path to the service account file
+
+It is recommended to use the application default credentials method to acquire google credentials.
 
 Using an HTTP Proxy for outbound traffic
 ----------------------------------------
