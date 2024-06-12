@@ -109,7 +109,7 @@ API v1 also expects one of the following to be configured:
 
 - the `service_account_file` config parameter to contain the path to the service account file
 
-It is recommended to use the application default credentials method to acquire google credentials.
+It is recommended to use the application default credentials method to acquire Google credentials.
 
 Using an HTTP Proxy for outbound traffic
 ----------------------------------------
