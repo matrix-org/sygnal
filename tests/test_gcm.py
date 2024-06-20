@@ -484,7 +484,7 @@ class GcmTestCase(testutils.TestCase):
     def test_api_v1_large_fields(self) -> None:
         """
         Tests the gcm pushkin truncates unusually large fields. Includes large
-        fields both at the top level of `data`, and nested within `body`.
+        fields both at the top level of `data`, and nested within `content`.
         """
         self.apns_pushkin_snotif = MagicMock()
         gcm = self.get_test_pushkin("com.example.gcm.apiv1")
