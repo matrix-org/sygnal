@@ -579,17 +579,20 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 else:
                     body["android"] = priority
 
+            if self.api_version is APIVersion.V1:
+                body["token"] = device.pushkey
+                new_body = body
+                body = {}
+                body["message"] = new_body
+
             for retry_number in range(0, MAX_TRIES):
+                # This has to happen inside the retry loop since `pushkeys` can be modified in the
+                # event of a failure that warrants a retry.
                 if self.api_version is APIVersion.Legacy:
                     if len(pushkeys) == 1:
                         body["to"] = pushkeys[0]
                     else:
                         body["registration_ids"] = pushkeys
-                elif self.api_version is APIVersion.V1:
-                    body["token"] = device.pushkey
-                    new_body = body
-                    body = {}
-                    body["message"] = new_body
 
                 log.info(
                     "Sending (attempt %i) => %r room:%s, event:%s",
