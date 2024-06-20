@@ -707,6 +707,8 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 for attr, value in data["content"].items():
                     if not isinstance(value, str):
                         continue
+                    if len(value) > MAX_BYTES_PER_FIELD:
+                        value = value[0:MAX_BYTES_PER_FIELD]
                     data["content_" + attr] = value
                 del data["content"]
 

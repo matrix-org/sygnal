@@ -480,3 +480,105 @@ class GcmTestCase(testutils.TestCase):
         assert gcm.last_request_body is not None
         self.assertEqual(gcm.last_request_body["mutable_content"], True)
         self.assertEqual(gcm.last_request_body["content_available"], True)
+
+    def test_api_v1_large_fields(self) -> None:
+        """
+        Tests the gcm pushkin truncates unusually large fields. Includes large
+        fields both at the top level of `data`, and nested within `body`.
+        """
+        self.apns_pushkin_snotif = MagicMock()
+        gcm = self.get_test_pushkin("com.example.gcm.apiv1")
+        gcm.preload_with_response(
+            200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
+        )
+
+        # type safety: using ignore here due to mypy not handling monkeypatching,
+        # see https://github.com/python/mypy/issues/2427
+        gcm._request_dispatch = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
+
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(([], []))
+
+        resp = self._request(
+            self._make_dummy_notification_large_fields([DEVICE_EXAMPLE_APIV1])
+        )
+
+        self.assertEqual(1, method.call_count)
+        notification_req = method.call_args.args
+
+        # The values for `room_name` & `content_other` should be truncated from the original.
+        self.assertEqual(
+            {
+                "message": {
+                    "data": {
+                        "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
+                        "type": "m.room.message",
+                        "sender": "@exampleuser:matrix.org",
+                        "room_name": "xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxx",
+                        "room_alias": "#exampleroom:matrix.org",
+                        "membership": None,
+                        "sender_display_name": "Major Tom",
+                        "content_msgtype": "m.text",
+                        "content_body": "I'm floating in a most peculiar way.",
+                        "content_other": "xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxx",
+                        "room_id": "!slw48wfj34rtnrf:example.com",
+                        "prio": "high",
+                        "unread": "2",
+                        "missed_calls": "1",
+                    },
+                    "android": {
+                        "notification": {
+                            "body": {
+                                "test body",
+                            },
+                        },
+                        "priority": "high",
+                    },
+                    "apns": {
+                        "payload": {
+                            "aps": {
+                                "content-available": 1,
+                                "mutable-content": 1,
+                                "alert": "",
+                            },
+                        },
+                    },
+                    "token": "spqr",
+                }
+            },
+            notification_req[2],
+        )
+
+        self.assertEqual(resp, {"rejected": []})
+        assert notification_req[3] is not None
+        self.assertEqual(
+            notification_req[3].get("Authorization"), ["Bearer myaccesstoken"]
+        )
