@@ -260,9 +260,6 @@ class GcmTestCase(testutils.TestCase):
         """
         self.apns_pushkin_snotif = MagicMock()
         gcm = self.get_test_pushkin("com.example.gcm.apiv1")
-        gcm.preload_with_response(
-            200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
-        )
 
         # type safety: using ignore here due to mypy not handling monkeypatching,
         # see https://github.com/python/mypy/issues/2427
@@ -474,14 +471,6 @@ class GcmTestCase(testutils.TestCase):
         self.gcm_pushkin_snotif = MagicMock()
 
         gcm = self.get_test_pushkin("com.example.gcm.apiv1")
-        gcm.preload_with_response(
-            502,
-            {
-                "results": [
-                    {"registration_id": "spqr", "error": "NotRegistered"},
-                ]
-            },
-        )
 
         # type safety: using ignore here due to mypy not handling monkeypatching,
         # see https://github.com/python/mypy/issues/2427
