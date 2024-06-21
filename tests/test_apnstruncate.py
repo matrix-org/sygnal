@@ -21,7 +21,7 @@ import string
 import unittest
 from typing import Any, Dict
 
-from sygnal.apnstruncate import json_encode, truncate
+from matrix_sygnal.apnstruncate import json_encode, truncate
 
 
 def simplestring(length: int, offset: int = 0) -> str:

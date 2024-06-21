@@ -34,8 +34,10 @@ from twisted.web.http_headers import Headers
 from twisted.web.iweb import IAgent, IBodyProducer, IPolicyForHTTPS, IResponse
 from zope.interface import implementer
 
-from sygnal.helper.proxy import decompose_http_proxy_url
-from sygnal.helper.proxy.connectproxyclient_twisted import HTTPConnectProxyEndpoint
+from matrix_sygnal.helper.proxy import decompose_http_proxy_url
+from matrix_sygnal.helper.proxy.connectproxyclient_twisted import (
+    HTTPConnectProxyEndpoint,
+)
 
 logger = logging.getLogger(__name__)
 

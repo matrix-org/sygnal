@@ -57,7 +57,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
   pip install --prefix="/install" --no-deps --no-warn-script-location -r /sygnal/requirements.txt
 
 # Copy over the rest of the sygnal source code.
-COPY sygnal /sygnal/sygnal/
+COPY matrix_sygnal /sygnal/matrix_sygnal/
 # ... and what we need to `pip install`.
 COPY pyproject.toml README.md /sygnal/
 
@@ -85,4 +85,4 @@ COPY --from=builder /install /usr/local
 
 EXPOSE 5000/tcp
 
-ENTRYPOINT ["python", "-m", "sygnal.sygnal"]
+ENTRYPOINT ["python", "-m", "matrix_sygnal.sygnal"]

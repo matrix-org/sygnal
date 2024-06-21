@@ -30,7 +30,7 @@ from twisted.web.http_headers import Headers
 from twisted.web.server import Request
 from zope.interface.declarations import implementer
 
-from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
+from matrix_sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
 
 REQ_PATH = b"/_matrix/push/v1/notify"
 

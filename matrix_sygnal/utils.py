@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, MutableMapping, Tuple
 from twisted.internet.defer import Deferred
 
 if TYPE_CHECKING:
-    from sygnal.sygnal import SygnalReactor
+    from matrix_sygnal.sygnal import SygnalReactor
 
 
 async def twisted_sleep(delay: float, twisted_reactor: "SygnalReactor") -> None:

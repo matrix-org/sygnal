@@ -20,7 +20,7 @@ import logging
 import logging.config
 import os
 import sys
-from typing import Any, Dict, Set, cast
+from typing import Any, Dict, Generator, Set, cast
 
 import opentracing
 import prometheus_client
@@ -28,7 +28,7 @@ import yaml
 from opentracing import Tracer
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor, defer
-from twisted.internet.defer import ensureDeferred
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.internet.interfaces import (
     IReactorCore,
     IReactorFDSet,
@@ -40,8 +40,8 @@ from twisted.python import log as twisted_log
 from twisted.python.failure import Failure
 from zope.interface import Interface
 
-from sygnal.http import PushGatewayApiServer
-from sygnal.notifications import Pushkin
+from matrix_sygnal.http import PushGatewayApiServer
+from matrix_sygnal.notifications import Pushkin
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ class Sygnal:
             to_import = kind_split[0]
             to_construct = kind_split[1]
         else:
-            to_import = f"sygnal.{app_type}pushkin"
+            to_import = f"matrix_sygnal.{app_type}pushkin"
             to_construct = f"{app_type.capitalize()}Pushkin"
 
         logger.info("Importing pushkin module: %s", to_import)
@@ -223,7 +223,7 @@ class Sygnal:
         """
 
         @defer.inlineCallbacks
-        def start():
+        def start() -> Generator[Deferred[Any], Any, Any]:
             try:
                 yield ensureDeferred(self.make_pushkins_then_start())
             except Exception:
@@ -337,7 +337,7 @@ def merge_left_with_defaults(
     return result
 
 
-def main():
+def main() -> None:
     # TODO we don't want to have to install the reactor, when we can get away with
     #   it
     asyncioreactor.install()

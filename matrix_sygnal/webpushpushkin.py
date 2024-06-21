@@ -31,10 +31,10 @@ from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IResponse
 
-from sygnal.exceptions import PushkinSetupException
-from sygnal.helper.context_factory import ClientTLSOptionsFactory
-from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from sygnal.notifications import (
+from matrix_sygnal.exceptions import PushkinSetupException
+from matrix_sygnal.helper.context_factory import ClientTLSOptionsFactory
+from matrix_sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
+from matrix_sygnal.notifications import (
     ConcurrencyLimitedPushkin,
     Device,
     Notification,
@@ -42,7 +42,7 @@ from sygnal.notifications import (
 )
 
 if TYPE_CHECKING:
-    from sygnal.sygnal import Sygnal
+    from matrix_sygnal.sygnal import Sygnal
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_webpush_queue_time",

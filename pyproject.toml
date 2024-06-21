@@ -108,4 +108,4 @@ typing-extensions = ">=3.7.4"
 "changelog" = "https://github.com/matrix-org/sygnal/blob/main/CHANGELOG.md"
 
 [tool.poetry.scripts]
-sygnal = "sygnal.sygnal:main"
+sygnal = "matrix_sygnal.sygnal:main"

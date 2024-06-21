@@ -15,20 +15,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import abc
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Self,
+    Type,
+    TypeVar,
+    overload,
+)
 
 from matrix_common.regex import glob_to_regex
 from opentracing import Span
 from prometheus_client import Counter
 
-from sygnal.exceptions import (
+from matrix_sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
     PushkinSetupException,
 )
 
 if TYPE_CHECKING:
-    from sygnal.sygnal import Sygnal
+    from matrix_sygnal.sygnal import Sygnal
 
 T = TypeVar("T")
 
@@ -83,7 +93,7 @@ class Counts:
 
 
 class Notification:
-    def __init__(self, notif):
+    def __init__(self, notif: dict):
         # optional attributes
         self.room_name: Optional[str] = notif.get("room_name")
         self.room_alias: Optional[str] = notif.get("room_alias")
@@ -155,7 +165,7 @@ class Pushkin(abc.ABC):
         ...
 
     @classmethod
-    async def create(cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
+    async def create(cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> Self:
         """
         Override this if your pushkin needs to call async code in order to
         be constructed. Otherwise, it defaults to just invoking the Python-standard

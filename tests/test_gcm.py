@@ -17,13 +17,13 @@ import tempfile
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
 from unittest.mock import MagicMock
 
-from sygnal.gcmpushkin import APIVersion, GcmPushkin
+from matrix_sygnal.gcmpushkin import APIVersion, GcmPushkin
 
 from tests import testutils
 from tests.testutils import DummyResponse
 
 if TYPE_CHECKING:
-    from sygnal.sygnal import Sygnal
+    from matrix_sygnal.sygnal import Sygnal
 
 DEVICE_EXAMPLE = {"app_id": "com.example.gcm", "pushkey": "spqr", "pushkey_ts": 42}
 DEVICE_EXAMPLE2 = {"app_id": "com.example.gcm", "pushkey": "spqr2", "pushkey_ts": 42}
