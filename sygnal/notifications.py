@@ -15,17 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import abc
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    List,
-    Optional,
-    Self,
-    Type,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, overload
 
 from matrix_common.regex import glob_to_regex
 from opentracing import Span
@@ -165,7 +155,7 @@ class Pushkin(abc.ABC):
         ...
 
     @classmethod
-    async def create(cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> Self:
+    async def create(cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         """
         Override this if your pushkin needs to call async code in order to
         be constructed. Otherwise, it defaults to just invoking the Python-standard
