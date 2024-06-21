@@ -85,6 +85,11 @@ MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
 RETRY_DELAY_BASE_QUOTA_EXCEEDED = 60
 MAX_BYTES_PER_FIELD = 1024
+MAX_FIREBASE_MESSAGE_SIZE = 4096
+
+# Subtract 1 since the combined size of the other non-overflowing fields will push it over the
+# edge otherwise.
+MAX_NOTIFICATION_OVERFLOW_FIELDS = MAX_FIREBASE_MESSAGE_SIZE / MAX_BYTES_PER_FIELD - 1
 
 AUTH_SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
 
@@ -673,6 +678,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             JSON-compatible dict or None if the default_payload is misconfigured
         """
         data = {}
+        overflow_fields = 0
 
         if device.data:
             default_payload = device.data.get("default_payload", {})
@@ -700,6 +706,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 # Truncate fields to a sensible maximum length. If the whole
                 # body is too long, GCM will reject it.
                 if data[attr] is not None and len(data[attr]) > MAX_BYTES_PER_FIELD:
+                    overflow_fields += 1
                     data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
 
         if api_version is APIVersion.V1:
@@ -708,6 +715,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     if not isinstance(value, str):
                         continue
                     if len(value) > MAX_BYTES_PER_FIELD:
+                        overflow_fields += 1
                         value = value[0:MAX_BYTES_PER_FIELD] + "..."
                     data["content_" + attr] = value
                 del data["content"]
@@ -723,5 +731,10 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             elif api_version is APIVersion.V1:
                 data["unread"] = str(n.counts.unread)
                 data["missed_calls"] = str(n.counts.missed_calls)
+
+        if overflow_fields > MAX_NOTIFICATION_OVERFLOW_FIELDS:
+            logger.warning(
+                "Payload contains too many overflowing fields. Notification likely to be rejected by Firebase."
+            )
 
         return data
