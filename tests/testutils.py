@@ -286,6 +286,7 @@ class ExtendedMemoryReactorClock(MemoryReactorClock):
 class DummyResponse:
     def __init__(self, code):
         self.code = code
+        self.headers = Headers()
 
 
 def make_async_magic_mock(ret_val):

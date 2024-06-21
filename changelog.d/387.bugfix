@@ -1,0 +1,1 @@
+Fixes an issue where retry attempts using the Firebase v1 API would fail due to nested `messages`.
