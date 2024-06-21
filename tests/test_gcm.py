@@ -548,7 +548,7 @@ ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
 ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
-ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooox...",
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxx...",
                         "room_id": "!slw48wfj34rtnrf:example.com",
                         "prio": "high",
                         "unread": "2",
