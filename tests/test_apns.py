@@ -17,8 +17,8 @@ from unittest.mock import MagicMock, patch
 
 from aioapns.common import NotificationResult, PushType
 
-from matrix_sygnal import apnstruncate
-from matrix_sygnal.apnspushkin import ApnsPushkin
+from sygnal import apnstruncate
+from sygnal.apnspushkin import ApnsPushkin
 
 from tests import testutils
 
@@ -58,16 +58,14 @@ DEVICE_EXAMPLE_FOR_PUSH_TYPE_PUSHKIN = {
 
 class ApnsTestCase(testutils.TestCase):
     def setUp(self) -> None:
-        self.apns_mock_class = patch("matrix_sygnal.apnspushkin.APNs").start()
+        self.apns_mock_class = patch("sygnal.apnspushkin.APNs").start()
         self.apns_mock = MagicMock()
         self.apns_mock_class.return_value = self.apns_mock
 
         # pretend our certificate exists
         patch("os.path.exists", lambda x: x == TEST_CERTFILE_PATH).start()
         # Since no certificate exists, don't try to read it.
-        patch(
-            "matrix_sygnal.apnspushkin.ApnsPushkin._report_certificate_expiration"
-        ).start()
+        patch("sygnal.apnspushkin.ApnsPushkin._report_certificate_expiration").start()
         self.addCleanup(patch.stopall)
 
         super().setUp()

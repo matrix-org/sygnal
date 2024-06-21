@@ -32,23 +32,23 @@ from opentracing import Span, logs, tags
 from prometheus_client import Counter, Gauge, Histogram
 from twisted.internet.defer import Deferred
 
-from matrix_sygnal import apnstruncate
-from matrix_sygnal.exceptions import (
+from sygnal import apnstruncate
+from sygnal.exceptions import (
     NotificationDispatchException,
     PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
-from matrix_sygnal.helper.proxy.proxy_asyncio import ProxyingEventLoopWrapper
-from matrix_sygnal.notifications import (
+from sygnal.helper.proxy.proxy_asyncio import ProxyingEventLoopWrapper
+from sygnal.notifications import (
     ConcurrencyLimitedPushkin,
     Device,
     Notification,
     NotificationContext,
 )
-from matrix_sygnal.utils import NotificationLoggerAdapter, twisted_sleep
+from sygnal.utils import NotificationLoggerAdapter, twisted_sleep
 
 if TYPE_CHECKING:
-    from matrix_sygnal.sygnal import Sygnal
+    from sygnal.sygnal import Sygnal
 
 
 logger = logging.getLogger(__name__)

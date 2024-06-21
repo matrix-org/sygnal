@@ -14,13 +14,13 @@
 
 from typing import Any, Dict, List
 
-from matrix_sygnal.notifications import (
+from sygnal.notifications import (
     ConcurrencyLimitedPushkin,
     Device,
     Notification,
     NotificationContext,
 )
-from matrix_sygnal.utils import twisted_sleep
+from sygnal.utils import twisted_sleep
 
 from tests.testutils import TestCase
 

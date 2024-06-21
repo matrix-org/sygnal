@@ -22,7 +22,7 @@ from twisted.protocols.tls import TLSMemoryBIOFactory
 from twisted.web.client import readBody
 from twisted.web.http import HTTPChannel
 
-from matrix_sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
+from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
 
 from tests.testutils import TestCase
 from tests.twisted_test_helpers import (

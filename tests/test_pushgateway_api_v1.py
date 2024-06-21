@@ -17,16 +17,11 @@ from typing import Any, Dict, List
 from twisted.internet.address import IPv6Address
 from twisted.internet.testing import StringTransport
 
-from matrix_sygnal.exceptions import (
+from sygnal.exceptions import (
     NotificationDispatchException,
     TemporaryNotificationDispatchException,
 )
-from matrix_sygnal.notifications import (
-    Device,
-    Notification,
-    NotificationContext,
-    Pushkin,
-)
+from sygnal.notifications import Device, Notification, NotificationContext, Pushkin
 
 from tests import testutils
 

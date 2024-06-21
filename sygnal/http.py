@@ -35,15 +35,15 @@ from twisted.web.http import (
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from matrix_sygnal.exceptions import (
+from sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
 )
-from matrix_sygnal.notifications import Notification, NotificationContext, Pushkin
-from matrix_sygnal.utils import NotificationLoggerAdapter, json_decoder
+from sygnal.notifications import Notification, NotificationContext, Pushkin
+from sygnal.utils import NotificationLoggerAdapter, json_decoder
 
 if TYPE_CHECKING:
-    from matrix_sygnal.sygnal import Sygnal
+    from sygnal.sygnal import Sygnal
 
 logger = logging.getLogger(__name__)
 

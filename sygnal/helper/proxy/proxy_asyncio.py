@@ -24,8 +24,8 @@ from typing import Any, Callable, Optional, Tuple, Union
 
 import attr
 
-from matrix_sygnal.exceptions import ProxyConnectError
-from matrix_sygnal.helper.proxy import decompose_http_proxy_url
+from sygnal.exceptions import ProxyConnectError
+from sygnal.helper.proxy import decompose_http_proxy_url
 
 logger = logging.getLogger(__name__)
 

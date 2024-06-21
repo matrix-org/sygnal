@@ -14,7 +14,7 @@
 # limitations under the License.
 import unittest
 
-from matrix_sygnal.helper.proxy import HttpProxyUrl, decompose_http_proxy_url
+from sygnal.helper.proxy import HttpProxyUrl, decompose_http_proxy_url
 
 
 class ProxyUrlTestCase(unittest.TestCase):

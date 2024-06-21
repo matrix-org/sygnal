@@ -17,8 +17,8 @@ import ssl
 from asyncio import AbstractEventLoop, BaseTransport, Protocol, Task
 from typing import Optional, Tuple, cast
 
-from matrix_sygnal.exceptions import ProxyConnectError
-from matrix_sygnal.helper.proxy.proxy_asyncio import HttpConnectProtocol
+from sygnal.exceptions import ProxyConnectError
+from sygnal.helper.proxy.proxy_asyncio import HttpConnectProtocol
 
 from tests import testutils
 from tests.asyncio_test_helpers import (

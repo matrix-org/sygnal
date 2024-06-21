@@ -31,14 +31,14 @@ from matrix_common.regex import glob_to_regex
 from opentracing import Span
 from prometheus_client import Counter
 
-from matrix_sygnal.exceptions import (
+from sygnal.exceptions import (
     InvalidNotificationException,
     NotificationDispatchException,
     PushkinSetupException,
 )
 
 if TYPE_CHECKING:
-    from matrix_sygnal.sygnal import Sygnal
+    from sygnal.sygnal import Sygnal
 
 T = TypeVar("T")
 

@@ -34,7 +34,7 @@ from twisted.python.failure import Failure
 from twisted.web import http
 from zope.interface import implementer
 
-from matrix_sygnal.exceptions import ProxyConnectError
+from sygnal.exceptions import ProxyConnectError
 
 logger = logging.getLogger(__name__)
 

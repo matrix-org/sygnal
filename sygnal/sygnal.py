@@ -40,8 +40,8 @@ from twisted.python import log as twisted_log
 from twisted.python.failure import Failure
 from zope.interface import Interface
 
-from matrix_sygnal.http import PushGatewayApiServer
-from matrix_sygnal.notifications import Pushkin
+from sygnal.http import PushGatewayApiServer
+from sygnal.notifications import Pushkin
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ class Sygnal:
             to_import = kind_split[0]
             to_construct = kind_split[1]
         else:
-            to_import = f"matrix_sygnal.{app_type}pushkin"
+            to_import = f"sygnal.{app_type}pushkin"
             to_construct = f"{app_type.capitalize()}Pushkin"
 
         logger.info("Importing pushkin module: %s", to_import)

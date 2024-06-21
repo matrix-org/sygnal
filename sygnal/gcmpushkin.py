@@ -36,24 +36,24 @@ from twisted.web.client import FileBodyProducer, HTTPConnectionPool, readBody
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IResponse
 
-from matrix_sygnal.exceptions import (
+from sygnal.exceptions import (
     NotificationDispatchException,
     NotificationQuotaDispatchException,
     PushkinSetupException,
     TemporaryNotificationDispatchException,
 )
-from matrix_sygnal.helper.context_factory import ClientTLSOptionsFactory
-from matrix_sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
-from matrix_sygnal.notifications import (
+from sygnal.helper.context_factory import ClientTLSOptionsFactory
+from sygnal.helper.proxy.proxyagent_twisted import ProxyAgent
+from sygnal.notifications import (
     ConcurrencyLimitedPushkin,
     Device,
     Notification,
     NotificationContext,
 )
-from matrix_sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
+from sygnal.utils import NotificationLoggerAdapter, json_decoder, twisted_sleep
 
 if TYPE_CHECKING:
-    from matrix_sygnal.sygnal import Sygnal
+    from sygnal.sygnal import Sygnal
 
 QUEUE_TIME_HISTOGRAM = Histogram(
     "sygnal_gcm_queue_time", "Time taken waiting for a connection to GCM"

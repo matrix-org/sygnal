@@ -61,6 +61,9 @@ description = "Reference Push Gateway for Matrix Notifications"
 authors = ["Matrix.org Team and Contributors <packages@matrix.org>"]
 readme = "README.md"
 license = "Apache-2.0"
+packages = [
+    { include = "sygnal" },
+]
 include = [
     { path = "tests", format = "sdist" },
 ]
@@ -108,4 +111,4 @@ typing-extensions = ">=3.7.4"
 "changelog" = "https://github.com/matrix-org/sygnal/blob/main/CHANGELOG.md"
 
 [tool.poetry.scripts]
-sygnal = "matrix_sygnal.sygnal:main"
+sygnal = "sygnal.sygnal:main"
