@@ -708,18 +708,20 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 if data[attr] is not None and isinstance(data[attr], str):
                     # The only `attr` that shouldn't be of type `str` is `content`,
                     # which is handled explicitly later on.
-                    if len(bytes(data[attr], "utf-8")) > MAX_BYTES_PER_FIELD:
+                    data[attr], truncated = truncate_str(
+                        data[attr], MAX_BYTES_PER_FIELD
+                    )
+                    if truncated:
                         overflow_fields += 1
-                        data[attr] = truncate_str(data[attr], MAX_BYTES_PER_FIELD)
 
         if api_version is APIVersion.V1:
             if isinstance(data.get("content"), dict):
                 for attr, value in data["content"].items():
                     if not isinstance(value, str):
                         continue
-                    if len(bytes(value, "utf-8")) > MAX_BYTES_PER_FIELD:
+                    value, truncated = truncate_str(value, MAX_BYTES_PER_FIELD)
+                    if truncated:
                         overflow_fields += 1
-                        value = truncate_str(value, MAX_BYTES_PER_FIELD)
                     data["content_" + attr] = value
                 del data["content"]
 
@@ -743,9 +745,12 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         return data
 
 
-def truncate_str(input: str, max_length: int) -> str:
+def truncate_str(input: str, max_length: int) -> tuple[str, bool]:
     str_bytes = input.encode("utf-8")
+    if len(str_bytes) <= max_length:
+        return (input, False)
+
     try:
-        return str_bytes[: max_length - 3].decode("utf-8") + "…"
+        return (str_bytes[: max_length - 3].decode("utf-8") + "…", True)
     except UnicodeDecodeError as err:
-        return str_bytes[: err.start].decode("utf-8") + "…"
+        return (str_bytes[: err.start].decode("utf-8") + "…", True)
