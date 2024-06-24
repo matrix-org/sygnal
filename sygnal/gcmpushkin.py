@@ -745,12 +745,26 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         return data
 
 
-def truncate_str(input: str, max_length: int) -> tuple[str, bool]:
+def truncate_str(input: str, max_bytes: int) -> tuple[str, bool]:
+    """
+    Truncate the given string. If the truncation would occur in the middle of a unicode
+    character, that character will be removed entirely instead.
+    Appends a `…` character to imply the string was truncated.
+
+    Args:
+        `input`: the string to be truncated
+        `max_bytes`: maximum length, in bytes, that the payload should occupy when truncated
+
+    Returns:
+        Tuple of (truncated string, whether truncation took place)
+
+    """
+
     str_bytes = input.encode("utf-8")
-    if len(str_bytes) <= max_length:
+    if len(str_bytes) <= max_bytes:
         return (input, False)
 
     try:
-        return (str_bytes[: max_length - 3].decode("utf-8") + "…", True)
+        return (str_bytes[: max_bytes - 3].decode("utf-8") + "…", True)
     except UnicodeDecodeError as err:
         return (str_bytes[: err.start].decode("utf-8") + "…", True)
