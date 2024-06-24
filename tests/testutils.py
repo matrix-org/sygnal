@@ -136,6 +136,10 @@ class TestCase(unittest.TestCase):
             }
         }
 
+    # NOTE: The `⚑` character (len 3 bytes) is inserted at byte position 1020 (occupying 1020-1022).
+    # This will make the truncation (which is `str[: 1024 - 3]`) occur in the middle of a unicode
+    # character. The truncation logic should recognize this and return the string starting before
+    # the `⚑`, with a `…` appended to indicate the string was truncated.
     def _make_dummy_notification_large_fields(self, devices):
         return {
             "notification": {
@@ -199,7 +203,7 @@ ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
 ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
-ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+ooooooooooxxxxxxxxxx🦉oooooo£xxxxxxxx☻oo🦉⚑xxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
 ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\

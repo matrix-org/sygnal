@@ -528,7 +528,7 @@ ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
 ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
-ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxx",
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooox…",
                         "room_alias": "#exampleroom:matrix.org",
                         "membership": None,
                         "sender_display_name": "Major Tom",
@@ -548,7 +548,7 @@ ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
 ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
 xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
-ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooox…",
+ooooooooooxxxxxxxxxx🦉oooooo£xxxxxxxx☻oo🦉…",
                         "room_id": "!slw48wfj34rtnrf:example.com",
                         "prio": "high",
                         "unread": "2",
