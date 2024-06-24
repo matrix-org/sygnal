@@ -716,7 +716,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                         continue
                     if len(value) > MAX_BYTES_PER_FIELD:
                         overflow_fields += 1
-                        value = value[:MAX_BYTES_PER_FIELD-3] + "…"
+                        value = value[: MAX_BYTES_PER_FIELD - 3] + "…"
                     data["content_" + attr] = value
                 del data["content"]
 
