@@ -749,7 +749,7 @@ def truncate_str(input: str, max_bytes: int) -> tuple[str, bool]:
     """
     Truncate the given string. If the truncation would occur in the middle of a unicode
     character, that character will be removed entirely instead.
-    Appends a `…` character to imply the string was truncated.
+    Appends a `…` character to the resulting string when truncation occurs.
 
     Args:
         `input`: the string to be truncated
