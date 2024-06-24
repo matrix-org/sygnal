@@ -745,7 +745,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         return data
 
 
-def truncate_str(input: str, max_bytes: int) -> tuple[str, bool]:
+def truncate_str(input: str, max_bytes: int) -> Tuple[str, bool]:
     """
     Truncate the given string. If the truncation would occur in the middle of a unicode
     character, that character will be removed entirely instead.
