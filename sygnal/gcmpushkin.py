@@ -757,7 +757,6 @@ def truncate_str(input: str, max_bytes: int) -> tuple[str, bool]:
 
     Returns:
         Tuple of (truncated string, whether truncation took place)
-
     """
 
     str_bytes = input.encode("utf-8")
