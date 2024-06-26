@@ -19,7 +19,7 @@ import logging
 import sys
 import time
 import traceback
-from typing import TYPE_CHECKING, Callable, List, Union
+from typing import TYPE_CHECKING, Any, Callable, List, Union
 from uuid import uuid4
 
 from opentracing import Format, Span, logs, tags
@@ -177,7 +177,7 @@ class V1NotifyHandler(Resource):
 
             root_span_accounted_for = True
 
-            async def cb():
+            async def cb() -> None:
                 with REQUESTS_IN_FLIGHT_GUAGE.labels(
                     self.__class__.__name__
                 ).track_inprogress():
@@ -342,7 +342,10 @@ class SygnalLoggedSite(server.Site):
     """
 
     def __init__(
-        self, *args, log_formatter: Callable[[str, server.Request], str], **kwargs
+        self,
+        *args: Any,
+        log_formatter: Callable[[str, server.Request], str],
+        **kwargs: Any,
     ):
         super().__init__(*args, **kwargs)
         self.log_formatter = log_formatter

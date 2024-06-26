@@ -55,12 +55,15 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "sygnal"
+name = "matrix-sygnal"
 version = "0.14.4"
 description = "Reference Push Gateway for Matrix Notifications"
 authors = ["Matrix.org Team and Contributors <packages@matrix.org>"]
 readme = "README.md"
 license = "Apache-2.0"
+packages = [
+    { include = "sygnal" },
+]
 include = [
     { path = "tests", format = "sdist" },
 ]

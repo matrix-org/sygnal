@@ -83,7 +83,7 @@ class Counts:
 
 
 class Notification:
-    def __init__(self, notif):
+    def __init__(self, notif: dict):
         # optional attributes
         self.room_name: Optional[str] = notif.get("room_name")
         self.room_alias: Optional[str] = notif.get("room_alias")

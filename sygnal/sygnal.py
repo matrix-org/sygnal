@@ -20,7 +20,7 @@ import logging
 import logging.config
 import os
 import sys
-from typing import Any, Dict, Set, cast
+from typing import Any, Dict, Generator, Set, cast
 
 import opentracing
 import prometheus_client
@@ -28,7 +28,7 @@ import yaml
 from opentracing import Tracer
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor, defer
-from twisted.internet.defer import ensureDeferred
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.internet.interfaces import (
     IReactorCore,
     IReactorFDSet,
@@ -223,7 +223,7 @@ class Sygnal:
         """
 
         @defer.inlineCallbacks
-        def start():
+        def start() -> Generator[Deferred[Any], Any, Any]:
             try:
                 yield ensureDeferred(self.make_pushkins_then_start())
             except Exception:
@@ -337,7 +337,7 @@ def merge_left_with_defaults(
     return result
 
 
-def main():
+def main() -> None:
     # TODO we don't want to have to install the reactor, when we can get away with
     #   it
     asyncioreactor.install()
