@@ -1,3 +1,14 @@
+# Sygnal 0.15.0 (2024-06-26)
+
+**NOTE**: Exercise caution when installing over an existing sygnal installation via pip. The
+sygnal package name was inadvertently changed to `sygnal` during the change to use poetry in v0.14.2.
+Release v0.15.0 changes the package name back to `matrix-sygnal`, which is what it was prior to v0.14.2.
+
+### Bugfixes
+
+- Change package name back to matrix-sygnal. ([\#385](https://github.com/matrix-org/sygnal/issues/385))
+
+
 # Sygnal 0.14.4 (2024-06-26)
 
 ### Bugfixes
