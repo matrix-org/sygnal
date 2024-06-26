@@ -17,6 +17,7 @@ import tempfile
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Tuple
 from unittest.mock import MagicMock
 
+from sygnal.exceptions import TemporaryNotificationDispatchException
 from sygnal.gcmpushkin import APIVersion, GcmPushkin
 
 from tests import testutils
@@ -259,9 +260,6 @@ class GcmTestCase(testutils.TestCase):
         """
         self.apns_pushkin_snotif = MagicMock()
         gcm = self.get_test_pushkin("com.example.gcm.apiv1")
-        gcm.preload_with_response(
-            200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
-        )
 
         # type safety: using ignore here due to mypy not handling monkeypatching,
         # see https://github.com/python/mypy/issues/2427
@@ -464,6 +462,74 @@ class GcmTestCase(testutils.TestCase):
         self.assertEqual(gcm.last_request_body["registration_ids"], ["spqr", "spqr2"])
         self.assertEqual(gcm.num_requests, 1)
 
+    def test_api_v1_retry(self) -> None:
+        """
+        Tests that a Firebase response of 502 results in Sygnal retrying.
+        Also checks the notification message to ensure it is sane after retrying
+        multiple times.
+        """
+        self.gcm_pushkin_snotif = MagicMock()
+
+        gcm = self.get_test_pushkin("com.example.gcm.apiv1")
+
+        # type safety: using ignore here due to mypy not handling monkeypatching,
+        # see https://github.com/python/mypy/issues/2427
+        gcm._request_dispatch = self.gcm_pushkin_snotif  # type: ignore[assignment] # noqa: E501
+
+        async def side_effect(*_args: Any, **_kwargs: Any) -> None:
+            raise TemporaryNotificationDispatchException(
+                "GCM server error, hopefully temporary.", custom_retry_delay=None
+            )
+
+        method = self.gcm_pushkin_snotif
+        method.side_effect = side_effect
+
+        _resp = self._request(self._make_dummy_notification([DEVICE_EXAMPLE_APIV1]))
+
+        self.assertEqual(3, method.call_count)
+        notification_req = method.call_args.args
+
+        self.assertEqual(
+            {
+                "message": {
+                    "data": {
+                        "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
+                        "type": "m.room.message",
+                        "sender": "@exampleuser:matrix.org",
+                        "room_name": "Mission Control",
+                        "room_alias": "#exampleroom:matrix.org",
+                        "membership": None,
+                        "sender_display_name": "Major Tom",
+                        "content_msgtype": "m.text",
+                        "content_body": "I'm floating in a most peculiar way.",
+                        "room_id": "!slw48wfj34rtnrf:example.com",
+                        "prio": "high",
+                        "unread": "2",
+                        "missed_calls": "1",
+                    },
+                    "android": {
+                        "notification": {
+                            "body": {
+                                "test body",
+                            },
+                        },
+                        "priority": "high",
+                    },
+                    "apns": {
+                        "payload": {
+                            "aps": {
+                                "content-available": 1,
+                                "mutable-content": 1,
+                                "alert": "",
+                            },
+                        },
+                    },
+                    "token": "spqr",
+                }
+            },
+            notification_req[2],
+        )
+
     def test_fcm_options(self) -> None:
         """
         Tests that the config option `fcm_options` allows setting a base layer
@@ -480,3 +546,105 @@ class GcmTestCase(testutils.TestCase):
         assert gcm.last_request_body is not None
         self.assertEqual(gcm.last_request_body["mutable_content"], True)
         self.assertEqual(gcm.last_request_body["content_available"], True)
+
+    def test_api_v1_large_fields(self) -> None:
+        """
+        Tests the gcm pushkin truncates unusually large fields. Includes large
+        fields both at the top level of `data`, and nested within `content`.
+        """
+        self.apns_pushkin_snotif = MagicMock()
+        gcm = self.get_test_pushkin("com.example.gcm.apiv1")
+        gcm.preload_with_response(
+            200, {"results": [{"message_id": "msg42", "registration_id": "spqr"}]}
+        )
+
+        # type safety: using ignore here due to mypy not handling monkeypatching,
+        # see https://github.com/python/mypy/issues/2427
+        gcm._request_dispatch = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
+
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(([], []))
+
+        resp = self._request(
+            self._make_dummy_notification_large_fields([DEVICE_EXAMPLE_APIV1])
+        )
+
+        self.assertEqual(1, method.call_count)
+        notification_req = method.call_args.args
+
+        # The values for `room_name` & `content_other` should be truncated from the original.
+        self.assertEqual(
+            {
+                "message": {
+                    "data": {
+                        "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
+                        "type": "m.room.message",
+                        "sender": "@exampleuser:matrix.org",
+                        "room_name": "xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooox…",
+                        "room_alias": "#exampleroom:matrix.org",
+                        "membership": None,
+                        "sender_display_name": "Major Tom",
+                        "content_msgtype": "m.text",
+                        "content_body": "I'm floating in a most peculiar way.",
+                        "content_other": "xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxoooooooooo\
+xxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxxooooooooooxxxxxxxxxx\
+ooooooooooxxxxxxxxxx🦉oooooo£xxxxxxxx☻oo🦉…",
+                        "room_id": "!slw48wfj34rtnrf:example.com",
+                        "prio": "high",
+                        "unread": "2",
+                        "missed_calls": "1",
+                    },
+                    "android": {
+                        "notification": {
+                            "body": {
+                                "test body",
+                            },
+                        },
+                        "priority": "high",
+                    },
+                    "apns": {
+                        "payload": {
+                            "aps": {
+                                "content-available": 1,
+                                "mutable-content": 1,
+                                "alert": "",
+                            },
+                        },
+                    },
+                    "token": "spqr",
+                }
+            },
+            notification_req[2],
+        )
+
+        self.assertEqual(resp, {"rejected": []})
+        assert notification_req[3] is not None
+        self.assertEqual(
+            notification_req[3].get("Authorization"), ["Bearer myaccesstoken"]
+        )

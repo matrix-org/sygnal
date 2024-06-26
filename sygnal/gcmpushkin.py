@@ -85,6 +85,11 @@ MAX_TRIES = 3
 RETRY_DELAY_BASE = 10
 RETRY_DELAY_BASE_QUOTA_EXCEEDED = 60
 MAX_BYTES_PER_FIELD = 1024
+MAX_FIREBASE_MESSAGE_SIZE = 4096
+
+# Subtract 1 since the combined size of the other non-overflowing fields will push it over the
+# edge otherwise.
+MAX_NOTIFICATION_OVERFLOW_FIELDS = MAX_FIREBASE_MESSAGE_SIZE / MAX_BYTES_PER_FIELD - 1
 
 AUTH_SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
 
@@ -579,17 +584,20 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 else:
                     body["android"] = priority
 
+            if self.api_version is APIVersion.V1:
+                body["token"] = device.pushkey
+                new_body = body
+                body = {}
+                body["message"] = new_body
+
             for retry_number in range(0, MAX_TRIES):
+                # This has to happen inside the retry loop since `pushkeys` can be modified in the
+                # event of a failure that warrants a retry.
                 if self.api_version is APIVersion.Legacy:
                     if len(pushkeys) == 1:
                         body["to"] = pushkeys[0]
                     else:
                         body["registration_ids"] = pushkeys
-                elif self.api_version is APIVersion.V1:
-                    body["token"] = device.pushkey
-                    new_body = body
-                    body = {}
-                    body["message"] = new_body
 
                 log.info(
                     "Sending (attempt %i) => %r room:%s, event:%s",
@@ -673,6 +681,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             JSON-compatible dict or None if the default_payload is misconfigured
         """
         data = {}
+        overflow_fields = 0
 
         if device.data:
             default_payload = device.data.get("default_payload", {})
@@ -699,14 +708,23 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 data[attr] = getattr(n, attr)
                 # Truncate fields to a sensible maximum length. If the whole
                 # body is too long, GCM will reject it.
-                if data[attr] is not None and len(data[attr]) > MAX_BYTES_PER_FIELD:
-                    data[attr] = data[attr][0:MAX_BYTES_PER_FIELD]
+                if data[attr] is not None and isinstance(data[attr], str):
+                    # The only `attr` that shouldn't be of type `str` is `content`,
+                    # which is handled explicitly later on.
+                    data[attr], truncated = truncate_str(
+                        data[attr], MAX_BYTES_PER_FIELD
+                    )
+                    if truncated:
+                        overflow_fields += 1
 
         if api_version is APIVersion.V1:
             if isinstance(data.get("content"), dict):
                 for attr, value in data["content"].items():
                     if not isinstance(value, str):
                         continue
+                    value, truncated = truncate_str(value, MAX_BYTES_PER_FIELD)
+                    if truncated:
+                        overflow_fields += 1
                     data["content_" + attr] = value
                 del data["content"]
 
@@ -722,4 +740,33 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 data["unread"] = str(n.counts.unread)
                 data["missed_calls"] = str(n.counts.missed_calls)
 
+        if overflow_fields > MAX_NOTIFICATION_OVERFLOW_FIELDS:
+            logger.warning(
+                "Payload contains too many overflowing fields. Notification likely to be rejected by Firebase."
+            )
+
         return data
+
+
+def truncate_str(input: str, max_bytes: int) -> Tuple[str, bool]:
+    """
+    Truncate the given string. If the truncation would occur in the middle of a unicode
+    character, that character will be removed entirely instead.
+    Appends a `…` character to the resulting string when truncation occurs.
+
+    Args:
+        `input`: the string to be truncated
+        `max_bytes`: maximum length, in bytes, that the payload should occupy when truncated
+
+    Returns:
+        Tuple of (truncated string, whether truncation took place)
+    """
+
+    str_bytes = input.encode("utf-8")
+    if len(str_bytes) <= max_bytes:
+        return (input, False)
+
+    try:
+        return (str_bytes[: max_bytes - 3].decode("utf-8") + "…", True)
+    except UnicodeDecodeError as err:
+        return (str_bytes[: err.start].decode("utf-8") + "…", True)

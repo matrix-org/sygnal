@@ -1,3 +1,15 @@
+# Sygnal 0.14.4 (2024-06-26)
+
+### Bugfixes
+
+- Truncate large values inside of Firebase notification content fields. ([\#386](https://github.com/matrix-org/sygnal/issues/386))
+- Fixes an issue where retry attempts using the Firebase v1 API would fail due to nested `messages`. ([\#387](https://github.com/matrix-org/sygnal/issues/387))
+
+### Internal Changes
+
+- Bump `tornado` from 6.4 to 6.4.1. ([\#382](https://github.com/matrix-org/sygnal/issues/382))
+
+
 # Sygnal 0.14.3 (2024-05-31)
 
 ### Bugfixes
