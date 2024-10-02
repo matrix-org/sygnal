@@ -132,8 +132,6 @@ class TestGcmPushkin(GcmPushkin):
     async def _refresh_credentials(self) -> None:
         assert self.credentials is not None
         if not self.credentials.valid:
-            if self.google_auth_request is None:
-                self.google_auth_request = await self._build_google_auth_request()
             await self.credentials.refresh(self.google_auth_request)
 
 

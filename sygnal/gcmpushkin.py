@@ -155,13 +155,13 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         tls_client_options_factory = ClientTLSOptionsFactory()
 
         # use the Sygnal global proxy configuration
-        self.proxy_url = sygnal.config.get("proxy")
+        proxy_url = sygnal.config.get("proxy")
 
         self.http_agent = ProxyAgent(
             reactor=sygnal.reactor,
             pool=self.http_pool,
             contextFactory=tls_client_options_factory,
-            proxy_url_str=self.proxy_url,
+            proxy_url_str=proxy_url,
         )
 
         self.api_version = APIVersion.Legacy
@@ -209,10 +209,8 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     f"`service_account_file` must be valid: {str(e)}",
                 )
 
-        # This is built in `_refresh_credentials`, and must be done in an async function.
-        self.google_auth_request: Optional[
-            google.auth.transport._aiohttp_requests.Request
-        ] = None
+        # This is instantiated in `self.create`
+        self.google_auth_request: google.auth.transport._aiohttp_requests.Request
 
         # Use the fcm_options config dictionary as a foundation for the body;
         # this lets the Sygnal admin choose custom FCM options
@@ -235,6 +233,18 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         Returns:
             an instance of this Pushkin
         """
+        session = None
+        proxy_url = sygnal.config.get("proxy")
+        if proxy_url:
+            # `ClientSession` can't directly take the proxy URL, so we need to
+            # set the usual env var and use `trust_env=True`
+            os.environ["HTTPS_PROXY"] = proxy_url
+            session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
+
+        cls.google_auth_request = google.auth.transport._aiohttp_requests.Request(
+            session=session
+        )
+
         return cls(name, sygnal, config)
 
     async def _perform_http_request(
@@ -507,29 +517,11 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
     async def _refresh_credentials(self) -> None:
         assert self.credentials is not None
         if not self.credentials.valid:
-            # Setting up a ClientSession must be done from an async function.
-            # Lazily build `self.google_auth_request` instead of doing so in `__init__`.
-            if self.google_auth_request is None:
-                self.google_auth_request = await self._build_google_auth_request()
-
             await Deferred.fromFuture(
                 asyncio.ensure_future(
                     self.credentials.refresh(self.google_auth_request)
                 )
             )
-
-    async def _build_google_auth_request(
-        self,
-    ) -> google.auth.transport._aiohttp_requests.Request:
-        """Build a google auth request with an HTTP proxy, if configured."""
-        session = None
-        if self.proxy_url:
-            # `ClientSession` can't directly take the proxy URL, so we need to
-            # set the usual env var and use `trust_env=True`
-            os.environ["HTTPS_PROXY"] = self.proxy_url
-            session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
-
-        return google.auth.transport._aiohttp_requests.Request(session=session)
 
     async def _dispatch_notification_unlimited(
         self, n: Notification, device: Device, context: NotificationContext
