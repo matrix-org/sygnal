@@ -209,16 +209,8 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     f"`service_account_file` must be valid: {str(e)}",
                 )
 
-            session = None
-            if proxy_url:
-                # `ClientSession` can't directly take the proxy URL, so we need to
-                # set the usual env var and use `trust_env=True`
-                os.environ["HTTPS_PROXY"] = proxy_url
-                session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
-
-            self.google_auth_request = google.auth.transport._aiohttp_requests.Request(
-                session=session
-            )
+        # This is instantiated in `self.create`
+        self.google_auth_request: google.auth.transport._aiohttp_requests.Request
 
         # Use the fcm_options config dictionary as a foundation for the body;
         # this lets the Sygnal admin choose custom FCM options
@@ -241,6 +233,21 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         Returns:
             an instance of this Pushkin
         """
+        session = None
+        proxy_url = sygnal.config.get("proxy")
+        if proxy_url:
+            # `ClientSession` can't directly take the proxy URL, so we need to
+            # set the usual env var and use `trust_env=True`
+            os.environ["HTTPS_PROXY"] = proxy_url
+
+            # ClientSession must be instantiated by an async function, hence we do this
+            # here instead of `__init__`.
+            session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
+
+        cls.google_auth_request = google.auth.transport._aiohttp_requests.Request(
+            session=session
+        )
+
         return cls(name, sygnal, config)
 
     async def _perform_http_request(
