@@ -239,6 +239,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # `ClientSession` can't directly take the proxy URL, so we need to
             # set the usual env var and use `trust_env=True`
             os.environ["HTTPS_PROXY"] = proxy_url
+
+            # ClientSession must be instantiated by an async function, hence we do this
+            # here instead of `__init__`.
             session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
 
         cls.google_auth_request = google.auth.transport._aiohttp_requests.Request(
