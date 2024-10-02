@@ -1,0 +1,1 @@
+Fix incompatibility with `aiohttp>=3.10.0` when using GCM with an HTTP proxy.
