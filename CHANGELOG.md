@@ -1,3 +1,18 @@
+# Sygnal 1.15.1 (2024-10-04)
+
+### Bugfixes
+
+- Fix incompatibility with `aiohttp>=3.10.0` when using GCM with an HTTP proxy. ([\#395](https://github.com/matrix-org/sygnal/issues/395))
+
+### Improved Documentation
+
+- The Matrix.org Foundation no longer requires "real" or "legally identifiable" names in order to contribute to projects. ([\#391](https://github.com/matrix-org/sygnal/issues/391))
+
+### Internal Changes
+
+- Pin `aiohttp` dependency to <= 4.0.0. ([\#396](https://github.com/matrix-org/sygnal/issues/396))
+
+
 # Sygnal 0.15.0 (2024-06-26)
 
 **NOTE**: Exercise caution when installing over an existing sygnal installation via pip. The
