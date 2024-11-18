@@ -71,7 +71,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.8.0"
 aioapns = ">=3.0"
-aiohttp = "^3.10.2"
+aiohttp = "^3.10.11"
 attrs = ">=19.2.0"
 cryptography = ">=2.6.1"
 idna = ">=2.8"
