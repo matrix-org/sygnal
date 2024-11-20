@@ -165,6 +165,9 @@ class FakeTransport:
             logger.info("FakeTransport: Buffer now empty, completing disconnect")
             self.disconnected = True
 
+    def setTcpNoDelay(self, new: bool) -> None:
+        pass
+
 
 def get_test_https_policy():
     """Get a test IPolicyForHTTPS which trusts the test CA cert
