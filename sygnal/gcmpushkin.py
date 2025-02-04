@@ -240,9 +240,14 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # set the usual env var and use `trust_env=True`
             os.environ["HTTPS_PROXY"] = proxy_url
 
+            # Ensure the asyncio reactor has started the event loop.
+            loop = asyncio.get_event_loop()
+
             # ClientSession must be instantiated by an async function, hence we do this
             # here instead of `__init__`.
-            session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
+            session = aiohttp.ClientSession(
+                trust_env=True, auto_decompress=False, loop=loop
+            )
 
         cls.google_auth_request = google.auth.transport._aiohttp_requests.Request(
             session=session
