@@ -14,7 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import asyncio
 import copy
 import importlib
 import logging
@@ -29,7 +28,7 @@ import yaml
 from opentracing import Tracer
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
 from twisted.internet import asyncioreactor, defer
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.internet.interfaces import (
     IReactorCore,
     IReactorFDSet,
@@ -226,9 +225,7 @@ class Sygnal:
         @defer.inlineCallbacks
         def start() -> Generator[Deferred[Any], Any, Any]:
             try:
-                yield Deferred.fromFuture(
-                    asyncio.ensure_future(self.make_pushkins_then_start())
-                )
+                yield ensureDeferred(self.make_pushkins_then_start())
             except Exception:
                 # Print the exception and bail out.
                 print("Error during startup:", file=sys.stderr)
