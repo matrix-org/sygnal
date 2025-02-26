@@ -40,7 +40,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         config["apps"]["com.example.spqr"] = {
             "type": "tests.test_pushgateway_api_v1.TestPushkin"
         }
-        base_loop = asyncio.new_event_loop()
+        base_loop = self.loop
         augmented_loop = TimelessEventLoopWrapper(base_loop)  # type: ignore
         asyncio.set_event_loop(cast(AbstractEventLoop, augmented_loop))
 
@@ -97,7 +97,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         )
 
         # advance event loop because we have to let coroutines be executed
-        self.loop.advance(1.0)
+        cast(TimelessEventLoopWrapper, self.loop).advance(1.0)
 
         # *now* we should have switched over from the HTTP CONNECT protocol
         # to the user protocol (in our case, a MockProtocol).
@@ -142,7 +142,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         )
 
         # advance event loop because we have to let coroutines be executed
-        self.loop.advance(1.0)
+        cast(TimelessEventLoopWrapper, self.loop).advance(1.0)
 
         # *now* we should have switched over from the HTTP CONNECT protocol
         # to the user protocol (in our case, a MockProtocol).
@@ -187,7 +187,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         )
 
         # advance event loop because we have to let coroutines be executed
-        self.loop.advance(1.0)
+        cast(TimelessEventLoopWrapper, self.loop).advance(1.0)
 
         # *now* this future should have completed
         self.assertTrue(switch_over_task.done())
@@ -301,7 +301,7 @@ class AsyncioHttpProxyTLSTest(testutils.TestCase):
         )
 
         # Advance event loop because we have to let coroutines be executed
-        self.loop.advance(1.0)
+        cast(TimelessEventLoopWrapper, self.loop).advance(1.0)
         server_loop.advance(1.0)
 
         # We manually copy the bytes between the fake_proxy transport and our
@@ -329,7 +329,7 @@ class AsyncioHttpProxyTLSTest(testutils.TestCase):
         fake_proxy.pretend_to_receive(server_transport.buffer)
         server_transport.buffer = b""
 
-        self.loop.advance(1.0)
+        cast(TimelessEventLoopWrapper, self.loop).advance(1.0)
 
         # *now* we should have switched over from the HTTP CONNECT protocol
         # to the user protocol (in our case, a MockProtocol).

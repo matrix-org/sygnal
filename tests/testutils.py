@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 import json
 from io import BytesIO
 from threading import Condition
@@ -31,6 +32,8 @@ from twisted.web.server import Request
 from zope.interface.declarations import implementer
 
 from sygnal.sygnal import CONFIG_DEFAULTS, Sygnal, merge_left_with_defaults
+
+from tests.asyncio_test_helpers import TimelessEventLoopWrapper
 
 REQ_PATH = b"/_matrix/push/v1/notify"
 
@@ -73,6 +76,9 @@ class TestCase(unittest.TestCase):
 
         config = {"apps": {}, "log": logging_config}
 
+        self.loop: Union[asyncio.AbstractEventLoop, TimelessEventLoopWrapper] = (
+            asyncio.new_event_loop()
+        )
         self.config_setup(config)
 
         config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
@@ -80,6 +86,10 @@ class TestCase(unittest.TestCase):
         self.sygnal = Sygnal(config, reactor)  # type: ignore[arg-type]
         self.reactor = reactor
 
+        if self.loop is not None:
+            asyncio._set_running_loop(self.loop)
+        else:
+            asyncio._set_running_loop(asyncio.get_event_loop())
         start_deferred = ensureDeferred(self.sygnal.make_pushkins_then_start())
 
         while not start_deferred.called:

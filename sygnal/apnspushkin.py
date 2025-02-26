@@ -122,7 +122,12 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         "mdm": PushType.MDM,
     }
 
-    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
+    def __init__(
+        self,
+        name: str,
+        sygnal: "Sygnal",
+        config: Dict[str, Any],
+    ) -> None:
         super().__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
@@ -165,15 +170,45 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             if not self.get_config("topic", str):
                 raise PushkinSetupException("You must supply topic.")
 
+        push_type = self.get_config("push_type", str)
+        if not push_type:
+            self.push_type = None
+        else:
+            if push_type not in self.APNS_PUSH_TYPES.keys():
+                raise PushkinSetupException(f"Invalid value for push_type: {push_type}")
+
+            self.push_type = self.APNS_PUSH_TYPES[push_type]
+
+        self.apns_client: aioapns.APNs
+
+    @classmethod
+    async def create(
+        cls,
+        name: str,
+        sygnal: "Sygnal",
+        config: Dict[str, Any],
+    ) -> "ApnsPushkin":
+        """
+        Override this if your pushkin needs to call async code in order to
+        be constructed. Otherwise, it defaults to just invoking the Python-standard
+        __init__ constructor.
+
+        Returns:
+            an instance of this Pushkin
+        """
+
+        self = cls(name, sygnal, config)
+
         # use the Sygnal global proxy configuration
         proxy_url_str = sygnal.config.get("proxy")
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         if proxy_url_str:
             # this overrides the create_connection method to use a HTTP proxy
             loop = ProxyingEventLoopWrapper(loop, proxy_url_str)  # type: ignore
 
         async def make_apns() -> aioapns.APNs:
+            certfile = self.get_config("certfile", str)
             if certfile is not None:
                 # max_connection_attempts is actually the maximum number of
                 # additional connection attempts, so =0 means try once only
@@ -200,22 +235,15 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                     max_connection_attempts=0,
                 )
 
-        self.apns_client = loop.run_until_complete(make_apns())
-
-        push_type = self.get_config("push_type", str)
-        if not push_type:
-            self.push_type = None
-        else:
-            if push_type not in self.APNS_PUSH_TYPES.keys():
-                raise PushkinSetupException(f"Invalid value for push_type: {push_type}")
-
-            self.push_type = self.APNS_PUSH_TYPES[push_type]
+        self.apns_client = await make_apns()
 
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
 
         # without this, aioapns will not use the proxy if one is configured.
         self.apns_client.pool.loop = loop
+
+        return self
 
     def _report_certificate_expiration(self, certfile: str) -> None:
         """Export the epoch time that the certificate expires as a metric."""

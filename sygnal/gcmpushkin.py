@@ -134,7 +134,12 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "service_account_file",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
-    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
+    def __init__(
+        self,
+        name: str,
+        sygnal: "Sygnal",
+        config: Dict[str, Any],
+    ) -> None:
         super().__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
@@ -223,7 +228,10 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
 
     @classmethod
     async def create(
-        cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]
+        cls,
+        name: str,
+        sygnal: "Sygnal",
+        config: Dict[str, Any],
     ) -> "GcmPushkin":
         """
         Override this if your pushkin needs to call async code in order to
@@ -240,8 +248,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # set the usual env var and use `trust_env=True`
             os.environ["HTTPS_PROXY"] = proxy_url
 
-            # Ensure the asyncio reactor has started the event loop.
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
 
             # ClientSession must be instantiated by an async function, hence we do this
             # here instead of `__init__`.
