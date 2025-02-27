@@ -122,12 +122,7 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         "mdm": PushType.MDM,
     }
 
-    def __init__(
-        self,
-        name: str,
-        sygnal: "Sygnal",
-        config: Dict[str, Any],
-    ) -> None:
+    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
         super().__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
@@ -170,15 +165,6 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             if not self.get_config("topic", str):
                 raise PushkinSetupException("You must supply topic.")
 
-        push_type = self.get_config("push_type", str)
-        if not push_type:
-            self.push_type = None
-        else:
-            if push_type not in self.APNS_PUSH_TYPES.keys():
-                raise PushkinSetupException(f"Invalid value for push_type: {push_type}")
-
-            self.push_type = self.APNS_PUSH_TYPES[push_type]
-
         # use the Sygnal global proxy configuration
         proxy_url_str = sygnal.config.get("proxy")
 
@@ -216,6 +202,15 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
                 )
 
         self.apns_client = make_apns()
+
+        push_type = self.get_config("push_type", str)
+        if not push_type:
+            self.push_type = None
+        else:
+            if push_type not in self.APNS_PUSH_TYPES.keys():
+                raise PushkinSetupException(f"Invalid value for push_type: {push_type}")
+
+            self.push_type = self.APNS_PUSH_TYPES[push_type]
 
         # without this, aioapns will retry every second forever.
         self.apns_client.pool.max_connection_attempts = 3
