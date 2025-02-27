@@ -9,7 +9,8 @@ services:
       - ./sygnal.yaml:/sygnal.yaml
       - ./service_account.json:/service_account.json:ro
       - ./curl.sh:/curl.sh
-      - ./notification.json:/notification.json
+      - ./notification-gcm.json:/notification-gcm.json
+      - ./notification-ios.json:/notification-ios.json
       - ./proxy.conf:/etc/apt/apt.conf.d/proxy.conf
     ports:
       - 5000:5000
