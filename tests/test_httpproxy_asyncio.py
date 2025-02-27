@@ -40,7 +40,7 @@ class AsyncioHttpProxyTest(testutils.TestCase):
         config["apps"]["com.example.spqr"] = {
             "type": "tests.test_pushgateway_api_v1.TestPushkin"
         }
-        base_loop = self.loop
+        base_loop = asyncio.new_event_loop()
         augmented_loop = TimelessEventLoopWrapper(base_loop)  # type: ignore
         asyncio.set_event_loop(cast(AbstractEventLoop, augmented_loop))
 
