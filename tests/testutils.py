@@ -86,10 +86,7 @@ class TestCase(unittest.TestCase):
         self.sygnal = Sygnal(config, reactor)  # type: ignore[arg-type]
         self.reactor = reactor
 
-        if self.loop is not None:
-            asyncio._set_running_loop(self.loop)
-        else:
-            asyncio._set_running_loop(asyncio.get_event_loop())
+        asyncio._set_running_loop(self.loop)
         start_deferred = ensureDeferred(self.sygnal.make_pushkins_then_start())
 
         while not start_deferred.called:
