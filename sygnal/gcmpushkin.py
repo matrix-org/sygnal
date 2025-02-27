@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2014 Leon Handreke
-# Copyright 2017 New Vector Ltd
+# Copyright 2017 New Vector Ltdgcm
 # Copyright 2019-2020 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -226,21 +226,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 "Config field fcm_options, if set, must be a dictionary of options"
             )
 
-    @classmethod
-    async def create(
-        cls,
-        name: str,
-        sygnal: "Sygnal",
-        config: Dict[str, Any],
-    ) -> "GcmPushkin":
-        """
-        Override this if your pushkin needs to call async code in order to
-        be constructed. Otherwise, it defaults to just invoking the Python-standard
-        __init__ constructor.
-
-        Returns:
-            an instance of this Pushkin
-        """
         session = None
         proxy_url = sygnal.config.get("proxy")
         if proxy_url:
@@ -256,11 +241,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 trust_env=True, auto_decompress=False, loop=loop
             )
 
-        cls.google_auth_request = google.auth.transport._aiohttp_requests.Request(
+        self.google_auth_request = google.auth.transport._aiohttp_requests.Request(
             session=session
         )
-
-        return cls(name, sygnal, config)
 
     async def _perform_http_request(
         self, body: Dict[str, Any], headers: Dict[AnyStr, List[AnyStr]]
