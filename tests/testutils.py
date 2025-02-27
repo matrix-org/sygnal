@@ -80,13 +80,16 @@ class TestCase(unittest.TestCase):
             asyncio.new_event_loop()
         )
         self.config_setup(config)
+        # Manually set the running loop after calling config_setup since self.loop
+        # can be modified inside config_setup.
+        # asyncio doesn't set this itself for some reason when calling `set_event_loop`.
+        asyncio._set_running_loop(self.loop)
 
         config = merge_left_with_defaults(CONFIG_DEFAULTS, config)
 
         self.sygnal = Sygnal(config, reactor)  # type: ignore[arg-type]
         self.reactor = reactor
 
-        asyncio._set_running_loop(self.loop)
         start_deferred = ensureDeferred(self.sygnal.make_pushkins_then_start())
 
         while not start_deferred.called:
