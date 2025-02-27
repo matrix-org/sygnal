@@ -109,12 +109,7 @@ class Notification:
 
 
 class Pushkin(abc.ABC):
-    def __init__(
-        self,
-        name: str,
-        sygnal: "Sygnal",
-        config: Dict[str, Any],
-    ):
+    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         self.name = name
         self.appid_pattern = glob_to_regex(name, ignore_case=False)
         self.cfg = config
@@ -160,12 +155,7 @@ class Pushkin(abc.ABC):
         ...
 
     @classmethod
-    async def create(
-        cls,
-        name: str,
-        sygnal: "Sygnal",
-        config: Dict[str, Any],
-    ):
+    async def create(cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         """
         Override this if your pushkin needs to call async code in order to
         be constructed. Otherwise, it defaults to just invoking the Python-standard
@@ -196,12 +186,7 @@ class ConcurrencyLimitedPushkin(Pushkin):
         labelnames=["pushkin"],
     )
 
-    def __init__(
-        self,
-        name: str,
-        sygnal: "Sygnal",
-        config: Dict[str, Any],
-    ):
+    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]):
         super().__init__(name, sygnal, config)
         self._concurrent_limit = config.get(
             "inflight_request_limit",

@@ -296,12 +296,8 @@ class ProxyingEventLoopWrapper:
         protocol_factory: Callable[[], asyncio.Protocol],
         host: str,
         port: int,
-        *,
-        ssl: Optional[Union[bool, SSLContext]] = False,
+        ssl: Union[bool, SSLContext] = False,
     ) -> Tuple[BaseTransport, Protocol]:
-        assert isinstance(host, str)
-        assert isinstance(port, int)
-
         proxy_url_parts = decompose_http_proxy_url(self.proxy_url_str)
 
         sslcontext: Optional[SSLContext]

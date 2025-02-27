@@ -174,7 +174,6 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
             loop = ProxyingEventLoopWrapper(loop, proxy_url_str)  # type: ignore
 
         def make_apns() -> aioapns.APNs:
-            certfile = self.get_config("certfile", str)
             if certfile is not None:
                 # max_connection_attempts is actually the maximum number of
                 # additional connection attempts, so =0 means try once only

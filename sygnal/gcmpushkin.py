@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2014 Leon Handreke
-# Copyright 2017 New Vector Ltdgcm
+# Copyright 2017 New Vector Ltd
 # Copyright 2019-2020 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -134,12 +134,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
         "service_account_file",
     } | ConcurrencyLimitedPushkin.UNDERSTOOD_CONFIG_FIELDS
 
-    def __init__(
-        self,
-        name: str,
-        sygnal: "Sygnal",
-        config: Dict[str, Any],
-    ) -> None:
+    def __init__(self, name: str, sygnal: "Sygnal", config: Dict[str, Any]) -> None:
         super().__init__(name, sygnal, config)
 
         nonunderstood = set(self.cfg.keys()).difference(self.UNDERSTOOD_CONFIG_FIELDS)
@@ -214,9 +209,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     f"`service_account_file` must be valid: {str(e)}",
                 )
 
-        # This is instantiated in `self.create`
-        self.google_auth_request: google.auth.transport._aiohttp_requests.Request
-
         # Use the fcm_options config dictionary as a foundation for the body;
         # this lets the Sygnal admin choose custom FCM options
         # (e.g. content_available).
@@ -233,13 +225,7 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # set the usual env var and use `trust_env=True`
             os.environ["HTTPS_PROXY"] = proxy_url
 
-            loop = asyncio.get_running_loop()
-
-            # ClientSession must be instantiated by an async function, hence we do this
-            # here instead of `__init__`.
-            session = aiohttp.ClientSession(
-                trust_env=True, auto_decompress=False, loop=loop
-            )
+            session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
 
         self.google_auth_request = google.auth.transport._aiohttp_requests.Request(
             session=session
