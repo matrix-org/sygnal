@@ -19,7 +19,7 @@
     "devices": [
       {
         "app_id": "im.vector.app",
-        "pushkey": "<PUSHKEY HERE>",
+        "pushkey": "aaaa",
         "pushkey_ts": 12345678,
         "data": {},
         "tweaks": {

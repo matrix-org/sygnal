@@ -113,7 +113,7 @@ class HttpConnectProtocol(asyncio.Protocol):
         self._sslcontext = sslcontext
 
         # asyncio EventLoop
-        self._event_loop = loop or asyncio.get_event_loop()
+        self._event_loop = loop or asyncio.get_running_loop()
 
         # This future is completed when it is safe to take back control of the
         # transport.

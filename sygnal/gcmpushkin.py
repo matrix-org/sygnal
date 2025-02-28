@@ -209,9 +209,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                     f"`service_account_file` must be valid: {str(e)}",
                 )
 
-        # This is instantiated in `self.create`
-        self.google_auth_request: google.auth.transport._aiohttp_requests.Request
-
         # Use the fcm_options config dictionary as a foundation for the body;
         # this lets the Sygnal admin choose custom FCM options
         # (e.g. content_available).
@@ -221,18 +218,6 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 "Config field fcm_options, if set, must be a dictionary of options"
             )
 
-    @classmethod
-    async def create(
-        cls, name: str, sygnal: "Sygnal", config: Dict[str, Any]
-    ) -> "GcmPushkin":
-        """
-        Override this if your pushkin needs to call async code in order to
-        be constructed. Otherwise, it defaults to just invoking the Python-standard
-        __init__ constructor.
-
-        Returns:
-            an instance of this Pushkin
-        """
         session = None
         proxy_url = sygnal.config.get("proxy")
         if proxy_url:
@@ -240,15 +225,11 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
             # set the usual env var and use `trust_env=True`
             os.environ["HTTPS_PROXY"] = proxy_url
 
-            # ClientSession must be instantiated by an async function, hence we do this
-            # here instead of `__init__`.
             session = aiohttp.ClientSession(trust_env=True, auto_decompress=False)
 
-        cls.google_auth_request = google.auth.transport._aiohttp_requests.Request(
+        self.google_auth_request = google.auth.transport._aiohttp_requests.Request(
             session=session
         )
-
-        return cls(name, sygnal, config)
 
     async def _perform_http_request(
         self, body: Dict[str, Any], headers: Dict[AnyStr, List[AnyStr]]

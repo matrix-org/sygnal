@@ -168,39 +168,36 @@ class ApnsPushkin(ConcurrencyLimitedPushkin):
         # use the Sygnal global proxy configuration
         proxy_url_str = sygnal.config.get("proxy")
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         if proxy_url_str:
             # this overrides the create_connection method to use a HTTP proxy
             loop = ProxyingEventLoopWrapper(loop, proxy_url_str)  # type: ignore
 
-        async def make_apns() -> aioapns.APNs:
-            if certfile is not None:
-                # max_connection_attempts is actually the maximum number of
-                # additional connection attempts, so =0 means try once only
-                # (we will retry at a higher level so not worth doing more here)
-                apns_client = APNs(
-                    client_cert=certfile,
-                    use_sandbox=self.use_sandbox,
-                    max_connection_attempts=0,
-                )
+        if certfile is not None:
+            # max_connection_attempts is actually the maximum number of
+            # additional connection attempts, so =0 means try once only
+            # (we will retry at a higher level so not worth doing more here)
+            apns_client = APNs(
+                client_cert=certfile,
+                use_sandbox=self.use_sandbox,
+                max_connection_attempts=0,
+            )
 
-                self._report_certificate_expiration(certfile)
+            self._report_certificate_expiration(certfile)
 
-                return apns_client
-            else:
-                # max_connection_attempts is actually the maximum number of
-                # additional connection attempts, so =0 means try once only
-                # (we will retry at a higher level so not worth doing more here)
-                return APNs(
-                    key=self.get_config("keyfile", str),
-                    key_id=self.get_config("key_id", str),
-                    team_id=self.get_config("team_id", str),
-                    topic=self.get_config("topic", str),
-                    use_sandbox=self.use_sandbox,
-                    max_connection_attempts=0,
-                )
-
-        self.apns_client = loop.run_until_complete(make_apns())
+            self.apns_client = apns_client
+        else:
+            # max_connection_attempts is actually the maximum number of
+            # additional connection attempts, so =0 means try once only
+            # (we will retry at a higher level so not worth doing more here)
+            self.apns_client = APNs(
+                key=self.get_config("keyfile", str),
+                key_id=self.get_config("key_id", str),
+                team_id=self.get_config("team_id", str),
+                topic=self.get_config("topic", str),
+                use_sandbox=self.use_sandbox,
+                max_connection_attempts=0,
+            )
 
         push_type = self.get_config("push_type", str)
         if not push_type:

@@ -20,15 +20,15 @@ import logging
 import logging.config
 import os
 import sys
-from typing import Any, Dict, Generator, Set, cast
+from typing import Any, Dict, Set, cast
 
 import opentracing
 import prometheus_client
 import yaml
 from opentracing import Tracer
 from opentracing.scope_managers.asyncio import AsyncioScopeManager
-from twisted.internet import asyncioreactor, defer
-from twisted.internet.defer import Deferred, ensureDeferred
+from twisted.internet import asyncioreactor
+from twisted.internet.defer import ensureDeferred
 from twisted.internet.interfaces import (
     IReactorCore,
     IReactorFDSet,
@@ -42,6 +42,7 @@ from zope.interface import Interface
 
 from sygnal.http import PushGatewayApiServer
 from sygnal.notifications import Pushkin
+from sygnal.utils import twisted_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -222,10 +223,18 @@ class Sygnal:
         Attempt to run Sygnal and then exit the application.
         """
 
-        @defer.inlineCallbacks
-        def start() -> Generator[Deferred[Any], Any, Any]:
+        async def start():
+            # NOTE: This sleep may seem odd to you, but it is in fact necessary.
+            # Without this sleep, the code following it will run before Twisted has had
+            # a chance to fully setup the asyncio event loop.
+            # Specifically, `callWhenRunning` runs the functions
+            # before the asyncio event loop has started running.
+            # ie. asyncio.get_running_loop() will throw because of no running loop.
+            # Calling twisted_sleep is enough to kickstart Twisted into setting up the
+            # asyncio event loop for future usage.
+            await twisted_sleep(0, self.reactor)
             try:
-                yield ensureDeferred(self.make_pushkins_then_start())
+                await self.make_pushkins_then_start()
             except Exception:
                 # Print the exception and bail out.
                 print("Error during startup:", file=sys.stderr)
@@ -236,7 +245,7 @@ class Sygnal:
                 if self.reactor.running:
                     self.reactor.stop()
 
-        self.reactor.callWhenRunning(start)
+        self.reactor.callWhenRunning(lambda: ensureDeferred(start()))
         self.reactor.run()
 
 
