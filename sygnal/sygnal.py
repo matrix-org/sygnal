@@ -227,6 +227,8 @@ class Sygnal:
             # NOTE: This sleep may seem odd to you, but it is in fact necessary.
             # Without this sleep, the code following it will run before Twisted has had
             # a chance to fully setup the asyncio event loop.
+            # Specifically, `callWhenRunning` runs the functions
+            # before the asyncio event loop has started running.
             # ie. asyncio.get_running_loop() will throw because of no running loop.
             # Calling twisted_sleep is enough to kickstart Twisted into setting up the
             # asyncio event loop for future usage.
