@@ -6,18 +6,17 @@
 #    docker build -f docker/Dockerfile .
 #
 
+ARG DEBIAN_VERSION=bookworm
+ARG DEBIAN_VERSION_NUMERIC=12
 ARG PYTHON_VERSION=3.12
+ARG POETRY_VERSION=1.8.3
 
 ###
 ### Stage 0: generate requirements.txt
 ###
-# We hardcode the use of Debian bookworm here because this could change upstream.
-FROM docker.io/library/python:${PYTHON_VERSION}-slim-bookworm as requirements
-
-# We install poetry in its own build stage to avoid its dependencies conflicting with
-# sygnal's dependencies.
-RUN --mount=type=cache,target=/root/.cache/pip \
-  pip install --user "poetry==1.8.3"
+### This stage is platform-agnostic, so we can use the build platform in case of cross-compilation.
+###
+FROM --platform=$BUILDPLATFORM ghcr.io/astral-sh/uv:python${PYTHON_VERSION}-${DEBIAN_VERSION} AS requirements
 
 WORKDIR /sygnal
 
@@ -33,19 +32,30 @@ ARG TEST_ONLY_SKIP_DEP_HASH_VERIFICATION
 # Instead, we'll just install what a regular `pip install` would from PyPI.
 ARG TEST_ONLY_IGNORE_POETRY_LOCKFILE
 
+# This silences a warning as uv isn't able to do hardlinks between its cache
+# (mounted as --mount=type=cache) and the target directory.
+ENV UV_LINK_MODE=copy
+
 # Export the dependencies, but only if we're actually going to use the Poetry lockfile.
 # Otherwise, just create an empty requirements file so that the Dockerfile can
 # proceed.
-RUN if [ -z "$TEST_ONLY_IGNORE_POETRY_LOCKFILE" ]; then \
-  /root/.local/bin/poetry export -o /sygnal/requirements.txt ${TEST_ONLY_SKIP_DEP_HASH_VERIFICATION:+--without-hashes}; \
+ARG POETRY_VERSION
+RUN --mount=type=cache,target=/root/.cache/uv \
+  if [ -z "$TEST_ONLY_IGNORE_POETRY_LOCKFILE" ]; then \
+    uvx --with poetry-plugin-export==1.8.0 \
+        poetry@${POETRY_VERSION} export -o /sygnal/requirements.txt ${TEST_ONLY_SKIP_DEP_HASH_VERIFICATION:+--without-hashes}; \
   else \
-  touch /sygnal/requirements.txt; \
+    touch /sygnal/requirements.txt; \
   fi
 
 ###
 ### Stage 1: builder
 ###
-FROM docker.io/library/python:${PYTHON_VERSION}-slim-bookworm as builder
+FROM ghcr.io/astral-sh/uv:python${PYTHON_VERSION}-${DEBIAN_VERSION} AS builder
+
+# This silences a warning as uv isn't able to do hardlinks between its cache
+# (mounted as --mount=type=cache) and the target directory.
+ENV UV_LINK_MODE=copy
 
 # To speed up rebuilds, install all of the dependencies before we copy over
 # the whole sygnal project, so that this layer in the Docker cache can be
@@ -53,8 +63,8 @@ FROM docker.io/library/python:${PYTHON_VERSION}-slim-bookworm as builder
 #
 # This is aiming at installing the `[tool.poetry.depdendencies]` from pyproject.toml.
 COPY --from=requirements /sygnal/requirements.txt /sygnal/
-RUN --mount=type=cache,target=/root/.cache/pip \
-  pip install --prefix="/install" --no-deps --no-warn-script-location -r /sygnal/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv pip install --prefix="/install" --no-deps -r /sygnal/requirements.txt
 
 # Copy over the rest of the sygnal source code.
 COPY sygnal /sygnal/sygnal/
@@ -67,19 +77,21 @@ ARG TEST_ONLY_IGNORE_POETRY_LOCKFILE
 # Install the sygnal package itself.
 # If we have populated requirements.txt, we don't install any dependencies
 # as we should already have those from the previous `pip install` step.
-RUN --mount=type=cache,target=/sygnal/target,sharing=locked \
+RUN \
+  --mount=type=cache,target=/root/.cache/uv \
+  --mount=type=cache,target=/sygnal/target,sharing=locked \
   --mount=type=cache,target=${CARGO_HOME}/registry,sharing=locked \
   if [ -z "$TEST_ONLY_IGNORE_POETRY_LOCKFILE" ]; then \
-  pip install --prefix="/install" --no-deps --no-warn-script-location /sygnal; \
+    uv pip install --prefix="/install" --no-deps /sygnal; \
   else \
-  pip install --prefix="/install" --no-warn-script-location /sygnal; \
+    uv pip install --prefix="/install" /sygnal; \
   fi
 
 ###
 ### Stage 2: runtime
 ###
 
-FROM docker.io/library/python:${PYTHON_VERSION}-slim-bookworm
+FROM docker.io/library/python:${PYTHON_VERSION}-slim-${DEBIAN_VERSION}
 
 COPY --from=builder /install /usr/local
 
