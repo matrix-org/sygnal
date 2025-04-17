@@ -1,3 +1,9 @@
+# This documentation is out of date!
+
+This documentation page is for the versions of Sygnal maintained by the _Matrix.org Foundation_ ([github.com/matrix-org/dendrite](https://github.com/matrix-org/dendrite)), available under the Apache 2.0 licence.
+
+If you are interested in the documentation for a later version of Dendrite, please refer to [https://element-hq.github.io/dendrite/](https://element-hq.github.io/dendrite/).
+
 # Notes for application developers
 
 This document aims to illustrate some of the quirks, peculiarities and other
