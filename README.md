@@ -20,12 +20,6 @@ describes the protocol that Matrix Home Servers use to send notifications to Pus
 Gateways such as Sygnal.
 
 
-Contributing
-============
-
-Looking to contribute to Sygnal? See [CONTRIBUTING.md](CONTRIBUTING.md)
-
-
 Setup
 =====
 
