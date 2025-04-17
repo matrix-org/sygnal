@@ -1,7 +1,16 @@
+Sygnal is now actively maintained at [element-hq/sygnal](https://github.com/element-hq/sygnal)
+=================================================================================================
+
+Sygnal is a reference Push Gateway for [Matrix](https://matrix.org/)
+developed from 2019 through 2025 as part of the Matrix.org Foundation.
+The Matrix.org Foundation is not able to resource maintenance of Sygnal
+and it continues to be developed by Element.
+
+See [The future of Synapse and Dendrite blog post](https://matrix.org/blog/2023/11/06/future-of-synapse-dendrite/) for more information.
+
+
 Introduction
 ============
-
-Sygnal is a reference Push Gateway for [Matrix](https://matrix.org/).
 
 See https://spec.matrix.org/latest/push-gateway-api/#overview for a high
 level overview of how notifications work in Matrix.
