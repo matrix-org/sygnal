@@ -21,3 +21,4 @@ _trial_temp*
 
 .vscode/
 .idea/
+.DS_Store
