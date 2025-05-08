@@ -1,6 +1,8 @@
 services:
   sygnal:
-    image: sygnal
+    image: localhost/sygnal-with-curl
+    build:
+      dockerfile: sygnal-with-curl.Dockerfile
     networks:
       no-internet:
         ipv4_address: 172.28.0.2
@@ -11,7 +13,6 @@ services:
       - ./curl.sh:/curl.sh
       - ./notification-gcm.json:/notification-gcm.json
       - ./notification-ios.json:/notification-ios.json
-      - ./proxy.conf:/etc/apt/apt.conf.d/proxy.conf
     ports:
       - 5000:5000
 

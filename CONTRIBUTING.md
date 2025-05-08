@@ -273,15 +273,17 @@ unit tests and lints in a local development environment:
 To test whether proxy support is working or not, a docker compose file has been
 provided to make things easier.
 
+**Note:** `podman` and `podman compose` commands also work instead of `docker` for these steps.
+This may be preferable if root access is not available or desired.
+
 For GCM Pushkin proxy testing follow these steps:
 - create a firebase project & service account
 - download the service account file from firebase & save to `./scripts-dev/proxy-test/service_account.json`
 - configure the PROJECT_ID in `./scripts-dev/proxy-test/sygnal.yaml`
-- build a docker image of sygnal named `sygnal`
+- build a docker image of sygnal named `localhost/sygnal`
 - cd to `./scripts-dev/proxy-test/`
 - run `docker compose up`
 - in another terminal, run `docker exec -it sygnal bash`
-- run `apt update && apt install curl -y`
 - run `chmod +x curl.sh`
 - run `./curl.sh`
 - you can tell if the proxy is **NOT** working by inspecting the sygnal logs & seeing something along the lines of "Network is unreachable" or DNS resolution/proxy errors
