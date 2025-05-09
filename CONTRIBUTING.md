@@ -277,20 +277,24 @@ provided to make things easier.
 This may be preferable if root access is not available or desired.
 
 For GCM Pushkin proxy testing follow these steps:
-- create a firebase project & service account
-- download the service account file from firebase & save to `./scripts-dev/proxy-test/service_account.json`
-- configure the PROJECT_ID in `./scripts-dev/proxy-test/sygnal.yaml`
 - build a docker image of sygnal named `localhost/sygnal`
 - cd to `./scripts-dev/proxy-test/`
+- **If you want to test with the real FCM service** (otherwise, skip these steps — the FCM service will be replaced with dummy responses):
+  - create a firebase project & service account
+  - download the service account file from firebase & save to `./scripts-dev/proxy-test/service_account.json`
+  - configure the PROJECT_ID in `./scripts-dev/proxy-test/sygnal.yaml`
+  - comment out the `map-local` lines in `docker-compose.yaml`
 - run `./setup.sh`
 - run `docker compose up`
 - in another terminal, run `docker exec -it sygnal bash`
-- run `chmod +x curl.sh`
 - run `./curl.sh`
-- you can tell if the proxy is **NOT** working by inspecting the sygnal logs & seeing something along the lines of "Network is unreachable" or DNS resolution/proxy errors
-- you cal tell if the proxy is working by inspecting the sygnal logs & seeing the following error from firebase '"code": 400, "message": "The registration token is not a valid FCM registration token"'
-- this is due to the `pushkey` being set to PUSHKEY_HERE in `notification.json`
-- if you want to fully test an actual notification, you will have to update this value in `./scripts-dev/proxy-test/notification.json` before calling `docker compose up`
+- **If you are testing with the dummy FCM responses (default):**
+  - expect to see a 200 OK response from Sygnal. If you get one, the proxy must be working.
+- **If you are testing with the real FCM service**:
+  - you can tell if the proxy is **NOT** working by inspecting the sygnal logs & seeing something along the lines of "Network is unreachable" or DNS resolution/proxy errors
+  - you can tell if the proxy is working by inspecting the sygnal logs & seeing the following error from firebase '"code": 400, "message": "The registration token is not a valid FCM registration token"'
+  - this is due to the `pushkey` being set to PUSHKEY_HERE in `notification.json`
+  - if you want to fully test an actual notification, you will have to update this value in `./scripts-dev/proxy-test/notification.json` before calling `docker compose up`
 
 ## Updating your pull request
 

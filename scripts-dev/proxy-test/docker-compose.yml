@@ -21,7 +21,11 @@ services:
 
   proxy:
     image: docker.io/mitmproxy/mitmproxy
-    command: mitmdump -w /out/mitmdump_out
+    command: >-
+      mitmdump
+      -w /out/mitmdump_out
+      --map-local '|https://oauth2.googleapis.com/token|/responses/oauth2_googleapis_token.json'
+      --map-local '|https://fcm.googleapis.com/v1/projects/*|/responses/fcm_push.json'
     networks:
       no-internet:
         ipv4_address: 172.28.0.3
@@ -29,7 +33,8 @@ services:
     container_name: mitmdump
     volumes:
       - ./out:/out:Z
-      - ./mitmproxy:/home/mitmproxy/.mitmproxy:Z
+      - ./mitmproxy:/home/mitmproxy/.mitmproxy:z
+      - ./responses:/responses:ro
       - ./nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
     ports:
       - 8080:8080
