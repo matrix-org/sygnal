@@ -19,5 +19,8 @@ _trial_temp*
 /.python-version
 /htmlcov
 
+/scripts-dev/proxy-test/out
+/scripts-dev/proxy-test/mitmproxy
+
 .vscode/
 .idea/

@@ -282,6 +282,7 @@ For GCM Pushkin proxy testing follow these steps:
 - configure the PROJECT_ID in `./scripts-dev/proxy-test/sygnal.yaml`
 - build a docker image of sygnal named `localhost/sygnal`
 - cd to `./scripts-dev/proxy-test/`
+- run `./setup.sh`
 - run `docker compose up`
 - in another terminal, run `docker exec -it sygnal bash`
 - run `chmod +x curl.sh`

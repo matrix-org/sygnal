@@ -13,17 +13,23 @@ services:
       - ./curl.sh:/curl.sh
       - ./notification-gcm.json:/notification-gcm.json
       - ./notification-ios.json:/notification-ios.json
+      - ./mitmproxy:/mitmproxy:ro
+    environment:
+      SSL_CERT_FILE: /mitmproxy/ca.crt
     ports:
       - 5000:5000
 
   proxy:
-    image: dominikbechstein/nginx-forward-proxy
+    image: docker.io/mitmproxy/mitmproxy
+    command: mitmdump -w /out/mitmdump_out
     networks:
       no-internet:
         ipv4_address: 172.28.0.3
       internet:
-    container_name: nginx-forward-proxy
+    container_name: mitmdump
     volumes:
+      - ./out:/out:Z
+      - ./mitmproxy:/home/mitmproxy/.mitmproxy:Z
       - ./nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
     ports:
       - 8080:8080
