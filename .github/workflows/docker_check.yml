@@ -3,19 +3,34 @@
 # an early source of warnings that the Dockerfile isn't right.
 # This check also triggers when this file itself is modified.
 
-name: Check Docker image can be built successfully
+name: Docker checks
 
 on:
   push:
+    branches: ["main"]
+
+  pull_request:
     paths:
+      # changes to the container build definition
       - 'docker/Dockerfile'
+
+      # changes to this CI flow
       - '.github/workflows/docker_check.yml'
+
+      # changes to the source code or dependencies
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - 'sygnal/**'
+
+      # changes to the proxy-test setup
+      - 'scripts-dev/proxy-test/**'
 
 permissions:
   contents: read
 
 jobs:
   build:
+    name: Build Docker image
     runs-on: ubuntu-latest
     steps:
       - name: Set up QEMU
@@ -23,6 +38,19 @@ jobs:
         uses: docker/setup-qemu-action@v1
         with:
           platforms: arm64
+
+      # Use the containerd image store,
+      # otherwise we can't export the multi-arch image later
+      # https://github.com/docker/buildx/issues/59#issuecomment-2770311050
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
 
       - name: Set up Docker Buildx
         id: buildx
@@ -39,10 +67,86 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build all platforms
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: false
+          load: true
+          tags: "localhost/sygnal:latest"
           labels: "gitsha1=${{ github.sha }}"
           file: "docker/Dockerfile"
           platforms: linux/amd64,linux/arm64
+
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save container image to disk
+        run: |
+          docker image save localhost/sygnal:latest --output ${{ runner.temp }}/sygnal_image.tar
+
+      # https://docs.docker.com/build/ci/github-actions/share-image-jobs/
+      - name: Upload container image for subsequent steps
+        uses: actions/upload-artifact@v4
+        with:
+          name: sygnal_image
+          path: ${{ runner.temp }}/sygnal_image.tar
+          retention-days: 1
+
+  proxytest:
+    name: Check Proxy functionality
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download container image from build step
+        uses: actions/download-artifact@v4
+        with:
+          name: sygnal_image
+          path: ${{ runner.temp }}
+
+      - name: Load image into container engine
+        run: |
+          docker image load --input ${{ runner.temp }}/sygnal_image.tar
+
+      - uses: actions/checkout@v4.2.2
+
+      - name: Prepare test setup
+        run: |
+          scripts-dev/proxy-test/setup.sh
+          # Chown the mitmproxy setup files to be group-owned by root,
+          # because mitmproxy will re-number its user and group at startup,
+          # but the group with that ID must already exist inside the container...
+          # See: https://github.com/mitmproxy/mitmproxy/issues/6840
+          sudo chown -R :root scripts-dev/proxy-test/mitmproxy
+
+      - name: Start test services in Compose file
+        uses: hoverkraft-tech/compose-action@8be2d741e891ac9b8ac20825e6f3904149599925 # v2.2.0
+        with:
+          compose-file: scripts-dev/proxy-test/docker-compose.yml
+
+      - name: Invoke test script
+        run: |
+          echo '====='
+          docker ps -a
+          # TODO do something less hacky than a static 5-second sleep
+          sleep 5
+          echo '====='
+          docker ps -a
+          echo '====='
+          docker exec sygnal sh /curl.sh notification-gcm.json
+
+      - name: Print sygnal logs
+        if: always()
+        run: |
+          docker logs sygnal
+
+      - name: Print mitmdump logs
+        if: always()
+        run: |
+          docker logs mitmdump
+
+      - name: Upload mitmdump output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proxytest_mitmdump
+          path: scripts-dev/proxy-test/out/mitmdump_out
