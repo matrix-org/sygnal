@@ -202,6 +202,10 @@ apps:
   #  # Defaults to True, set this to False if your client library provides a
   #  # push token in hex format.
   #  #convert_device_token_to_hex: false
+  #  #
+  #  # Specifies whether to send the badge key in the APNs message.
+  #  # Defaults to True, set this to False to suppress sending the badge count.
+  #  #push_with_badge: false
 
   # This is an example GCM/FCM push configuration.
   #
