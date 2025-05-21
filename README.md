@@ -140,6 +140,8 @@ dictionary which is given when configuring the pusher via
 Running
 =======
 
+### Python
+
 With default configuration file name of `sygnal.yaml`:
 
 ```sh
@@ -153,6 +155,24 @@ SYGNAL_CONF=/path/to/custom_sygnal.conf python -m sygnal.sygnal
 ```
 
 Python 3.8 or higher is required.
+
+
+### Container
+
+The example below uses Podman but should work the same by substituting `podman` with `docker`. First create a volume to store your configuration and any necessary key files:
+
+```
+podman volume create sygnal
+cp /path/to/sygnal.conf /path/to/volumes/sygnal/_data
+cp /path/to/keyfile.p8 /path/to/volumes/sygnal/_data
+```
+
+We're going to mount the volume as `/sygnal` so make sure your configuration references any key files in this directory. Now you can pull the image and run the container:
+
+```
+podman image pull docker.io/matrixdotorg/sygnal
+podman run -d --name sygnal -p 5000:5000 -v sygnal:/sygnal -e SYGNAL_CONF=/sygnal/sygnal.yaml sygnal:latest
+```
 
 
 Log Rotation
