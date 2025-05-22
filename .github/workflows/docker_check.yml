@@ -8,8 +8,8 @@ name: Check Docker image can be built successfully
 on:
   push:
     paths:
-      - "docker/Dockerfile"
-      - ".github/workflows/docker_check.yml"
+      - 'docker/Dockerfile'
+      - '.github/workflows/docker_check.yml'
 
 permissions:
   contents: read
