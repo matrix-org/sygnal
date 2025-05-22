@@ -1,0 +1,1 @@
+Upgrade docker/build-push-action from v2 to v6 in workflows
