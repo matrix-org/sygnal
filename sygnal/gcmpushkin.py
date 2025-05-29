@@ -578,6 +578,9 @@ class GcmPushkin(ConcurrencyLimitedPushkin):
                 body = {}
                 body["message"] = new_body
 
+            if n.ttl is not None:
+                body["time_to_live"] = n.ttl
+
             for retry_number in range(0, MAX_TRIES):
                 # This has to happen inside the retry loop since `pushkeys` can be modified in the
                 # event of a failure that warrants a retry.
