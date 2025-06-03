@@ -101,7 +101,7 @@ Some other points to follow:
 
 Sygnal follows the [Synapse code style].
 
-[Synapse code style]: https://github.com/matrix-org/synapse/blob/master/CONTRIBUTING.md
+[Synapse code style]: https://github.com/element-hq/synapse/blob/master/CONTRIBUTING.md
 
 Many of the conventions are enforced by scripts which are run as part of the
 [continuous integration system](#continuous-integration-and-testing).
@@ -147,7 +147,7 @@ in the format of `PRnumber.type`. The type can be one of the following:
 * `misc` (for internal-only changes)
 
 This file will become part of our [changelog](
-https://github.com/matrix-org/sygnal/blob/master/CHANGELOG.md) at the next
+https://github.com/element-hq/sygnal/blob/master/CHANGELOG.md) at the next
 release, so the content of the file should be a short description of your
 change in the same style as the rest of the changelog. The file can contain Markdown
 formatting, and should end with a full stop (.) or an exclamation mark (!) for
@@ -180,7 +180,7 @@ There are two options for solving this:
     request](#updating-your-pull-request)), or:
 
  1. Look at the [list of all
-    issues/PRs](https://github.com/matrix-org/synapse/issues?q=), add one to the
+    issues/PRs](https://github.com/element-hq/sygnal/issues?q=), add one to the
     highest number you see, and quickly open the PR before somebody else claims
     your number.
 

@@ -15,7 +15,7 @@ EMS, and warn them beforehand - in case they need to upgrade quickly.
    git add -u && git commit -m $ver && git push
    ```
 5. Sanity-check the
-   [changelog](https://github.com/matrix-org/sygnal/blob/master/CHANGELOG.md)
+   [changelog](https://github.com/element-hq/sygnal/blob/master/CHANGELOG.md)
    and update if need be.
 6. Create a signed tag for the relese:
    ```sh
@@ -30,7 +30,7 @@ EMS, and warn them beforehand - in case they need to upgrade quickly.
    the resulting image will be published using the same tag as git.
 8. Create release on GH project page:
    ```sh
-   xdg-open https://github.com/matrix-org/sygnal/releases/edit/v$ver
+   xdg-open https://github.com/element-hq/sygnal/releases/edit/v$ver
    ```
 9. Notify #sygnal:matrix.org, #synapse-dev:matrix.org and EMS that a new
    release has been published.
