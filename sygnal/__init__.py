@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The Matrix.org Foundation C.I.C.
+# Copyright 2025 The Matrix.org Foundation C.I.C.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 from importlib.metadata import PackageNotFoundError, version
 
 try:
@@ -20,3 +21,15 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+# Update your remotes folks.
+announcement = """
+Sygnal is no longer being developed under the matrix-org organization. See the
+README.md for more details.
+
+Please update your git remote to pull from element-hq/sygnal:
+
+   git remote set-url origin git@github.com:element-hq/sygnal.git
+"""
+print(announcement)
+sys.exit(1)
