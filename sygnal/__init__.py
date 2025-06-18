@@ -15,6 +15,7 @@
 
 import sys
 from importlib.metadata import PackageNotFoundError, version
+from os import environ
 
 try:
     __version__ = version("matrix-sygnal")
@@ -22,14 +23,15 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
-# Update your remotes folks.
-announcement = """
-Sygnal is no longer being developed under the matrix-org organization. See the
-README.md for more details.
+if environ.get("RUN_DESPITE_UNSUPPORTED") != "Y":
+    # Update your remotes folks.
+    announcement = """
+    Sygnal is no longer being developed under the matrix-org organization. See the
+    README.md for more details.
 
-Please update your git remote to pull from element-hq/sygnal:
+    Please update your git remote to pull from element-hq/sygnal:
 
-   git remote set-url origin git@github.com:element-hq/sygnal.git
-"""
-print(announcement)
-sys.exit(1)
+       git remote set-url origin git@github.com:element-hq/sygnal.git
+    """
+    print(announcement)
+    sys.exit(1)
