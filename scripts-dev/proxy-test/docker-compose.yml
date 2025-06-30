@@ -35,7 +35,6 @@ services:
       - ./out:/out:Z
       - ./mitmproxy:/home/mitmproxy/.mitmproxy:z
       - ./responses:/responses:ro
-      - ./nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
     ports:
       - 8080:8080
 
