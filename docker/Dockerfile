@@ -97,3 +97,6 @@ COPY --from=builder /install /usr/local
 EXPOSE 5000/tcp
 
 ENTRYPOINT ["python", "-m", "sygnal.sygnal"]
+
+HEALTHCHECK --start-period=25s --interval=15s --timeout=5s \
+  CMD curl --fail --silent --show-error http://localhost:5000/health || exit 1
