@@ -24,6 +24,7 @@ from tests import testutils
 
 PUSHKIN_ID = "com.example.apns"
 PUSHKIN_ID_WITH_PUSH_TYPE = "com.example.apns.push_type"
+PUSHKIN_ID_WITH_NO_BADGE = "com.example.apns.no_badge"
 
 TEST_CERTFILE_PATH = "/path/to/my/certfile.pem"
 
@@ -55,6 +56,12 @@ DEVICE_EXAMPLE_FOR_PUSH_TYPE_PUSHKIN = {
     "pushkey_ts": 42,
 }
 
+DEVICE_EXAMPLE_FOR_NO_BADGE_PUSHKIN = {
+    "app_id": "com.example.apns.no_badge",
+    "pushkey": "spqr",
+    "pushkey_ts": 42,
+}
+
 
 class ApnsTestCase(testutils.TestCase):
     def setUp(self) -> None:
@@ -73,10 +80,12 @@ class ApnsTestCase(testutils.TestCase):
         self.apns_pushkin_snotif = MagicMock()
         test_pushkin = self.get_test_pushkin(PUSHKIN_ID)
         test_pushkin_push_type = self.get_test_pushkin(PUSHKIN_ID_WITH_PUSH_TYPE)
+        test_pushkin_with_no_badge = self.get_test_pushkin(PUSHKIN_ID_WITH_NO_BADGE)
         # type safety: using ignore here due to mypy not handling monkeypatching,
         # see https://github.com/python/mypy/issues/2427
         test_pushkin._send_notification = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
         test_pushkin_push_type._send_notification = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
+        test_pushkin_with_no_badge._send_notification = self.apns_pushkin_snotif  # type: ignore[assignment] # noqa: E501
 
     def get_test_pushkin(self, name: str) -> ApnsPushkin:
         test_pushkin = self.sygnal.pushkins[name]
@@ -90,6 +99,12 @@ class ApnsTestCase(testutils.TestCase):
             "type": "apns",
             "certfile": TEST_CERTFILE_PATH,
             "push_type": "alert",
+        }
+        config["apps"][PUSHKIN_ID_WITH_NO_BADGE] = {
+            "type": "apns",
+            "certfile": TEST_CERTFILE_PATH,
+            "push_type": "alert",
+            "push_with_badge": False,
         }
 
     def test_payload_truncation(self) -> None:
@@ -383,6 +398,50 @@ class ApnsTestCase(testutils.TestCase):
                         ],
                     },
                     "badge": 3,
+                },
+            },
+            notification_req.message,
+        )
+
+        self.assertEqual(PushType.ALERT, notification_req.push_type)
+
+        self.assertEqual({"rejected": []}, resp)
+
+    def test_expected_with_no_badge(self) -> None:
+        """
+        Tests the expected case with no badge: a good response from APNS means
+        we pass on a good response to the homeserver.
+        """
+        # Arrange
+        method = self.apns_pushkin_snotif
+        method.side_effect = testutils.make_async_magic_mock(
+            NotificationResult("notID", "200")
+        )
+
+        # Act
+        resp = self._request(
+            self._make_dummy_notification([DEVICE_EXAMPLE_FOR_NO_BADGE_PUSHKIN])
+        )
+
+        # Assert
+        self.assertEqual(1, method.call_count)
+        ((notification_req,), _kwargs) = method.call_args
+
+        self.assertEqual(
+            {
+                "room_id": "!slw48wfj34rtnrf:example.com",
+                "event_id": "$qTOWWTEL48yPm3uT-gdNhFcoHxfKbZuqRVnnWWSkGBs",
+                "missed_calls": 1,
+                "unread_count": 2,
+                "aps": {
+                    "alert": {
+                        "loc-key": "MSG_FROM_USER_IN_ROOM_WITH_CONTENT",
+                        "loc-args": [
+                            "Major Tom",
+                            "Mission Control",
+                            "I'm floating in a most peculiar way.",
+                        ],
+                    },
                 },
             },
             notification_req.message,
