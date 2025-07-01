@@ -125,13 +125,20 @@ jobs:
 
       - name: Invoke test script
         run: |
-          echo '====='
-          docker ps -a
-          # TODO do something less hacky than a static 5-second sleep
-          sleep 5
-          echo '====='
-          docker ps -a
-          echo '====='
+          echo "Waiting for container to be healthy"
+          for _ in {0..10}; do
+            sleep 1
+            container_state=$(docker inspect sygnal | jq '.[0].State')
+            echo "Container state: $container_state"
+            if ! echo "$container_state" | jq --exit-status '.Status == "running"'; then
+              echo "Container not running!"
+              exit 1
+            fi
+            if echo "$container_state" | jq --exit-status '.Health.Status == "healthy"'; then
+              echo "Container healthy!"
+              break
+            fi
+          done
           docker exec sygnal sh /curl.sh notification-gcm.json
 
       - name: Print sygnal logs
