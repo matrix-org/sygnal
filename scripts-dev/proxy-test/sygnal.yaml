@@ -64,9 +64,10 @@ apps:
     api_version: v1
     project_id: <PROJECT_ID>
     service_account_file: /service_account.json
-  im.vector.app.ios:
-    type: apns
-    keyfile: key.p8
-    key_id: asdf
-    team_id: team
-    topic: topic
+# TODO exercise the APNs functionality
+#  im.vector.app.ios:
+#    type: apns
+#    keyfile: key.p8
+#    key_id: asdf
+#    team_id: team
+#    topic: topic

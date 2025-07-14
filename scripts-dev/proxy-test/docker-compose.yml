@@ -1,6 +1,8 @@
 services:
   sygnal:
-    image: sygnal
+    image: localhost/sygnal-with-curl
+    build:
+      dockerfile: sygnal-with-curl.Dockerfile
     networks:
       no-internet:
         ipv4_address: 172.28.0.2
@@ -11,19 +13,28 @@ services:
       - ./curl.sh:/curl.sh
       - ./notification-gcm.json:/notification-gcm.json
       - ./notification-ios.json:/notification-ios.json
-      - ./proxy.conf:/etc/apt/apt.conf.d/proxy.conf
+      - ./mitmproxy:/mitmproxy:ro
+    environment:
+      SSL_CERT_FILE: /mitmproxy/ca.crt
     ports:
       - 5000:5000
 
   proxy:
-    image: dominikbechstein/nginx-forward-proxy
+    image: docker.io/mitmproxy/mitmproxy
+    command: >-
+      mitmdump
+      -w /out/mitmdump_out
+      --map-local '|https://oauth2.googleapis.com/token|/responses/oauth2_googleapis_token.json'
+      --map-local '|https://fcm.googleapis.com/v1/projects/*|/responses/fcm_push.json'
     networks:
       no-internet:
         ipv4_address: 172.28.0.3
       internet:
-    container_name: nginx-forward-proxy
+    container_name: mitmdump
     volumes:
-      - ./nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+      - ./out:/out:Z
+      - ./mitmproxy:/home/mitmproxy/.mitmproxy:z
+      - ./responses:/responses:ro
     ports:
       - 8080:8080
 
