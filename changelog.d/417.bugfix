@@ -1,1 +1,0 @@
-Pin aioapns to  be older than v4.0 to avoid a breaking change in key handling. Contributed by Michael DiStefano.

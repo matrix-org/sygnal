@@ -1,1 +1,0 @@
-Add `HEALTHCHECK` directive to the container image, using existing `/health` endpoint.

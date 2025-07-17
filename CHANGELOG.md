@@ -1,3 +1,37 @@
+# Sygnal 0.16.0 (2025-07-18)
+
+This is the first Sygnal release under an AGPLv3.0 licence (with CLA, for
+proprietary dual licensing). You can read more about this here:
+
+ - https://matrix.org/blog/2023/11/06/future-of-synapse-dendrite/
+ - https://element.io/blog/element-to-adopt-agplv3/
+
+### Bugfixes
+
+- Fix issue where GCM pushkins behind proxy fail to start. ([\#408](https://github.com/element-hq/sygnal/issues/408))
+- Pin aioapns to  be older than v4.0 to avoid a breaking change in key handling. Contributed by Michael DiStefano. ([\#417](https://github.com/element-hq/sygnal/issues/417))
+
+### Updates to the Docker image
+
+- Use Python 3.12 as a base for the Docker image instead of Python 3.11. ([\#400](https://github.com/element-hq/sygnal/issues/400))
+- Speed up the building of the Docker image. ([\#409](https://github.com/element-hq/sygnal/issues/409))
+- Add `HEALTHCHECK` directive to the container image, using existing `/health` endpoint. ([\#418](https://github.com/element-hq/sygnal/issues/418))
+
+### Improved Documentation
+
+- Add basic instructions for running within a container. ([\#410](https://github.com/element-hq/sygnal/issues/410))
+
+### Internal Changes
+
+- Bump twisted from 24.3.0 to 24.7.0. ([\#397](https://github.com/element-hq/sygnal/issues/397))
+- Bump aiohttp from 3.9.5 to 3.10.2. ([\#398](https://github.com/element-hq/sygnal/issues/398))
+- Fix unit tests by adding `setTcpNoDelay` to `FakeTransport`. ([\#402](https://github.com/element-hq/sygnal/issues/402))
+- Bump `virtualenv` from 20.26.2 to 20.26.6. ([\#405](https://github.com/element-hq/sygnal/issues/405))
+- Bump `jinja2` from 3.1.4 to 3.1.5. ([\#406](https://github.com/element-hq/sygnal/issues/406))
+- Bump docker/build-push-action and docker/metadata-action to the latest versions. ([\#412](https://github.com/element-hq/sygnal/issues/412))
+- Add a CI test for Sygnal's HTTP proxy functionality. ([\#413](https://github.com/element-hq/sygnal/issues/413))
+
+
 # Sygnal 0.15.1 (2024-10-04)
 
 ### Bugfixes
