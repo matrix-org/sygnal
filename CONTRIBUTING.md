@@ -2,7 +2,7 @@
 
 Everyone is welcome to contribute code to Sygnal, provided you are willing to
 license your contributions under the same license as the project itself. In
-this case, the [GNU Affero General Public License v3](LICENSE-AGPL-3.0).
+this case, the [Apache Software License v2](LICENSE).
 
 ### Installing dependencies
 
