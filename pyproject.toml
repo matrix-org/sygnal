@@ -2,7 +2,7 @@
     package = "sygnal"
     filename = "CHANGELOG.md"
     directory = "changelog.d"
-    issue_format = "[\\#{issue}](https://github.com/element-hq/sygnal/issues/{issue})"
+    issue_format = "[\\#{issue}](https://github.com/matrix-org/sygnal/issues/{issue})"
 
     [[tool.towncrier.type]]
         directory = "feature"
@@ -105,10 +105,10 @@ types-PyYAML = ">=6.0.0"
 typing-extensions = ">=3.7.4"
 
 [tool.poetry.urls]
-"homepage" = "https://github.com/element-hq/sygnal"
-"documentation" = "https://github.com/element-hq/sygnal/tree/main/docs"
-"repository" = "https://github.com/element-hq/sygnal.git"
-"changelog" = "https://github.com/element-hq/sygnal/blob/main/CHANGELOG.md"
+"homepage" = "https://github.com/matrix-org/sygnal"
+"documentation" = "https://github.com/matrix-org/sygnal/tree/main/docs"
+"repository" = "https://github.com/matrix-org/sygnal.git"
+"changelog" = "https://github.com/matrix-org/sygnal/blob/main/CHANGELOG.md"
 
 [tool.poetry.scripts]
 sygnal = "sygnal.sygnal:main"

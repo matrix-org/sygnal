@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Adapted from Synapse:
-#  https://github.com/element-hq/synapse/blob/1016f303e58b1305ed5b3572fde002e1273e0fc0/synapse/crypto/context_factory.py#L77
+#  https://github.com/matrix-org/synapse/blob/1016f303e58b1305ed5b3572fde002e1273e0fc0/synapse/crypto/context_factory.py#L77
 
 
 import logging

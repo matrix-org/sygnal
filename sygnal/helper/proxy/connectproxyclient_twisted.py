@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Adapted from Synapse:
-# https://github.com/element-hq/synapse/blob/6920e58136671f086536332bdd6844dff0d4b429/synapse/http/connectproxyclient.py
+# https://github.com/matrix-org/synapse/blob/6920e58136671f086536332bdd6844dff0d4b429/synapse/http/connectproxyclient.py
 
 import logging
 from base64 import urlsafe_b64encode

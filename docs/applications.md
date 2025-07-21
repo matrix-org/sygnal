@@ -212,7 +212,7 @@ endpoint in order to trigger the correct type of notification.
 The Notification Service Extension of *Element iOS*, [available here][ElementNSE],
 may be useful for reference.
 
-[ElementNSE]: https://github.com/element-hq/element-ios/blob/034e253fb19092ef16b5262293d5c32db96aec22/RiotNSE/NotificationService.swift
+[ElementNSE]: https://github.com/vector-im/element-ios/blob/034e253fb19092ef16b5262293d5c32db96aec22/RiotNSE/NotificationService.swift
 
 
 ### Firebase Cloud Messaging
